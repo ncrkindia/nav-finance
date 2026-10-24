@@ -23,7 +23,7 @@ public class FilterCriteria {
     /** Payment mode or channel filter (e.g., "UPI", "Cash", "Paytm"), or {@code null}. */
     private String paymentVia;
 
-    /** Unique person ID for Udhar tracking, or {@code null}. */
+    /** Unique person ID for loan and dues tracking, or {@code null}. */
     private Long personId;
 
     /** Earliest transaction date boundary (inclusive). */

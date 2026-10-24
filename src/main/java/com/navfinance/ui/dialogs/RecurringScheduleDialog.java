@@ -384,7 +384,7 @@ public class RecurringScheduleDialog extends JDialog {
             cmbCategory.addItem("EMI Payment");
             cmbCategory.addItem("Bill");
             cmbCategory.addItem("Credit Card");
-            cmbCategory.addItem("Udhar Given");
+            cmbCategory.addItem("Loan Given");
             cmbCategory.addItem("Special Expense");
             cmbCategory.addItem("Rent & Housing");
             cmbCategory.addItem("Groceries & Food");
@@ -395,7 +395,6 @@ public class RecurringScheduleDialog extends JDialog {
             cmbCategory.addItem("Salary");
             cmbCategory.addItem("Return");
             cmbCategory.addItem("Loan");
-            cmbCategory.addItem("Udhaar");
             cmbCategory.addItem("Rental Income");
             cmbCategory.addItem("Freelance");
             cmbCategory.addItem("Other Income");
@@ -420,7 +419,7 @@ public class RecurringScheduleDialog extends JDialog {
         } else if ("Credit Card".equalsIgnoreCase(cat)) {
             List<CreditCard> cards = financeService.getAllCreditCards();
             for (CreditCard cc : cards) cmbSubCategory.addItem(cc.getCardName());
-        } else if ("Udhar Given".equalsIgnoreCase(cat) || "Return".equalsIgnoreCase(cat) || "Udhaar".equalsIgnoreCase(cat)) {
+        } else if ("Loan Given".equalsIgnoreCase(cat) || "Loan".equalsIgnoreCase(cat) || "Return".equalsIgnoreCase(cat)) {
             List<Person> persons = financeService.getAllPersons();
             for (Person p : persons) cmbSubCategory.addItem(p.getName());
         }

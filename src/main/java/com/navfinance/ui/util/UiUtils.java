@@ -45,7 +45,7 @@ public final class UiUtils {
     /** Soft pastel red background tint for expense badges and cards (#FEF2F2). */
     public static final Color COLOR_EXPENSE_BG = new Color(254, 242, 242);
 
-    /** Warm amber gold signifying warnings, pending loans, and udhaar balances (#D97706). */
+    /** Warm amber gold signifying warnings, pending loans, and dues balances (#D97706). */
     public static final Color COLOR_AMBER = new Color(217, 119, 6);
 
     /** Soft pastel amber background tint for warning badges (#FEF3C7). */

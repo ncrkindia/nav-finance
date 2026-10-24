@@ -38,7 +38,7 @@ import java.util.List;
  * <p>
  * This panel organizes 5 foundational catalogs into dedicated sub-tabs:
  * <ul>
- *   <li><b>Persons:</b> Contacts, relatives, and counterparties for tracking Udhar Given/Taken and Loans.</li>
+ *   <li><b>Persons:</b> Contacts, relatives, and counterparties for tracking loans and dues.</li>
  *   <li><b>Bills:</b> Utility recurring bills (Electricity, Mobile, Broadband, Water, Gas, Maintenance) with typical amounts.</li>
  *   <li><b>EMIs:</b> Structured loan repayment schedules, lending institutions, and monthly commitments.</li>
  *   <li><b>Credit Cards:</b> Credit card identifiers, issuing banks, and card masking digits for expense tracking.</li>

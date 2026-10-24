@@ -86,7 +86,7 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
     /** Dropdown selector for payment channel (Via: Cash, UPI, Paytm, PhonePe, Cards, etc.). */
     private JComboBox<String> cmbViaFilter;
 
-    /** Dropdown selector for person counterparties (Udhar, loan, or relative entries). */
+    /** Dropdown selector for person counterparties (loan, relative, or contact entries). */
     private JComboBox<Object> cmbPersonFilter;
 
     /** Text field specifying minimum transaction amount filter. */

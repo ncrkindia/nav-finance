@@ -20,7 +20,7 @@ public final class AppConfig {
     public static final String APP_NAME = "Nav Finance";
 
     /** Secondary branding description shown in window titles and headers. */
-    public static final String APP_SUBTITLE = "Personal Finance & Udhar Management System";
+    public static final String APP_SUBTITLE = "Personal Finance & Loan Management System";
 
     /** Semantic version string of the release. */
     public static final String APP_VERSION = "1.0.0";

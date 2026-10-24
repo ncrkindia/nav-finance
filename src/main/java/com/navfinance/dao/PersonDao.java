@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * Data Access Object (DAO) for managing Person master records
- * used for Udhar Given / Udhar Taken tracking and personal loan accounting.
+ * used for loan and dues tracking and counterparty accounting.
  */
 public class PersonDao {
 

@@ -7,10 +7,10 @@ import com.navfinance.ui.panels.AboutUsPanel;
 import com.navfinance.ui.panels.AuditLogPanel;
 import com.navfinance.ui.panels.DashboardPanel;
 import com.navfinance.ui.panels.DuePaymentsPanel;
+import com.navfinance.ui.panels.LoansDuesPanel;
 import com.navfinance.ui.panels.MastersPanel;
 import com.navfinance.ui.panels.SettingsPanel;
 import com.navfinance.ui.panels.TransactionsPanel;
-import com.navfinance.ui.panels.UdharTrackerPanel;
 import com.navfinance.ui.panels.UserGuidePanel;
 import com.navfinance.i18n.AppLanguage;
 import com.navfinance.i18n.I18n;
@@ -50,7 +50,7 @@ import java.awt.event.KeyEvent;
  *       <li><b>Dashboard:</b> Financial KPIs, income vs expense trend bar charts, and category donut distribution.</li>
  *       <li><b>Transactions:</b> Searchable income/expense ledger with multi-column sorting and report exports.</li>
  *       <li><b>Due &amp; Recurring:</b> Tracking due and overdue bills/EMIs with one-click settlements.</li>
- *       <li><b>Udhaar &amp; Loans:</b> Personal loans ledger tracking counterparty balances.</li>
+ *       <li><b>Loans &amp; Dues:</b> Personal loans ledger tracking counterparty balances.</li>
  *       <li><b>Masters:</b> Management of reusable catalogs (Persons, Bills, EMIs, Cards, Modes).</li>
  *       <li><b>Audit Trail:</b> Immutable historical activity log of all inserts, updates, and deletes.</li>
  *       <li><b>User Guide:</b> Interactive searchable documentation handbook.</li>
@@ -82,7 +82,7 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
     private DuePaymentsPanel duePaymentsPanel;
 
     /** Panel tracking personal loans and informal debts across individual persons. */
-    private UdharTrackerPanel udharPanel;
+    private LoansDuesPanel loansDuesPanel;
 
     /** Panel managing reference catalogs for Persons, Bills, EMIs, Cards, and Modes. */
     private MastersPanel mastersPanel;
@@ -271,7 +271,7 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
         dashboardPanel = new DashboardPanel();
         transactionsPanel = new TransactionsPanel();
         duePaymentsPanel = new DuePaymentsPanel();
-        udharPanel = new UdharTrackerPanel();
+        loansDuesPanel = new LoansDuesPanel();
         mastersPanel = new MastersPanel();
         auditPanel = new AuditLogPanel();
         userGuidePanel = new UserGuidePanel();
@@ -281,7 +281,7 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
         mainTabs.addTab(I18n.get("tab.dashboard"), NavIcons.dashboard(16, UiUtils.COLOR_PRIMARY), dashboardPanel);
         mainTabs.addTab(I18n.get("tab.transactions"), NavIcons.transactions(16, UiUtils.COLOR_PRIMARY), transactionsPanel);
         mainTabs.addTab(I18n.get("tab.duePayments"), NavIcons.duePayments(16, UiUtils.COLOR_AMBER), duePaymentsPanel);
-        mainTabs.addTab(I18n.get("tab.udhar"), NavIcons.udhar(16, UiUtils.COLOR_INCOME), udharPanel);
+        mainTabs.addTab(I18n.get("tab.loans"), NavIcons.loan(16, UiUtils.COLOR_INCOME), loansDuesPanel);
         mainTabs.addTab(I18n.get("tab.masters"), NavIcons.masters(16, UiUtils.COLOR_PRIMARY), mastersPanel);
         mainTabs.addTab(I18n.get("tab.audit"), NavIcons.audit(16, UiUtils.COLOR_TEXT_MUTED), auditPanel);
         mainTabs.addTab(I18n.get("tab.userGuide"), NavIcons.userGuide(16, UiUtils.COLOR_PRIMARY), userGuidePanel);
@@ -294,7 +294,7 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
                 case 0 -> dashboardPanel.refreshData();
                 case 1 -> transactionsPanel.applyFilters();
                 case 2 -> duePaymentsPanel.refreshAll();
-                case 3 -> udharPanel.refreshData();
+                case 3 -> loansDuesPanel.refreshData();
                 case 4 -> mastersPanel.refreshAll();
                 case 5 -> auditPanel.refreshLogs();
                 default -> {}
@@ -373,7 +373,7 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
         dashboardPanel.refreshData();
         transactionsPanel.applyFilters();
         duePaymentsPanel.refreshAll();
-        udharPanel.refreshData();
+        loansDuesPanel.refreshData();
         mastersPanel.refreshAll();
         auditPanel.refreshLogs();
     }
@@ -423,7 +423,7 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
             mainTabs.setTitleAt(0, I18n.get("tab.dashboard"));
             mainTabs.setTitleAt(1, I18n.get("tab.transactions"));
             mainTabs.setTitleAt(2, I18n.get("tab.duePayments"));
-            mainTabs.setTitleAt(3, I18n.get("tab.udhar"));
+            mainTabs.setTitleAt(3, I18n.get("tab.loans"));
             mainTabs.setTitleAt(4, I18n.get("tab.masters"));
             mainTabs.setTitleAt(5, I18n.get("tab.audit"));
             mainTabs.setTitleAt(6, I18n.get("tab.userGuide"));

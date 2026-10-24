@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * Core business orchestration service managing ledger transactions, master entities (Persons,
- * Bills, EMIs, Credit Cards, Payment Channels), audit tracking, and Udhar counterparty balance calculations.
+ * Bills, EMIs, Credit Cards, Payment Channels), audit tracking, and loans and dues counterparty balance calculations.
  * <p>
  * Ensures audit logging is automatically triggered on every creation, update, and deletion.
  * </p>
@@ -390,20 +390,20 @@ public class FinanceService {
         return auditDao.findAll(limit);
     }
 
-    // --- Udhar Tracker Breakdown ---
+    // --- Loans & Dues Counterparty Breakdown ---
 
     /**
-     * Encapsulates cumulative Udhar accounting balances for a specific person.
-     * Computes money given, money returned, money borrowed, money repaid, and net balance.
+     * Encapsulates cumulative loan accounting balances for a specific person.
+     * Computes money lent, money returned, money borrowed, money repaid, and net balance.
      */
-    public static class PersonUdharSummary {
+    public static class PersonLoanSummary {
         private final Person person;
-        private double totalGiven = 0; // Money we gave to person (Udhar Given)
-        private double totalReturned = 0; // Money person returned to us (Return from person)
-        private double totalTaken = 0; // Money we borrowed from person (Udhar / Loan taken)
+        private double totalGiven = 0; // Money we gave/lent to person
+        private double totalReturned = 0; // Money person returned to us
+        private double totalTaken = 0; // Money we borrowed from person
         private double totalRepaid = 0; // Money we repaid to person
 
-        public PersonUdharSummary(Person person) {
+        public PersonLoanSummary(Person person) {
             this.person = person;
         }
 
@@ -412,6 +412,10 @@ public class FinanceService {
         }
 
         public double getTotalGiven() {
+            return totalGiven;
+        }
+
+        public double getTotalLent() {
             return totalGiven;
         }
 
@@ -428,6 +432,10 @@ public class FinanceService {
         }
 
         public double getTotalTaken() {
+            return totalTaken;
+        }
+
+        public double getTotalBorrowed() {
             return totalTaken;
         }
 
@@ -448,7 +456,7 @@ public class FinanceService {
          * Positive means the person owes us money (Asset / Receivable).
          * Negative means we owe the person money (Liability / Payable).
          *
-         * @return Net balance in INR
+         * @return Net balance in active currency
          */
         public double getNetBalance() {
             double weAreOwed = totalGiven - totalReturned;
@@ -457,16 +465,17 @@ public class FinanceService {
         }
     }
 
+
     /**
-     * Computes consolidated Udhar positions for all contacts across all historical transactions.
+     * Computes consolidated loan and dues positions for all contacts across all historical transactions.
      *
-     * @return List of {@link PersonUdharSummary} objects
+     * @return List of {@link PersonLoanSummary} objects
      */
-    public List<PersonUdharSummary> getPersonUdharSummaries() {
+    public List<PersonLoanSummary> getPersonLoanSummaries() {
         List<Person> persons = getAllPersons();
-        Map<Long, PersonUdharSummary> map = new HashMap<>();
+        Map<Long, PersonLoanSummary> map = new HashMap<>();
         for (Person p : persons) {
-            map.put(p.getId(), new PersonUdharSummary(p));
+            map.put(p.getId(), new PersonLoanSummary(p));
         }
 
         FilterCriteria criteria = new FilterCriteria();
@@ -475,19 +484,19 @@ public class FinanceService {
 
         for (Transaction tx : transactions) {
             if (tx.getPersonId() != null && map.containsKey(tx.getPersonId())) {
-                PersonUdharSummary summary = map.get(tx.getPersonId());
+                PersonLoanSummary summary = map.get(tx.getPersonId());
                 String cat = tx.getCategory() != null ? tx.getCategory().toLowerCase() : "";
 
                 if (tx.getType() == TransactionType.EXPENSE) {
-                    if (cat.contains("udhar given") || cat.contains("loan given")) {
+                    if (cat.contains("loan given") || cat.contains("lent")) {
                         summary.addGiven(tx.getAmount());
-                    } else if (cat.contains("udhar return") || cat.contains("repayment")) {
+                    } else if (cat.contains("repayment") || cat.contains("repaid")) {
                         summary.addRepaid(tx.getAmount());
                     }
                 } else if (tx.getType() == TransactionType.INCOME) {
-                    if (cat.contains("return")) {
+                    if (cat.contains("return") || cat.contains("returned")) {
                         summary.addReturned(tx.getAmount());
-                    } else if (cat.contains("udhaar") || cat.contains("udhar") || cat.contains("loan")) {
+                    } else if (cat.contains("loan") || cat.contains("borrowed")) {
                         summary.addTaken(tx.getAmount());
                     }
                 }
@@ -496,4 +505,6 @@ public class FinanceService {
 
         return new ArrayList<>(map.values());
     }
+
+
 }

@@ -3,7 +3,7 @@ package com.navfinance.model;
 import java.time.LocalDateTime;
 
 /**
- * Model representing an individual contact in the master directory (for Udhaar Given, Taken, or Returns).
+ * Model representing an individual contact in the master directory (for Loan Given, Taken, or Returns).
  *
  * @author Nav Finance Team
  * @version 1.0.0

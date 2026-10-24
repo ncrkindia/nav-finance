@@ -24,7 +24,7 @@ import java.util.Map;
  * <p>
  * Supports inserting, updating, deleting, multi-criteria filtering,
  * aggregate sums, category breakdown rollups, distinct category querying,
- * and Udhar Given / Udhar Taken summaries.
+ * and Loans & Dues (Lent / Borrowed) summaries.
  * </p>
  */
 public class TransactionDao {
@@ -428,12 +428,12 @@ public class TransactionDao {
     }
 
     /**
-     * Calculates the cumulative total of money loaned out / given to relatives, friends, or debtors.
+     * Calculates the cumulative total of money loaned out / lent to contacts or debtors.
      *
-     * @return Total Udhar Given in INR
+     * @return Total lent amount in active currency
      */
-    public double getTotalUdharGiven() {
-        String sql = "SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE category IN ('Udhar Given', 'Loan Given')";
+    public double getTotalLentAmount() {
+        String sql = "SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE category IN ('Loan Given', 'Lent')";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -441,18 +441,13 @@ public class TransactionDao {
                 return rs.getDouble(1);
             }
         } catch (SQLException e) {
-            System.err.println("Failed to calculate total udhar given: " + e.getMessage());
+            System.err.println("Failed to calculate total lent amount: " + e.getMessage());
         }
         return 0.0;
     }
 
-    /**
-     * Calculates the cumulative total of money borrowed / taken from lenders or relatives.
-     *
-     * @return Total Udhar Taken in INR
-     */
-    public double getTotalUdharTaken() {
-        String sql = "SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE category IN ('Udhaar', 'Udhar', 'Loan')";
+    public double getTotalBorrowedAmount() {
+        String sql = "SELECT COALESCE(SUM(amount), 0.0) FROM transactions WHERE category IN ('Loan', 'Borrowed')";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -460,10 +455,11 @@ public class TransactionDao {
                 return rs.getDouble(1);
             }
         } catch (SQLException e) {
-            System.err.println("Failed to calculate total udhar taken: " + e.getMessage());
+            System.err.println("Failed to calculate total borrowed amount: " + e.getMessage());
         }
         return 0.0;
     }
+
 
     /**
      * Maps an active result set row to a {@link Transaction} domain entity.

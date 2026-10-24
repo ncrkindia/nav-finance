@@ -34,42 +34,43 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Specialized ledger panel for tracking personal loans, debts, and informal credit (Udhaar).
+ * Loans &amp; Dues directory panel providing comprehensive tracking of informal peer-to-peer
+ * loans, borrowings, and outstanding counterparty dues.
  * <p>
- * This dashboard provides:
+ * Key Features:
+ * </p>
  * <ul>
- *   <li>Top-level KPI metrics summarizing Total Udhar Given, Total Udhar Taken, and Net Receivable/Payable position.</li>
- *   <li>Person-wise breakdown table displaying Total Given, Total Returned, Total Taken, Total Repaid,
+ *   <li>Top-level KPI metrics summarizing Total Lent (Money Given), Total Borrowed (Money Taken), and Net Balance position.</li>
+ *   <li>Person-wise breakdown table displaying Total Lent, Total Returned, Total Borrowed, Total Repaid,
  *       Net Position (+/-), and Status badge ("Owes You", "You Owe", "Settled").</li>
- *   <li>Convenient shortcuts to register new counterparties ({@link PersonDialog}) and record loan
- *       disbursements or repayments directly ({@link TransactionDialog}).</li>
+ *   <li>Quick action buttons to register new contacts ({@link PersonDialog}) and record loans or repayments directly ({@link TransactionDialog}).</li>
  * </ul>
  */
-public class UdharTrackerPanel extends JPanel implements LanguageChangeListener {
+public class LoansDuesPanel extends JPanel implements LanguageChangeListener {
 
     /** Business service managing transaction ledgers and Person master catalogs. */
     private final FinanceService financeService = FinanceService.getInstance();
 
-    /** KPI card displaying aggregated Udhar Given (money lent). */
-    private KpiCard kpiGiven;
+    /** KPI card displaying aggregated money lent to others. */
+    private KpiCard kpiLent;
 
-    /** KPI card displaying aggregated Udhar Taken (money borrowed). */
-    private KpiCard kpiTaken;
+    /** KPI card displaying aggregated money borrowed from others. */
+    private KpiCard kpiBorrowed;
 
     /** KPI card displaying net balance position across all personal loans. */
     private KpiCard kpiNet;
 
-    /** Swing table displaying person-wise Udhaar balances and settlement statuses. */
-    private JTable tblUdhar;
+    /** Swing table displaying person-wise loan balances and settlement statuses. */
+    private JTable tblLoans;
 
-    /** Table model backing the Udhaar ledger grid. */
+    /** Table model backing the loans and dues grid. */
     private DefaultTableModel tableModel;
 
     /**
-     * Constructs a new {@code UdharTrackerPanel}, setting up header controls,
+     * Constructs a new {@code LoansDuesPanel}, setting up header controls,
      * KPI indicators, ledger table formatting, and loading initial loan aggregates.
      */
-    public UdharTrackerPanel() {
+    public LoansDuesPanel() {
         setLayout(new BorderLayout(0, 14));
         setBackground(new Color(248, 250, 252));
         setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
@@ -87,7 +88,7 @@ public class UdharTrackerPanel extends JPanel implements LanguageChangeListener 
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setOpaque(false);
 
-        JLabel lblTitle = new JLabel(I18n.get("udhar.title"));
+        JLabel lblTitle = new JLabel(I18n.get("loans.title"));
         lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
         topPanel.add(lblTitle, BorderLayout.WEST);
@@ -95,18 +96,21 @@ public class UdharTrackerPanel extends JPanel implements LanguageChangeListener 
         JPanel btnGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnGroup.setOpaque(false);
 
-        JButton btnAddPerson = UiUtils.createSecondaryButton(I18n.get("udhar.btn.addContact"), NavIcons.person(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnAddPerson = UiUtils.createSecondaryButton(I18n.get("loans.btn.addContact"), NavIcons.person(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnAddPerson.setFont(UiUtils.boldFont());
         btnAddPerson.addActionListener(e -> onAddPerson());
 
-        JButton btnGiveUdhar = UiUtils.createDangerButton(I18n.get("udhar.btn.giveLoan"), NavIcons.minus(13, Color.WHITE));
-        btnGiveUdhar.addActionListener(e -> onRecordUdhar(true));
+        JButton btnLendMoney = UiUtils.createDangerButton(I18n.get("loans.btn.giveLoan"), NavIcons.minus(13, Color.WHITE));
+        btnLendMoney.setFont(UiUtils.boldFont());
+        btnLendMoney.addActionListener(e -> onRecordLoan(true));
 
-        JButton btnTakeUdhar = UiUtils.createSuccessButton(I18n.get("udhar.btn.takeLoan"), NavIcons.plus(13, Color.WHITE));
-        btnTakeUdhar.addActionListener(e -> onRecordUdhar(false));
+        JButton btnBorrowMoney = UiUtils.createSuccessButton(I18n.get("loans.btn.takeLoan"), NavIcons.plus(13, Color.WHITE));
+        btnBorrowMoney.setFont(UiUtils.boldFont());
+        btnBorrowMoney.addActionListener(e -> onRecordLoan(false));
 
         btnGroup.add(btnAddPerson);
-        btnGroup.add(btnGiveUdhar);
-        btnGroup.add(btnTakeUdhar);
+        btnGroup.add(btnLendMoney);
+        btnGroup.add(btnBorrowMoney);
         topPanel.add(btnGroup, BorderLayout.EAST);
 
         add(topPanel, BorderLayout.NORTH);
@@ -119,28 +123,29 @@ public class UdharTrackerPanel extends JPanel implements LanguageChangeListener 
         JPanel kpiRow = new JPanel(new GridLayout(1, 3, 14, 0));
         kpiRow.setOpaque(false);
 
-        kpiGiven = new KpiCard(I18n.get("udhar.kpi.totalLent"), "₹ 0.00", "Money Lent to Others", UiUtils.COLOR_AMBER, NavIcons.minus(22, UiUtils.COLOR_AMBER));
-        kpiTaken = new KpiCard(I18n.get("udhar.kpi.totalBorrowed"), "₹ 0.00", "Money Borrowed from Others", UiUtils.COLOR_PRIMARY, NavIcons.plus(22, UiUtils.COLOR_PRIMARY));
-        kpiNet = new KpiCard(I18n.get("udhar.kpi.netOutstanding"), "₹ 0.00", "Net Balance", UiUtils.COLOR_INCOME, NavIcons.udhar(22, UiUtils.COLOR_INCOME));
+        kpiLent = new KpiCard(I18n.get("loans.kpi.totalLent"), "₹ 0.00", "Money Lent to Others", UiUtils.COLOR_AMBER, NavIcons.minus(22, UiUtils.COLOR_AMBER));
+        kpiBorrowed = new KpiCard(I18n.get("loans.kpi.totalBorrowed"), "₹ 0.00", "Money Borrowed from Others", UiUtils.COLOR_PRIMARY, NavIcons.plus(22, UiUtils.COLOR_PRIMARY));
+        kpiNet = new KpiCard(I18n.get("loans.kpi.netOutstanding"), "₹ 0.00", "Net Balance", UiUtils.COLOR_INCOME, NavIcons.loan(22, UiUtils.COLOR_INCOME));
 
-        kpiRow.add(kpiGiven);
-        kpiRow.add(kpiTaken);
+        kpiRow.add(kpiLent);
+        kpiRow.add(kpiBorrowed);
         kpiRow.add(kpiNet);
         centerPanel.add(kpiRow, BorderLayout.NORTH);
 
-        // Person-wise Udhaar Ledger Table
+        // Ledger Table
         String[] cols = {
-                I18n.get("udhar.table.personId"),
-                I18n.get("udhar.table.person"),
-                I18n.get("udhar.table.relation"),
-                I18n.get("udhar.table.contact"),
-                I18n.get("udhar.table.lent"),
-                I18n.get("udhar.table.returned"),
-                I18n.get("udhar.table.taken"),
-                I18n.get("udhar.table.repaid"),
-                I18n.get("udhar.table.netBalance"),
-                I18n.get("udhar.table.status")
+                I18n.get("loans.table.personId"),
+                I18n.get("loans.table.person"),
+                I18n.get("loans.table.relation"),
+                I18n.get("loans.table.contact"),
+                I18n.get("loans.table.lent"),
+                I18n.get("loans.table.returned"),
+                I18n.get("loans.table.taken"),
+                I18n.get("loans.table.repaid"),
+                I18n.get("loans.table.netBalance"),
+                I18n.get("loans.table.status")
         };
+
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -148,55 +153,62 @@ public class UdharTrackerPanel extends JPanel implements LanguageChangeListener 
             }
         };
 
-        tblUdhar = new JTable(tableModel);
-        tblUdhar.setRowHeight(32);
-        tblUdhar.getTableHeader().setFont(UiUtils.boldFont());
-        tblUdhar.setFont(UiUtils.regularFont());
-        tblUdhar.setShowGrid(false);
-        tblUdhar.setIntercellSpacing(new Dimension(0, 0));
+        tblLoans = new JTable(tableModel);
+        tblLoans.setRowHeight(32);
+        tblLoans.getTableHeader().setFont(UiUtils.boldFont());
+        tblLoans.setFont(UiUtils.regularFont());
+        tblLoans.setShowGrid(false);
+        tblLoans.setIntercellSpacing(new Dimension(0, 0));
 
-        // Format Net Position column (Col 8: Green if owes you, Red if you owe)
-        tblUdhar.getColumnModel().getColumn(8).setCellRenderer(new DefaultTableCellRenderer() {
+        // Format numeric columns with right alignment
+        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
+        rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
+        for (int i = 4; i <= 8; i++) {
+            tblLoans.getColumnModel().getColumn(i).setCellRenderer(rightRenderer);
+        }
+
+        // Color net balance column
+        tblLoans.getColumnModel().getColumn(8).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
-                setHorizontalAlignment(RIGHT);
-                setFont(UiUtils.FONT_BOLD);
+                JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
+                l.setHorizontalAlignment(RIGHT);
+                l.setFont(UiUtils.boldFont());
                 String str = String.valueOf(value);
                 if (str.startsWith("+")) {
-                    setForeground(UiUtils.COLOR_INCOME); // Owes you
+                    l.setForeground(UiUtils.COLOR_INCOME); // Money owed to user
                 } else if (str.startsWith("-")) {
-                    setForeground(UiUtils.COLOR_EXPENSE); // You owe
+                    l.setForeground(UiUtils.COLOR_EXPENSE); // User owes money
                 } else {
-                    setForeground(UiUtils.COLOR_TEXT_MUTED);
+                    l.setForeground(UiUtils.COLOR_TEXT_MUTED);
                 }
-                return c;
+                return l;
             }
         });
 
-        // Format Status column with vector status dot (Col 9: Status badge)
-        tblUdhar.getColumnModel().getColumn(9).setCellRenderer(new DefaultTableCellRenderer() {
+        // Format Status badge column
+        tblLoans.getColumnModel().getColumn(9).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
                 l.setHorizontalAlignment(CENTER);
                 l.setFont(UiUtils.boldFont());
                 String str = String.valueOf(value);
-                Color statusColor;
-                if (str.equals(I18n.get("udhar.status.simple.owesYou")) || str.contains("Owes")) {
-                    statusColor = UiUtils.COLOR_INCOME;
-                } else if (str.equals(I18n.get("udhar.status.simple.youOwe")) || str.contains("Owe")) {
-                    statusColor = UiUtils.COLOR_EXPENSE;
+                if (str.equals(I18n.get("loans.status.simple.owesYou")) || str.contains("Owes")) {
+                    l.setForeground(UiUtils.COLOR_INCOME);
+                    l.setIcon(NavIcons.statusDot(8, UiUtils.COLOR_INCOME));
+                } else if (str.equals(I18n.get("loans.status.simple.youOwe")) || str.contains("Owe")) {
+                    l.setForeground(UiUtils.COLOR_EXPENSE);
+                    l.setIcon(NavIcons.statusDot(8, UiUtils.COLOR_EXPENSE));
                 } else {
-                    statusColor = UiUtils.COLOR_TEXT_MUTED;
+                    l.setForeground(UiUtils.COLOR_TEXT_MUTED);
+                    l.setIcon(NavIcons.check(10, UiUtils.COLOR_TEXT_MUTED));
                 }
-                l.setForeground(statusColor);
-                l.setIcon(NavIcons.statusDot(8, statusColor));
                 return l;
             }
         });
 
-        JScrollPane sp = new JScrollPane(tblUdhar);
+        JScrollPane sp = new JScrollPane(tblLoans);
         sp.setBorder(UiUtils.createCardBorder());
         centerPanel.add(sp, BorderLayout.CENTER);
 
@@ -204,33 +216,32 @@ public class UdharTrackerPanel extends JPanel implements LanguageChangeListener 
     }
 
     /**
-     * Re-queries all Udhar summaries across registered persons from {@link FinanceService},
+     * Re-queries all loan summaries across registered persons from {@link FinanceService},
      * updates table rows, and refreshes the summary KPI metric cards.
-     * Declared final to safeguard constructor invocation.
      */
     public final void refreshData() {
-        List<FinanceService.PersonUdharSummary> summaries = financeService.getPersonUdharSummaries();
+        List<FinanceService.PersonLoanSummary> summaries = financeService.getPersonLoanSummaries();
         tableModel.setRowCount(0);
 
-        double sumGiven = 0;
-        double sumTaken = 0;
+        double sumLent = 0;
+        double sumBorrowed = 0;
 
-        for (FinanceService.PersonUdharSummary s : summaries) {
+        for (FinanceService.PersonLoanSummary s : summaries) {
             Person p = s.getPerson();
             double net = s.getNetBalance();
-            sumGiven += s.getTotalGiven();
-            sumTaken += s.getTotalTaken();
+            sumLent += s.getTotalGiven();
+            sumBorrowed += s.getTotalTaken();
 
             String status;
             String netStr;
             if (net > 0) {
-                status = I18n.get("udhar.status.simple.owesYou");
+                status = I18n.get("loans.status.simple.owesYou");
                 netStr = "+ " + AppConfig.formatCurrency(net);
             } else if (net < 0) {
-                status = I18n.get("udhar.status.simple.youOwe");
+                status = I18n.get("loans.status.simple.youOwe");
                 netStr = "- " + AppConfig.formatCurrency(Math.abs(net));
             } else {
-                status = I18n.get("udhar.status.simple.settled");
+                status = I18n.get("loans.status.simple.settled");
                 netStr = AppConfig.formatCurrency(0);
             }
 
@@ -248,12 +259,12 @@ public class UdharTrackerPanel extends JPanel implements LanguageChangeListener 
             });
         }
 
-        kpiGiven.setValue(AppConfig.formatCurrency(sumGiven));
-        kpiTaken.setValue(AppConfig.formatCurrency(sumTaken));
+        kpiLent.setValue(AppConfig.formatCurrency(sumLent));
+        kpiBorrowed.setValue(AppConfig.formatCurrency(sumBorrowed));
 
-        double netAll = sumGiven - sumTaken;
+        double netAll = sumLent - sumBorrowed;
         kpiNet.setValue(AppConfig.formatCurrency(netAll));
-        kpiNet.setSubtitle(netAll >= 0 ? I18n.get("udhar.kpi.netOutstanding") : I18n.get("udhar.kpi.totalRepaid"));
+        kpiNet.setSubtitle(netAll >= 0 ? I18n.get("loans.kpi.netOutstanding") : I18n.get("loans.kpi.totalRepaid"));
     }
 
     /**
@@ -271,19 +282,19 @@ public class UdharTrackerPanel extends JPanel implements LanguageChangeListener 
     /**
      * Opens the transaction creation dialog pre-configured for personal loan lending or repayment.
      *
-     * @param isGive {@code true} to record Udhar Given (Expense), {@code false} to record Udhar Taken or Returned (Income)
+     * @param isLending {@code true} to record money lent (Expense), {@code false} to record money borrowed or returned (Income)
      */
-    private void onRecordUdhar(boolean isGive) {
+    private void onRecordLoan(boolean isLending) {
         JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
         Transaction sample = new Transaction();
         sample.setTxDate(LocalDate.now());
 
-        if (isGive) {
+        if (isLending) {
             sample.setType(TransactionType.EXPENSE);
-            sample.setCategory("Udhar Given");
+            sample.setCategory("Loan Given");
         } else {
             sample.setType(TransactionType.INCOME);
-            sample.setCategory("Udhaar");
+            sample.setCategory("Loan");
         }
 
         TransactionDialog dialog = new TransactionDialog(frame, sample, sample.getType());

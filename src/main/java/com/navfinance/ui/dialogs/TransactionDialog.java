@@ -79,7 +79,7 @@ public class TransactionDialog extends JDialog {
     /** Editable dropdown for selecting or typing sub-category specifics. */
     private JComboBox<String> cmbSubCategory;
 
-    /** Dropdown for attributing udhaar or loan transactions to a specific contact. */
+    /** Dropdown for attributing loan transactions to a specific contact. */
     private JComboBox<Person> cmbPerson;
 
     /** Text area for transaction memo or notes. */
@@ -214,7 +214,7 @@ public class TransactionDialog extends JDialog {
         cmbSubCategory.setEditable(true);
         mainPanel.add(cmbSubCategory, gbc);
 
-        // 7. Associated Person (Optional / Udhar / Loan)
+        // 7. Associated Person (Optional / Counterparty / Loan)
         lblPersonTitle = new JLabel(I18n.get("transactions.table.person") + ":");
         lblPersonTitle.setFont(UiUtils.regularFont());
         gbc.gridx = 0; gbc.gridy = row;
@@ -345,16 +345,15 @@ public class TransactionDialog extends JDialog {
             cmbCategory.addItem("Relative");
             cmbCategory.addItem("Return");
             cmbCategory.addItem("Loan");
-            cmbCategory.addItem("Udhaar");
             cmbCategory.addItem("Freelance / Business");
             cmbCategory.addItem("Other Income");
         } else {
             lblDateTitle.setText("Date / Planned Date:");
             chkExpected.setText("Planned / Due (Not Paid Yet)");
-            // Expense Categories requested: EMI Payment, Credit Card, Udhar Given, Bill, Special Expense, etc.
+            // Expense Categories: EMI Payment, Credit Card, Loan Given, Bill, Special Expense, etc.
             cmbCategory.addItem("EMI Payment");
             cmbCategory.addItem("Credit Card");
-            cmbCategory.addItem("Udhar Given");
+            cmbCategory.addItem("Loan Given");
             cmbCategory.addItem("Bill");
             cmbCategory.addItem("Special Expense");
             cmbCategory.addItem("Groceries & Food");
@@ -397,7 +396,7 @@ public class TransactionDialog extends JDialog {
                     cmbSubCategory.addItem(e.getEmiName());
                 }
                 cmbSubCategory.addItem("Other Loan EMI");
-            } else if ("Udhar Given".equalsIgnoreCase(cat)) {
+            } else if ("Loan Given".equalsIgnoreCase(cat)) {
                 // Populate with Persons
                 List<Person> persons = financeService.getAllPersons();
                 for (Person p : persons) {
@@ -416,7 +415,7 @@ public class TransactionDialog extends JDialog {
                 cmbSubCategory.addItem("Primary Employer");
                 cmbSubCategory.addItem("Bonus / Incentive");
                 cmbSubCategory.addItem("Arrears / Reimbursement");
-            } else if ("Relative".equalsIgnoreCase(cat) || "Udhaar".equalsIgnoreCase(cat) || "Return".equalsIgnoreCase(cat)) {
+            } else if ("Relative".equalsIgnoreCase(cat) || "Return".equalsIgnoreCase(cat)) {
                 List<Person> persons = financeService.getAllPersons();
                 for (Person p : persons) {
                     cmbSubCategory.addItem(p.getName());

@@ -38,7 +38,7 @@ import java.util.List;
 /**
  * Primary overview Dashboard panel synthesizing real-time financial health indicators.
  * <p>
- * Displays KPI headline summary cards (Total Income, Total Expense, Net Balance, Udhaar Position),
+ * Displays KPI headline summary cards (Total Income, Total Expense, Net Balance, Loan Position),
  * multi-temporal cash flow trend charts, category-wise expense distribution donut charts,
  * quick entry shortcuts, and a recent transactions ledger preview.
  * </p>
@@ -67,8 +67,8 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
     /** KPI card component displaying net savings or deficit. */
     private KpiCard kpiBalance;
 
-    /** KPI card component displaying net Udhaar lending position. */
-    private KpiCard kpiUdhar;
+    /** KPI card component displaying net loans and dues lending position. */
+    private KpiCard kpiLoans;
 
     /** Bar chart component illustrating inflows vs. outflows. */
     private TrendChartPanel trendChart;
@@ -187,12 +187,12 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
         kpiIncome = new KpiCard(I18n.get("dashboard.kpi.totalIncome"), "₹ 0.00", I18n.get("dashboard.period.thisMonth"), UiUtils.COLOR_INCOME, NavIcons.plus(22, UiUtils.COLOR_INCOME));
         kpiExpense = new KpiCard(I18n.get("dashboard.kpi.totalExpense"), "₹ 0.00", I18n.get("dashboard.period.thisMonth"), UiUtils.COLOR_EXPENSE, NavIcons.minus(22, UiUtils.COLOR_EXPENSE));
         kpiBalance = new KpiCard(I18n.get("dashboard.kpi.netBalance"), "₹ 0.00", I18n.get("dashboard.title"), UiUtils.COLOR_PRIMARY, NavIcons.dashboard(22, UiUtils.COLOR_PRIMARY));
-        kpiUdhar = new KpiCard(I18n.get("tab.udhar"), "₹ 0.00", I18n.get("udhar.subtitle"), UiUtils.COLOR_AMBER, NavIcons.udhar(22, UiUtils.COLOR_AMBER));
+        kpiLoans = new KpiCard(I18n.get("tab.loans"), "₹ 0.00", I18n.get("loans.subtitle"), UiUtils.COLOR_AMBER, NavIcons.loan(22, UiUtils.COLOR_AMBER));
 
         kpiRow.add(kpiIncome);
         kpiRow.add(kpiExpense);
         kpiRow.add(kpiBalance);
-        kpiRow.add(kpiUdhar);
+        kpiRow.add(kpiLoans);
         centerPanel.add(kpiRow, BorderLayout.NORTH);
 
         // 2. Charts Row (Trend Chart + Category Donut Chart)
@@ -325,11 +325,11 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
         kpiBalance.setValue(AppConfig.formatCurrency(summary.getNetBalance()));
         kpiBalance.setSubtitle(summary.getNetBalance() >= 0 ? "Surplus / Savings" : "Deficit / Overspent");
 
-        String udharSub = String.format("Given: %s | Taken: %s",
-                AppConfig.formatCurrencyPlain(summary.getTotalUdharGiven()),
-                AppConfig.formatCurrencyPlain(summary.getTotalUdharTaken()));
-        kpiUdhar.setValue(AppConfig.formatCurrency(summary.getNetUdharBalance()));
-        kpiUdhar.setSubtitle(udharSub);
+        String loansSub = String.format("Lent: %s | Borrowed: %s",
+                AppConfig.formatCurrencyPlain(summary.getTotalLent()),
+                AppConfig.formatCurrencyPlain(summary.getTotalBorrowed()));
+        kpiLoans.setValue(AppConfig.formatCurrency(summary.getNetLoanBalance()));
+        kpiLoans.setSubtitle(loansSub);
 
         // Update Charts
         trendChart.setTrendPoints(summary.getTrendPoints());

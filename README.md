@@ -1,18 +1,18 @@
 # Nav Finance 💰
 
-> **A Modern Personal Finance & Udhaar Management System for Windows**  
+> **A Modern Personal Finance & Loan Management System for Windows**  
 > Built with **Java 21**, **Modern Swing (FlatLaf)**, and an embedded **H2 Database** stored locally at `~user/nav-finance`.
 
 ---
 
 ## 🌟 Use Case & Problem Solved
 
-Managing daily household finances, recurring bills, EMIs, credit cards, and informal loans (*Udhaar Given or Taken*) is often painful with generic spreadsheets or cloud apps that compromise privacy.
+Managing daily household finances, recurring bills, EMIs, credit cards, and informal loans (*Loans Given or Taken*) is often painful with generic spreadsheets or cloud apps that compromise privacy.
 
 **Nav Finance** is designed specifically for personal and family finances in India and worldwide:
 - **Private & Local-First**: No external cloud tracking. All financial data is securely kept in an embedded H2 database located in your user profile: `~user/nav-finance/navfinance_db.mv.db`.
 - **Income & Expense Tracking**: Categorize daily transactions, recurring salaries, dividend returns, credit card payments, household utility bills, and personal EMIs.
-- **Udhaar & Personal Loans Ledger**: Track informal lending and borrowing between friends, relatives, and colleagues with exact contact, relation, and net settlement tracking (*Who owes whom*).
+- **Personal Loans & Dues Ledger**: Track informal lending and borrowing between friends, relatives, and colleagues with exact contact, relation, and net settlement tracking (*Who owes whom*).
 - **Audit Details**: Every creation, modification, and deletion records full timestamps and change logs for complete financial integrity.
 - **Executive Dashboard**: Visual trends of In vs Out (Green and Red) categorized by **Weekly**, **Monthly**, **Quarterly**, or **Annually**.
 - **Multi-Format Reports**: Export filtered records with a single click to **PDF**, **Excel (.xlsx)**, or **CSV**.
@@ -26,19 +26,19 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
 - **Income Entry**:
   - **Date / Expected Date**: Dual input with interactive **`📅` Date Picker** popup and manual typing (`YYYY-MM-DD` / `DD-MM-YYYY`)
   - **Amount** formatted in INR (`₹`) or custom currency symbol
-  - **Category**: `Salary`, `Relative`, `Return`, `Loan`, `Udhaar`, `Freelance`, `Other Income`
+  - **Category**: `Salary`, `Relative`, `Return`, `Loan`, `Freelance`, `Other Income`
   - **Sub-Category**: `Person`, `Loan`, `Bonus`, `Others`
   - **Payment Mode**: Cash, Net Banking, UPI, Paytm, PhonePe, Cheque, etc.
 - **Expense Entry**:
   - **Expense Date / Planned Date**: Dual input with interactive **`📅` Date Picker** popup and manual typing
   - **Amount**
   - **Via (Payment Mode)**: `Cash`, `Paytm`, `PhonePe`, `UPI`, `Net Banking`, `Credit Card`, `Debit Card`, `Other` *(supports custom modes on-the-fly)*
-  - **Category**: `EMI Payment`, `Credit Card`, `Udhar Given`, `Bill`, `Special Expense`, `Groceries & Food`, `Shopping`, `Fuel & Travel`, `Health`
+  - **Category**: `EMI Payment`, `Credit Card`, `Loan Given`, `Bill`, `Special Expense`, `Groceries & Food`, `Shopping`, `Fuel & Travel`, `Health`
   - **Dynamic Sub-Category**:
     - When selecting **Bill** → Pick from registered bills (e.g., *Airtel Bill*, *Electricity (Khardoni)*, *Electricity (Noida)*)
     - When selecting **Credit Card** → Pick from registered credit cards (e.g., *HDFC Millennia*, *ICICI Amazon Pay*, *SBI SimplyCLICK*)
     - When selecting **EMI Payment** → Pick from registered loan EMIs (e.g., *Home Loan EMI*, *Car Loan EMI*, *Laptop EMI*)
-    - When selecting **Udhar Given** → Pick from registered Persons (*Rahul*, *Amit*, *Suresh*, etc.)
+    - When selecting **Loan Given** → Pick from registered Persons (*Rahul*, *Amit*, *Suresh*, etc.)
 
 ### 2. Comprehensive Masters Catalog
 - **Persons Master**: Maintains list of contacts with `Name`, `Contact`, `Relation` (Friend, Colleague, Relative, Family, Landlord), and `Notes`.
@@ -47,11 +47,11 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
 - **Credit Cards Master**: Store bank name, card name, and last 4 digits for easy expense attribution.
 - **Payment Modes**: Manage payment modes used across transactions.
 
-### 3. Udhaar & Personal Loan Ledger
+### 3. Personal Loans & Dues Ledger
 - Dedicated ledger computing:
-  - **Total Udhar Given** (money lent to others)
-  - **Total Udhar Returned** (money returned by others)
-  - **Total Udhar Taken** (money borrowed from others)
+  - **Total Lent** (money lent to others)
+  - **Total Returned** (money returned by others)
+  - **Total Borrowed** (money borrowed from others)
   - **Total Repaid** (money paid back by you)
   - **Net Balance** (clearly indicates *Owes You* in Green or *You Owe* in Red)
 
@@ -61,7 +61,7 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
   - **Total Income (In)** in **Green**
   - **Total Expense (Out)** in **Red**
   - **Net Balance / Savings** in **Blue**
-  - **Udhar Position** in **Amber**
+  - **Loan Position** in **Amber**
 - **Trend Chart**: Dual-colored Bar Chart comparing In (Green) vs Out (Red) over time.
 - **Category Donut Chart**: Visual distribution of expenses by category with percentages and legends.
 - **Recent Activity**: Quick view of latest 10 transactions.
@@ -221,7 +221,7 @@ nav-finance/
             ├── DashboardPanel.java       # Visual executive dashboard
             ├── TransactionsPanel.java    # Search, filter, sort & export transactions
             ├── DuePaymentsPanel.java     # Due & overdue tracker & recurring rules manager
-            ├── UdharTrackerPanel.java    # Person-wise loan & Udhaar ledger
+            ├── LoansDuesPanel.java       # Person-wise loan & dues ledger
             ├── MastersPanel.java         # Masters management tabs
             ├── AuditLogPanel.java        # Audit trail viewer
             ├── UserGuidePanel.java       # Interactive in-app user guide & documentation

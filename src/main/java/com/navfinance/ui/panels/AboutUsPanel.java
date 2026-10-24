@@ -94,7 +94,7 @@ public class AboutUsPanel extends JPanel {
         lblTag.setFont(UiUtils.FONT_BOLD);
         lblTag.setForeground(UiUtils.COLOR_PRIMARY);
 
-        JLabel lblDesc = new JLabel("<html>A state-of-the-art offline desktop application crafted to provide households and professionals with complete clarity, privacy, and control over income, expenses, recurring bills, EMIs, and personal loans (*Udhaar*).</html>");
+        JLabel lblDesc = new JLabel("<html>A state-of-the-art offline desktop application crafted to provide households and professionals with complete clarity, privacy, and control over income, expenses, recurring bills, EMIs, and personal loans.</html>");
         lblDesc.setFont(UiUtils.FONT_REGULAR);
         lblDesc.setForeground(UiUtils.COLOR_TEXT_MUTED);
 

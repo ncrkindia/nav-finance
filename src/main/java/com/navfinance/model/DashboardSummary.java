@@ -24,9 +24,9 @@ public class DashboardSummary {
     private double totalExpense;
     private double netBalance;
 
-    private double totalUdharGiven;
-    private double totalUdharTaken;
-    private double netUdharBalance;
+    private double totalLent;
+    private double totalBorrowed;
+    private double netLoanBalance;
 
     private Map<String, Double> incomeByCategory = new LinkedHashMap<>();
     private Map<String, Double> expenseByCategory = new LinkedHashMap<>();
@@ -100,20 +100,21 @@ public class DashboardSummary {
     /** @param netBalance Net balance */
     public void setNetBalance(double netBalance) { this.netBalance = netBalance; }
 
-    /** @return Total outstanding Udhaar given to others */
-    public double getTotalUdharGiven() { return totalUdharGiven; }
-    /** @param totalUdharGiven Total Udhaar given */
-    public void setTotalUdharGiven(double totalUdharGiven) { this.totalUdharGiven = totalUdharGiven; }
+    /** @return Total outstanding money lent to others */
+    public double getTotalLent() { return totalLent; }
+    /** @param totalLent Total money lent */
+    public void setTotalLent(double totalLent) { this.totalLent = totalLent; }
 
-    /** @return Total outstanding Udhaar taken from others */
-    public double getTotalUdharTaken() { return totalUdharTaken; }
-    /** @param totalUdharTaken Total Udhaar taken */
-    public void setTotalUdharTaken(double totalUdharTaken) { this.totalUdharTaken = totalUdharTaken; }
+    /** @return Total outstanding money borrowed from others */
+    public double getTotalBorrowed() { return totalBorrowed; }
+    /** @param totalBorrowed Total money borrowed */
+    public void setTotalBorrowed(double totalBorrowed) { this.totalBorrowed = totalBorrowed; }
 
-    /** @return Net Udhaar position (Given - Taken) */
-    public double getNetUdharBalance() { return netUdharBalance; }
-    /** @param netUdharBalance Net Udhaar position */
-    public void setNetUdharBalance(double netUdharBalance) { this.netUdharBalance = netUdharBalance; }
+    /** @return Net loan position (Lent - Borrowed) */
+    public double getNetLoanBalance() { return netLoanBalance; }
+    /** @param netLoanBalance Net loan position */
+    public void setNetLoanBalance(double netLoanBalance) { this.netLoanBalance = netLoanBalance; }
+
 
     /** @return Map of income totals by category */
     public Map<String, Double> getIncomeByCategory() { return incomeByCategory; }

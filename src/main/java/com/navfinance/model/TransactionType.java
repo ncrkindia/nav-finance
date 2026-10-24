@@ -3,8 +3,8 @@ package com.navfinance.model;
 /**
  * Enumeration representing the fundamental direction of money flow.
  * <ul>
- *   <li>{@link #INCOME}: Cash inflow (e.g. Salary, Loan received, Udhar returned, Investment return).</li>
- *   <li>{@link #EXPENSE}: Cash outflow (e.g. EMIs, Credit Cards, Bills, Udhar given, Groceries).</li>
+ *   <li>{@link #INCOME}: Cash inflow (e.g. Salary, Loan received, Loan returned, Investment return).</li>
+ *   <li>{@link #EXPENSE}: Cash outflow (e.g. EMIs, Credit Cards, Bills, Loan given, Groceries).</li>
  * </ul>
  */
 public enum TransactionType {

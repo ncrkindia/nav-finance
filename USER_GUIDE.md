@@ -1,6 +1,6 @@
 # Nav Finance - User Guide 📘
 
-Welcome to **Nav Finance**, your personal finance companion for tracking household income, daily expenses, utility bills, loan EMIs, and informal lending/borrowing (*Udhaar*).
+Welcome to **Nav Finance**, your personal finance companion for tracking household income, daily expenses, utility bills, loan EMIs, and personal loans & dues.
 
 ---
 
@@ -9,7 +9,7 @@ Welcome to **Nav Finance**, your personal finance companion for tracking househo
 2. [Navigating the Dashboard](#2-navigating-the-dashboard)
 3. [Recording Income Entries](#3-recording-income-entries)
 4. [Recording Expense Entries](#4-recording-expense-entries)
-5. [Managing Udhaar & Personal Loans](#5-managing-udhaar--personal-loans)
+5. [Managing Personal Loans & Dues](#5-managing-personal-loans--dues)
 6. [Managing Catalog Masters (Bills, EMIs, Persons)](#6-managing-catalog-masters)
 7. [Filtering, Searching & Sorting Transactions](#7-filtering-searching--sorting-transactions)
 8. [Exporting Reports (PDF, Excel, CSV)](#8-exporting-reports)
@@ -53,7 +53,7 @@ The **Dashboard** tab is your financial control center:
 - **Total Income (In)**: Displayed in **Green**. Represents total earnings and receipts in the active period.
 - **Total Expense (Out)**: Displayed in **Red**. Represents total expenditures, bills, and money lent out.
 - **Net Savings / Balance**: Displayed in **Blue** or **Green**. Represents `Income - Expense`.
-- **Udhaar Ledger Position**: Displayed in **Amber**. Shows your net pending balance across all loans given vs borrowed.
+- **Loans & Dues Position**: Displayed in **Amber**. Shows your net pending balance across all loans given vs borrowed.
 
 ### Changing the Time Period
 In the top bar of the dashboard, choose from:
@@ -70,7 +70,7 @@ Use the `◀ Prev` and `Next ▶` buttons to navigate back and forward through h
    - Red bars represent **Expense (Out)**.
    - Compares the last 6 months (or weeks/quarters) side-by-side.
 2. **Expense Breakdown by Category (Donut Chart)**:
-   - Shows where your money went (e.g., *EMI Payment*, *Bills*, *Credit Cards*, *Udhar Given*).
+   - Shows where your money went (e.g., *EMI Payment*, *Bills*, *Credit Cards*, *Loan Given*).
    - Displays percentage share and formatted amounts in the right legend.
 
 ---
@@ -89,12 +89,11 @@ Use the `◀ Prev` and `Next ▶` buttons to navigate back and forward through h
      - `Relative`
      - `Return` (e.g. return of previously given loan)
      - `Loan` (money borrowed from a bank or friend)
-     - `Udhaar` (informal money taken)
      - `Freelance / Business`
      - `Other Income`
    - **Sub-Category**: Select or type the specific source (e.g. `Primary Employer`, `Tech Corp`, or select a person's name).
    - **Payment Via**: Select payment channel (`Net Banking`, `UPI`, `Cash`, `PhonePe`, `Paytm`, `Cheque`, etc.).
-   - **Associated Person**: If the income comes from an individual (such as an Udhaar return from *Rahul Sharma*), pick the person from the dropdown.
+   - **Associated Person**: If the income comes from an individual (such as a loan return from *Rahul Sharma*), pick the person from the dropdown.
    - **Notes / Remarks**: Add any descriptive detail.
 3. Click **Save Entry**. An audit log will be created automatically.
 
@@ -114,7 +113,7 @@ Use the `◀ Prev` and `Next ▶` buttons to navigate back and forward through h
      - `Bill`
      - `EMI Payment`
      - `Credit Card`
-     - `Udhar Given`
+     - `Loan Given`
      - `Special Expense`
      - `Groceries & Food`
      - `Shopping`
@@ -135,19 +134,19 @@ Use the `◀ Prev` and `Next ▶` buttons to navigate back and forward through h
        - *Car Loan EMI*
        - *Personal Loan*
        - *Laptop EMI*
-     - If Category is **Udhar Given**, it automatically lists registered persons.
+     - If Category is **Loan Given**, it automatically lists registered persons.
    - **Notes / Remarks**: Additional transaction comments.
 3. Click **Save Entry**.
 
 ---
 
-## 5. Managing Udhaar & Personal Loans
+## 5. Managing Personal Loans & Dues
 
-Click the **`🤝 Udhaar & Loans`** tab to access the dedicated personal loan and Udhaar ledger:
+Click the **`🤝 Loans & Dues`** tab to access the dedicated personal loans and dues ledger:
 
-- **Total Udhar Given**: Total amount you have lent out to friends, relatives, and colleagues.
-- **Total Udhar Taken**: Total amount you have borrowed from others.
-- **Net Udhar Position**: Overall net position:
+- **Total Lent**: Total amount you have lent out to friends, relatives, and colleagues.
+- **Total Borrowed**: Total amount you have borrowed from others.
+- **Net Loan Position**: Overall net position:
   - If positive: Others owe you money in total.
   - If negative: You owe others money in total.
 - **Person-Wise Ledger Table**:
@@ -158,8 +157,8 @@ Click the **`🤝 Udhaar & Loans`** tab to access the dedicated personal loan an
     - **`- ₹10,000.00` (You Owe)** in **Red**
     - **`₹ 0.00` (Settled)** in **Gray**
 - **Quick Actions**:
-  - Click **`- Give Udhar`** to quickly record money lent to someone.
-  - Click **`+ Take Udhar / Receive Return`** to record money received back or borrowed.
+  - Click **`- Give Loan`** to quickly record money lent to someone.
+  - Click **`+ Borrow / Receive Return`** to record money received back or borrowed.
 
 ---
 
@@ -267,7 +266,7 @@ Nav Finance allows bulk operations via standard CSV files for initial data migra
    CREATE,,INCOME,2026-10-01,false,95000.00,Net Banking,Salary,Tech Corp India,,Monthly salary credit
    CREATE,,EXPENSE,2026-10-04,false,1199.00,Paytm,Bill,Airtel Bill,,Home fiber bill
    CREATE,,EXPENSE,2026-10-05,false,28500.00,Net Banking,EMI Payment,Home Loan EMI,,Auto-debit for Home loan
-   CREATE,,EXPENSE,2026-10-15,false,5000.00,UPI,Udhar Given,Rahul Sharma,Rahul Sharma,Urgent loan to friend
+   CREATE,,EXPENSE,2026-10-15,false,5000.00,UPI,Loan Given,Rahul Sharma,Rahul Sharma,Urgent loan to friend
    UPDATE,1,INCOME,2026-10-01,false,98500.00,Net Banking,Salary,Tech Corp India,,Salary with festival bonus
    DELETE,999,,,,,,,,,,Deleting unwanted entry
    ```
@@ -281,7 +280,7 @@ Nav Finance allows bulk operations via standard CSV files for initial data migra
   - **`Expected`**: `true` or `false` (default: false).
   - **`Amount`**: Number without currency symbols (e.g. `15000.00`). Commas are automatically stripped.
   - **`Via`**: Payment mode (`Cash`, `Paytm`, `PhonePe`, `UPI`, `Net Banking`, etc.). Novel modes are automatically added to the master list.
-  - **`Category`**: Primary category (e.g., `Salary`, `Bill`, `EMI Payment`, `Udhar Given`).
+  - **`Category`**: Primary category (e.g., `Salary`, `Bill`, `EMI Payment`, `Loan Given`).
   - **`SubCategory`**: Sub-category (e.g., *Airtel Bill*, *Home Loan EMI*, *Rahul Sharma*).
   - **`Person`**: Person's name (auto-links to your registered Persons list).
   - **`Notes`**: Optional remarks.

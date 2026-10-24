@@ -158,8 +158,8 @@ public class CsvImportService {
             writer.println("CREATE,,EXPENSE,2026-10-04,false,1199.00,Paytm,Bill,Airtel Bill,,Home fiber bill");
             // Sample 3: Create new EMI Expense
             writer.println("CREATE,,EXPENSE,2026-10-05,false,28500.00,Net Banking,EMI Payment,Home Loan EMI,,Auto-debit for Home loan");
-            // Sample 4: Create new Udhar Given
-            writer.println("CREATE,,EXPENSE,2026-10-15,false,5000.00,UPI,Udhar Given,Rahul Sharma,Rahul Sharma,Urgent loan to friend");
+            // Sample 4: Create new Loan Given
+            writer.println("CREATE,,EXPENSE,2026-10-15,false,5000.00,UPI,Loan Given,Rahul Sharma,Rahul Sharma,Urgent loan to friend");
             // Sample 5: Update existing entry (replace 1 with your actual ID)
             writer.println("UPDATE,1,INCOME,2026-10-01,false,98500.00,Net Banking,Salary,Tech Corp India,,Salary with festival bonus");
             // Sample 6: Delete entry by ID (replace 999 with target ID)

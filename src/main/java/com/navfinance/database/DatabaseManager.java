@@ -307,7 +307,7 @@ public class DatabaseManager {
                 stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, notes) " +
                         "VALUES ('INCOME', '%s', FALSE, 12000.00, 'Net Banking', 'Return', 'Mutual Fund Dividend', 'Investment return')", now.minusDays(15)));
                 stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, person_id, notes) " +
-                        "VALUES ('INCOME', '%s', FALSE, 25000.00, 'PhonePe', 'Udhaar', 'Suresh Kumar', 3, 'Udhar taken for temporary medical need')", now.minusDays(20)));
+                        "VALUES ('INCOME', '%s', FALSE, 25000.00, 'PhonePe', 'Loan', 'Suresh Kumar', 3, 'Personal loan borrowed for temporary medical need')", now.minusDays(20)));
 
                 // Expense entries
                 stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, emi_id, notes) " +
@@ -325,7 +325,7 @@ public class DatabaseManager {
                 stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, credit_card_id, notes) " +
                         "VALUES ('EXPENSE', '%s', FALSE, 18450.00, 'Credit Card', 'Credit Card', 'HDFC Millennia', 1, 'Monthly Credit Card statement settlement')", now.minusDays(12)));
                 stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, person_id, notes) " +
-                        "VALUES ('EXPENSE', '%s', FALSE, 20000.00, 'UPI', 'Udhar Given', 'Amit Verma', 2, 'Friend urgent personal expense assistance')", now.minusDays(18)));
+                        "VALUES ('EXPENSE', '%s', FALSE, 20000.00, 'UPI', 'Loan Given', 'Amit Verma', 2, 'Personal loan lent to friend for urgent assistance')", now.minusDays(18)));
                 stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, notes) " +
                         "VALUES ('EXPENSE', '%s', FALSE, 8500.00, 'Cash', 'Special Expense', 'Family Dinner & Outing', 'Weekend celebration')", now.minusDays(6)));
 

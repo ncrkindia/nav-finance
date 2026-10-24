@@ -212,13 +212,13 @@ public final class NavIcons {
     }
 
     /**
-     * Creates an Udhaar &amp; Personal Loans handshake icon.
+     * Creates a Loans &amp; Dues exchange vector icon.
      *
      * @param size dimension in pixels
      * @param color stroke color
      * @return vector {@link Icon}
      */
-    public static Icon udhar(int size, Color color) {
+    public static Icon loan(int size, Color color) {
         return new VectorIcon(size, g2 -> {
             g2.setColor(color);
             float s = size;
@@ -238,6 +238,8 @@ public final class NavIcons {
             g2.draw(p2);
         });
     }
+
+
 
     /**
      * Creates a Catalog / Masters folder layer icon.

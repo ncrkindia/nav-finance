@@ -18,7 +18,7 @@ import java.util.List;
  * and KPI metrics across configurable time horizons (Weekly, Monthly, Quarterly, Annually).
  * <p>
  * Aggregates net cash balances, category distribution maps for pie/donut charts,
- * historical income/expense bar comparisons, and Udhar debt positions.
+ * historical income/expense bar comparisons, and loan debt positions.
  * </p>
  */
 public class AnalyticsService {
@@ -148,12 +148,13 @@ public class AnalyticsService {
         // Trend
         summary.setTrendPoints(trendPoints);
 
-        // Udhar
-        double udharGiven = transactionDao.getTotalUdharGiven();
-        double udharTaken = transactionDao.getTotalUdharTaken();
-        summary.setTotalUdharGiven(udharGiven);
-        summary.setTotalUdharTaken(udharTaken);
-        summary.setNetUdharBalance(udharGiven - udharTaken);
+        // Loans & Dues
+        double totalLent = transactionDao.getTotalLentAmount();
+        double totalBorrowed = transactionDao.getTotalBorrowedAmount();
+        summary.setTotalLent(totalLent);
+        summary.setTotalBorrowed(totalBorrowed);
+        summary.setNetLoanBalance(totalLent - totalBorrowed);
+
 
         // Recent 10 transactions
         FilterCriteria recentCriteria = new FilterCriteria();

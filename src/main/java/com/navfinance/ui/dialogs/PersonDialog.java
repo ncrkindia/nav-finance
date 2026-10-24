@@ -27,7 +27,7 @@ import java.awt.Insets;
  * Modal dialog for registering and managing Person contact directory profiles.
  * <p>
  * Captures full names, phone numbers or contacts, interpersonal relationships (Friend,
- * Relative, Colleague, Landlord, etc.), and custom notes for Udhar / Loan tracking.
+ * Relative, Colleague, Landlord, etc.), and custom notes for loan and dues tracking.
  * </p>
  */
 public class PersonDialog extends JDialog {

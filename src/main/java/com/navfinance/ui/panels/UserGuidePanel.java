@@ -29,8 +29,8 @@ import java.util.Map;
  * <ul>
  *   <li>1. Getting Started &amp; Dashboard Overview (KPI cards, bar trends, donut charts).</li>
  *   <li>2. Recording Income Entries (categories, subcategories, counterparties).</li>
- *   <li>3. Recording Expenses &amp; Bills (dynamic subcategories for Bills, Cards, EMIs, Udhar).</li>
- *   <li>4. Udhaar &amp; Personal Loans Ledger (lending, borrowing, net positions, settlements).</li>
+ *   <li>3. Recording Expenses &amp; Bills (dynamic subcategories for Bills, Cards, EMIs, Loans).</li>
+ *   <li>4. Loans &amp; Personal Dues Ledger (lending, borrowing, net positions, settlements).</li>
  *   <li>5. Catalog Masters (Persons, Bills, EMIs, Credit Cards, Payment Modes).</li>
  *   <li>6. Filtering, Searching &amp; Sorting (presets, multi-column sorting).</li>
  *   <li>7. PDF, Excel &amp; CSV Reports (OpenPDF landscape reports, Apache POI workbooks).</li>
@@ -81,7 +81,7 @@ public class UserGuidePanel extends JPanel {
                 <li><b style='color:#16a34a;'>Total Income (In):</b> Displayed in vibrant green, representing all earnings in the selected period.</li>
                 <li><b style='color:#dc2626;'>Total Expense (Out):</b> Displayed in vibrant red, representing all expenditures, bills, and loans given.</li>
                 <li><b style='color:#2563eb;'>Net Savings / Balance:</b> Automatically computed as <code>Income - Expense</code>.</li>
-                <li><b style='color:#d97706;'>Udhaar Ledger Position:</b> Net balance of all personal loans and Udhar.</li>
+                <li><b style='color:#d97706;'>Loans & Dues Ledger:</b> Net balance of all personal loans and money lent or borrowed.</li>
             </ul>
             <h3>Time Periods</h3>
             <p>Use the time selector to view your finances by <b>Weekly</b>, <b>Monthly</b>, <b>Quarterly</b>, or <b>Annually</b>. Click <b>◀ Prev</b> or <b>Next ▶</b> to jump across past and future periods.</p>
@@ -96,10 +96,10 @@ public class UserGuidePanel extends JPanel {
                 <li><b>Date / Expected Date:</b> Enter manually or click the calendar button to open the picker.</li>
                 <li><b>Expected Checkbox:</b> Check if this income is anticipated in the future rather than already in hand.</li>
                 <li><b>Amount:</b> Enter the numerical amount.</li>
-                <li><b>Category:</b> Choose from <i>Salary, Relative, Return, Loan, Udhaar, Freelance, Other Income</i>.</li>
+                <li><b>Category:</b> Choose from <i>Salary, Relative, Return, Loan, Freelance, Other Income</i>.</li>
                 <li><b>Sub-Category:</b> Specific employer, person name, or loan name.</li>
                 <li><b>Payment Via:</b> Payment mode (Net Banking, UPI, Cash, Paytm, PhonePe, etc.).</li>
-                <li><b>Associated Person:</b> Link to an individual from your Persons master for Udhaar returns.</li>
+                <li><b>Associated Person:</b> Link to an individual from your Persons master for loan returns.</li>
             </ul>
         """);
 
@@ -116,19 +116,19 @@ public class UserGuidePanel extends JPanel {
                         <li><b>Bill:</b> Sub-category dynamically suggests your bills (<i>Airtel Bill, Electricity (Khardoni), Electricity (Noida)</i>).</li>
                         <li><b>Credit Card:</b> Sub-category dynamically suggests your cards (<i>HDFC Millennia, ICICI Amazon Pay</i>).</li>
                         <li><b>EMI Payment:</b> Sub-category dynamically suggests your EMIs (<i>Home Loan EMI, Car Loan EMI</i>).</li>
-                        <li><b>Udhar Given:</b> Sub-category dynamically suggests registered persons.</li>
+                        <li><b>Loan Given:</b> Sub-category dynamically suggests registered persons.</li>
                     </ul>
                 </li>
             </ul>
         """);
 
-        topicContent.put("4. Udhaar & Personal Loans Ledger", """
-            <h2>4. Udhaar & Personal Loans Ledger</h2>
-            <p>The <b>Udhaar & Loans</b> tab tracks informal lending and borrowing with zero confusion:</p>
+        topicContent.put("4. Loans & Dues (Lending & Borrowing) Ledger", """
+            <h2>4. Loans & Dues (Lending & Borrowing) Ledger</h2>
+            <p>The <b>Loans & Dues</b> tab tracks informal lending and borrowing with zero confusion:</p>
             <ul>
-                <li><b>Total Given:</b> Money you lent out to others.</li>
+                <li><b>Total Lent:</b> Money you lent out to others.</li>
                 <li><b>Total Returned:</b> Money returned back to you.</li>
-                <li><b>Total Taken:</b> Money you borrowed from friends or relatives.</li>
+                <li><b>Total Borrowed:</b> Money you borrowed from friends or relatives.</li>
                 <li><b>Total Repaid:</b> Money you paid back.</li>
                 <li><b>Net Position:</b>
                     <ul>
@@ -138,7 +138,7 @@ public class UserGuidePanel extends JPanel {
                     </ul>
                 </li>
             </ul>
-            <p>Use <b>- Give Udhar</b> and <b>+ Take Udhar / Receive Return</b> for quick entries.</p>
+            <p>Use <b>- Give Loan</b> and <b>+ Take Loan / Receive Return</b> for quick entries.</p>
         """);
 
         topicContent.put("5. Catalog Masters (Bills, EMIs, Persons)", """
