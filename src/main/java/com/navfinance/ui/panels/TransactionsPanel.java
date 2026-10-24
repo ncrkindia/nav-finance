@@ -3,7 +3,9 @@ package com.navfinance.ui.panels;
 import com.navfinance.config.AppConfig;
 import com.navfinance.model.FilterCriteria;
 import com.navfinance.model.Person;
+import com.navfinance.model.SettlementStatus;
 import com.navfinance.model.Transaction;
+import com.navfinance.model.TransactionSettlementInfo;
 import com.navfinance.model.TransactionType;
 import com.navfinance.service.CsvImportService;
 import com.navfinance.service.ExportService;
@@ -14,6 +16,7 @@ import com.navfinance.i18n.LanguageChangeListener;
 import com.navfinance.ui.components.DatePickerField;
 import com.navfinance.ui.dialogs.CsvImportDialog;
 import com.navfinance.ui.dialogs.TransactionDialog;
+import com.navfinance.ui.dialogs.TransactionLinkDialog;
 import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
 
@@ -49,6 +52,7 @@ import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Primary transactional ledger management panel for NavFinance.
@@ -88,6 +92,9 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
 
     /** Dropdown selector for person counterparties (loan, relative, or contact entries). */
     private JComboBox<Object> cmbPersonFilter;
+
+    /** Dropdown selector for settlement status (All, Nullified Only, Partial Only, Unlinked Only). */
+    private JComboBox<String> cmbSettlementFilter;
 
     /** Text field specifying minimum transaction amount filter. */
     private JTextField txtMinAmount;
@@ -188,10 +195,14 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
 
         btnExport.addActionListener(e -> exportMenu.show(btnExport, 0, btnExport.getHeight()));
 
+        JButton btnLink = UiUtils.createSecondaryButton(I18n.get("link.action.linkCounterpart"), NavIcons.link(13, UiUtils.COLOR_PRIMARY));
+        btnLink.addActionListener(e -> onLinkSelected());
+
         btnGroup.add(btnAddIncome);
         btnGroup.add(btnAddExpense);
         btnGroup.add(btnEdit);
         btnGroup.add(btnDelete);
+        btnGroup.add(btnLink);
         btnGroup.add(btnImportCsv);
         btnGroup.add(btnExport);
 
@@ -323,6 +334,18 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         amtInputs.add(txtMaxAmount);
         filterCard.add(amtInputs, gbc);
 
+        gbc.gridx = 4; gbc.gridy = row;
+        filterCard.add(new JLabel(I18n.get("link.filter.title")), gbc);
+        gbc.gridx = 5; gbc.gridy = row;
+        cmbSettlementFilter = new JComboBox<>(new String[]{
+                I18n.get("transactions.filter.allGeneric"),
+                I18n.get("link.filter.nullifiedOnly"),
+                I18n.get("link.filter.partialOnly"),
+                I18n.get("link.filter.unlinkedOnly")
+        });
+        cmbSettlementFilter.addActionListener(e -> applyFilters());
+        filterCard.add(cmbSettlementFilter, gbc);
+
         gbc.gridx = 6; gbc.gridy = row; gbc.gridwidth = 2;
         JPanel btnFilterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         btnFilterPanel.setOpaque(false);
@@ -346,6 +369,7 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
                 I18n.get("transactions.table.date"),
                 I18n.get("transactions.table.status"),
                 I18n.get("transactions.table.amount"),
+                I18n.get("link.column.settlement"),
                 I18n.get("transactions.table.via"),
                 I18n.get("transactions.table.category"),
                 I18n.get("transactions.table.subCategory"),
@@ -402,29 +426,135 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
             }
         });
 
-        // Format Amount Column (Right aligned, colored)
+        // Format Amount Column (Right aligned, distinctly colored when nullified)
         tblTransactions.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
-                setHorizontalAlignment(RIGHT);
-                setFont(UiUtils.FONT_BOLD);
-                Object typeVal = table.getValueAt(row, 1);
-                if ("Income".equalsIgnoreCase(String.valueOf(typeVal))) {
-                    setForeground(UiUtils.COLOR_INCOME);
+                JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
+                l.setHorizontalAlignment(RIGHT);
+                l.setFont(UiUtils.FONT_BOLD);
+
+                Object settlementObj = table.getValueAt(row, 5);
+                boolean isNullified = (settlementObj instanceof TransactionSettlementInfo sInfo) && sInfo.isNullified();
+
+                if (isNullified) {
+                    // DIFFERENT DISTINCT COLOR: Mark nullified transactions in rich royal purple (#6D28D9)!
+                    l.setForeground(new Color(109, 40, 217));
+                    if (!isSelected) {
+                        l.setBackground(new Color(245, 243, 255));
+                    }
+                    l.setToolTipText(((TransactionSettlementInfo) settlementObj).getHtmlTooltip());
                 } else {
-                    setForeground(UiUtils.COLOR_EXPENSE);
+                    Object typeVal = table.getValueAt(row, 1);
+                    if ("Income".equalsIgnoreCase(String.valueOf(typeVal))) {
+                        l.setForeground(UiUtils.COLOR_INCOME);
+                    } else {
+                        l.setForeground(UiUtils.COLOR_EXPENSE);
+                    }
+                    if (!isSelected) {
+                        l.setBackground(Color.WHITE);
+                    }
+                    l.setToolTipText(null);
                 }
-                return c;
+                return l;
             }
         });
 
-        // Double click to edit selected record
+        // Format Settlement Column (Col 5)
+        tblTransactions.getColumnModel().getColumn(5).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
+                l.setHorizontalAlignment(CENTER);
+                l.setFont(UiUtils.FONT_BOLD);
+
+                if (value instanceof TransactionSettlementInfo info) {
+                    l.setToolTipText(info.getHtmlTooltip());
+                    switch (info.getStatus()) {
+                        case NULLIFIED -> {
+                            // DISTINCT COLOR: Vivid royal purple badge for nullified status
+                            l.setForeground(new Color(109, 40, 217));
+                            l.setText(I18n.get("link.status.nullified"));
+                            l.setIcon(NavIcons.checkCircle(12, new Color(109, 40, 217)));
+                            if (!isSelected) {
+                                l.setBackground(new Color(245, 243, 255));
+                            }
+                        }
+                        case PARTIAL -> {
+                            l.setForeground(UiUtils.COLOR_AMBER);
+                            l.setText(String.format("%s (%.0f%%)", I18n.get("link.status.partial"), info.getSettledPercentage()));
+                            l.setIcon(NavIcons.statusDot(8, UiUtils.COLOR_AMBER));
+                            if (!isSelected) {
+                                l.setBackground(new Color(254, 252, 232));
+                            }
+                        }
+                        case UNLINKED -> {
+                            l.setForeground(UiUtils.COLOR_TEXT_MUTED);
+                            l.setText(I18n.get("link.status.unlinked"));
+                            l.setIcon(NavIcons.unlink(11, UiUtils.COLOR_TEXT_MUTED));
+                            if (!isSelected) {
+                                l.setBackground(Color.WHITE);
+                            }
+                        }
+                        case NONE -> {
+                            l.setForeground(UiUtils.COLOR_TEXT_MUTED);
+                            l.setText("-");
+                            l.setIcon(null);
+                            if (!isSelected) {
+                                l.setBackground(Color.WHITE);
+                            }
+                        }
+                    }
+                } else {
+                    l.setText(value != null ? value.toString() : "-");
+                    l.setIcon(null);
+                    l.setToolTipText(null);
+                    if (!isSelected) {
+                        l.setBackground(Color.WHITE);
+                    }
+                }
+                return l;
+            }
+        });
+
+        // Context menu for table rows
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem miEdit = new JMenuItem(I18n.get("btn.edit"), NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
+        miEdit.addActionListener(e -> onEditSelected());
+        contextMenu.add(miEdit);
+
+        JMenuItem miLink = new JMenuItem(I18n.get("link.action.linkCounterpart"), NavIcons.link(13, UiUtils.COLOR_PRIMARY));
+        miLink.addActionListener(e -> onLinkSelected());
+        contextMenu.add(miLink);
+
+        JMenuItem miUnlink = new JMenuItem(I18n.get("link.action.removeLinks"), NavIcons.unlink(13, UiUtils.COLOR_EXPENSE));
+        miUnlink.addActionListener(e -> onUnlinkSelected());
+        contextMenu.add(miUnlink);
+
+        contextMenu.addSeparator();
+
+        JMenuItem miDelete = new JMenuItem(I18n.get("btn.delete"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        miDelete.addActionListener(e -> onDeleteSelected());
+        contextMenu.add(miDelete);
+
+        tblTransactions.setComponentPopupMenu(contextMenu);
+
+        // Double click to edit, and right-click to select row
         tblTransactions.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
                     onEditSelected();
+                }
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    int r = tblTransactions.rowAtPoint(e.getPoint());
+                    if (r >= 0 && !tblTransactions.isRowSelected(r)) {
+                        tblTransactions.setRowSelectionInterval(r, r);
+                    }
                 }
             }
         });
@@ -627,7 +757,28 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         criteria.setSortAscending(sortDir != null && sortDir.contains("Asc"));
 
         // Execute query against database
-        currentTransactions = financeService.filterTransactions(criteria);
+        List<Transaction> fetched = financeService.filterTransactions(criteria);
+
+        // Fetch batch settlement info map
+        Map<Long, TransactionSettlementInfo> settlementMap = financeService.getSettlementInfoMap(fetched);
+
+        // Filter by settlement filter dropdown if chosen
+        int settlementFilterIdx = cmbSettlementFilter != null ? cmbSettlementFilter.getSelectedIndex() : 0;
+        // 0 = All Generic, 1 = Nullified Only, 2 = Partial Only, 3 = Unlinked Only
+        if (settlementFilterIdx > 0) {
+            currentTransactions = fetched.stream().filter(tx -> {
+                TransactionSettlementInfo sInfo = settlementMap.get(tx.getId());
+                SettlementStatus status = sInfo != null ? sInfo.getStatus() : SettlementStatus.NONE;
+                return switch (settlementFilterIdx) {
+                    case 1 -> status == SettlementStatus.NULLIFIED;
+                    case 2 -> status == SettlementStatus.PARTIAL;
+                    case 3 -> status == SettlementStatus.UNLINKED;
+                    default -> true;
+                };
+            }).toList();
+        } else {
+            currentTransactions = fetched;
+        }
 
         // Update Table Rows and Aggregate Financial Totals
         tableModel.setRowCount(0);
@@ -638,12 +789,15 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
             if (tx.getType() == TransactionType.INCOME) totalIn += tx.getAmount();
             else totalOut += tx.getAmount();
 
+            TransactionSettlementInfo sInfo = settlementMap.get(tx.getId());
+
             tableModel.addRow(new Object[]{
                     tx.getId(),
                     tx.getType().getDisplayName(),
                     tx.getTxDate() != null ? tx.getTxDate().format(AppConfig.DATE_FORMATTER) : "-",
                     tx.isExpected() ? "Expected" : "Settled",
                     AppConfig.formatCurrency(tx.getAmount()),
+                    sInfo,
                     tx.getPaymentVia() != null ? tx.getPaymentVia() : "-",
                     tx.getCategory() != null ? tx.getCategory() : "-",
                     tx.getSubCategory() != null ? tx.getSubCategory() : "-",
@@ -674,9 +828,55 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         txtMaxAmount.setText("");
         cmbViaFilter.setSelectedIndex(0);
         cmbPersonFilter.setSelectedIndex(0);
+        if (cmbSettlementFilter != null) {
+            cmbSettlementFilter.setSelectedIndex(0);
+        }
         cmbSortBy.setSelectedIndex(0);
         cmbSortDir.setSelectedIndex(0);
         applyFilters();
+    }
+
+    /**
+     * Opens the linking dialog for the selected transaction.
+     */
+    private void onLinkSelected() {
+        int row = tblTransactions.getSelectedRow();
+        if (row < 0) {
+            UiUtils.showError(this, I18n.get("link.selectPrompt"));
+            return;
+        }
+
+        Long id = (Long) tblTransactions.getValueAt(row, 0);
+        Transaction tx = financeService.getTransactionById(id);
+        if (tx == null) return;
+
+        JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
+        TransactionLinkDialog dialog = new TransactionLinkDialog(frame, tx);
+        dialog.setVisible(true);
+        if (dialog.isSaved()) {
+            applyFilters();
+        }
+    }
+
+    /**
+     * Removes all links associated with the selected transaction after confirmation.
+     */
+    private void onUnlinkSelected() {
+        int row = tblTransactions.getSelectedRow();
+        if (row < 0) {
+            UiUtils.showError(this, I18n.get("link.selectPrompt"));
+            return;
+        }
+
+        Long id = (Long) tblTransactions.getValueAt(row, 0);
+        if (UiUtils.confirm(this, I18n.get("link.unlinkConfirm"))) {
+            int count = financeService.deleteLinksForTransaction(id);
+            if (count >= 0) {
+                applyFilters();
+            } else {
+                UiUtils.showError(this, "Failed to unlink transactions.");
+            }
+        }
     }
 
     /**

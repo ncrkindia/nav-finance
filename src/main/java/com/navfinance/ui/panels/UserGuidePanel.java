@@ -139,6 +139,7 @@ public class UserGuidePanel extends JPanel {
                 </li>
             </ul>
             <p>Use <b>- Give Loan</b> and <b>+ Take Loan / Receive Return</b> for quick entries.</p>
+            <p><b>Settlement Linking:</b> When you record a loan return or loan given, you can link it directly with counterpart transactions to mark them as partially or 100% fully settled (Nullified).</p>
         """);
 
         topicContent.put("5. Catalog Masters (Bills, EMIs, Persons)", """
@@ -153,12 +154,16 @@ public class UserGuidePanel extends JPanel {
             </ul>
         """);
 
-        topicContent.put("6. Filtering, Searching & Sorting", """
-            <h2>6. Filtering, Searching & Sorting Transactions</h2>
+        topicContent.put("6. Filtering, Searching, Sorting & Settlement Linking", """
+            <h2>6. Filtering, Searching, Sorting & Settlement Linking</h2>
             <p>In the <b>Transactions</b> tab:</p>
             <ul>
                 <li><b>Search Box:</b> Searches notes, categories, sub-categories, and person names simultaneously.</li>
                 <li><b>Type Filter:</b> Filter by All, Income (In), or Expense (Out).</li>
+                <li><b>Settlement Filter:</b> Filter by <i>All, Nullified Only, Partial Only, or Unlinked Only</i>.</li>
+                <li><b>Bidirectional Linking:</b> Right-click any row and choose <b>Link Given / Received Transactions...</b> to allocate counterpart settlements.</li>
+                <li><b>Nullified Status &amp; Distinct Color:</b> Fully settled transactions (100% paid/received) are highlighted in <span style='color:#6d28d9; font-weight:bold;'>Royal Purple (✓ Nullified)</span> to immediately distinguish them from active incomes and expenses. Partial settlements show in <span style='color:#d97706; font-weight:bold;'>Amber (Partial %)</span>.</li>
+                <li><b>Rich Hover Tooltip:</b> Hover over the settlement badge to view the full list of linked counterpart transactions, dates, and amounts.</li>
                 <li><b>Date Presets:</b> Quick presets for <i>Today, This Week, This Month, This Quarter, This Year, All Time</i>, or custom <b>From / To</b> date pickers.</li>
                 <li><b>Sorting:</b> Sort by <i>Date, Amount, Type (In/Out), Category, or Sub-Category</i> in Ascending or Descending order.</li>
                 <li><b>Summary Bar:</b> Bottom bar shows real-time count, Total In, Total Out, and Net Balance for the filtered results.</li>

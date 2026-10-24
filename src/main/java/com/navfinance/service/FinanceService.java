@@ -8,6 +8,7 @@ import com.navfinance.dao.EmiDao;
 import com.navfinance.dao.PaymentModeDao;
 import com.navfinance.dao.PersonDao;
 import com.navfinance.dao.TransactionDao;
+import com.navfinance.dao.TransactionLinkDao;
 import com.navfinance.model.AuditLog;
 import com.navfinance.model.Bill;
 import com.navfinance.model.CreditCard;
@@ -15,6 +16,8 @@ import com.navfinance.model.Emi;
 import com.navfinance.model.FilterCriteria;
 import com.navfinance.model.Person;
 import com.navfinance.model.Transaction;
+import com.navfinance.model.TransactionLink;
+import com.navfinance.model.TransactionSettlementInfo;
 import com.navfinance.model.TransactionType;
 
 import java.util.ArrayList;
@@ -34,6 +37,7 @@ public class FinanceService {
     private static FinanceService instance;
 
     private final TransactionDao transactionDao = new TransactionDao();
+    private final TransactionLinkDao transactionLinkDao = new TransactionLinkDao();
     private final PersonDao personDao = new PersonDao();
     private final BillDao billDao = new BillDao();
     private final EmiDao emiDao = new EmiDao();
@@ -506,5 +510,206 @@ public class FinanceService {
         return new ArrayList<>(map.values());
     }
 
+    // ==============================================================================
+    // TRANSACTION LINKING & SETTLEMENT METHODS
+    // ==============================================================================
 
+    /**
+     * Determines whether a transaction is considered a "Give" candidate (e.g. Loan Given, Lent, or Expense to a Person).
+     *
+     * @param tx Target transaction
+     * @return {@code true} if this transaction qualifies as a Give transaction
+     */
+    public boolean isGiveTransaction(Transaction tx) {
+        if (tx == null || tx.getType() != TransactionType.EXPENSE) return false;
+        String cat = tx.getCategory() != null ? tx.getCategory().toLowerCase() : "";
+        return cat.contains("loan given") || cat.contains("lent") || tx.getPersonId() != null;
+    }
+
+    /**
+     * Determines whether a transaction is considered a "Return Received" candidate (e.g. Return, Returned, or Income from a Person).
+     *
+     * @param tx Target transaction
+     * @return {@code true} if this transaction qualifies as a Return transaction
+     */
+    public boolean isReturnTransaction(Transaction tx) {
+        if (tx == null || tx.getType() != TransactionType.INCOME) return false;
+        String cat = tx.getCategory() != null ? tx.getCategory().toLowerCase() : "";
+        return cat.contains("return") || cat.contains("returned") || tx.getPersonId() != null;
+    }
+
+    /**
+     * Retrieves all links where the transaction participates either as Give or Return.
+     *
+     * @param txId Transaction primary key ID
+     * @return List of {@link TransactionLink} entities
+     */
+    public List<TransactionLink> getTransactionLinks(Long txId) {
+        if (txId == null) return new ArrayList<>();
+        return transactionLinkDao.findByTransactionId(txId);
+    }
+
+    /**
+     * Links a Give transaction with a Return transaction for a specific settled amount.
+     *
+     * @param giveTxId   Give transaction ID (Expense)
+     * @param returnTxId Return transaction ID (Income)
+     * @param amount     Allocated settlement amount
+     * @param notes      Optional link remarks
+     * @return Created link entity
+     */
+    public TransactionLink linkTransactions(Long giveTxId, Long returnTxId, double amount, String notes) {
+        TransactionLink link = new TransactionLink(giveTxId, returnTxId, amount, notes);
+        TransactionLink saved = transactionLinkDao.insert(link);
+        if (saved != null) {
+            auditDao.log("TRANSACTION_LINK", saved.getId(), "CREATE",
+                    String.format("Linked Give #%d with Return #%d for amount %s",
+                            giveTxId, returnTxId, AppConfig.formatCurrency(amount)));
+        }
+        return saved;
+    }
+
+    /**
+     * Deletes an existing settlement link.
+     *
+     * @param linkId Primary key of the link
+     * @return {@code true} if deleted successfully
+     */
+    public boolean removeTransactionLink(Long linkId) {
+        boolean ok = transactionLinkDao.delete(linkId);
+        if (ok) {
+            auditDao.log("TRANSACTION_LINK", linkId, "DELETE", "Removed link #" + linkId);
+        }
+        return ok;
+    }
+
+    /**
+     * Removes all links associated with a transaction.
+     *
+     * @param txId Transaction ID
+     * @return Number of links deleted
+     */
+    public int deleteLinksForTransaction(Long txId) {
+        int count = transactionLinkDao.deleteByTransactionId(txId);
+        if (count > 0) {
+            auditDao.log("TRANSACTION_LINK", txId, "DELETE", "Removed all links (" + count + ") for tx #" + txId);
+        }
+        return count;
+    }
+
+    /**
+     * Retrieves eligible open Give transactions (Expense / Lent) for a specific person.
+     *
+     * @param personId    Optional person filter
+     * @param excludeTxId Transaction to exclude (e.g. currently editing tx)
+     * @return List of candidates
+     */
+    public List<TransactionLinkDao.EligibleCandidate> getEligibleGiveTransactions(Long personId, Long excludeTxId) {
+        return transactionLinkDao.getEligibleGiveTransactions(personId, excludeTxId);
+    }
+
+    /**
+     * Retrieves eligible open Return transactions (Income / Repayment) for a specific person.
+     *
+     * @param personId    Optional person filter
+     * @param excludeTxId Transaction to exclude (e.g. currently editing tx)
+     * @return List of candidates
+     */
+    public List<TransactionLinkDao.EligibleCandidate> getEligibleReturnTransactions(Long personId, Long excludeTxId) {
+        return transactionLinkDao.getEligibleReturnTransactions(personId, excludeTxId);
+    }
+
+    /**
+     * Computes the settlement info for a single transaction.
+     *
+     * @param tx Target transaction
+     * @return {@link TransactionSettlementInfo}
+     */
+    public TransactionSettlementInfo getSettlementInfo(Transaction tx) {
+        if (tx == null) return null;
+        TransactionSettlementInfo info = new TransactionSettlementInfo(tx.getId(), tx.getAmount());
+        info.setCandidate(isGiveTransaction(tx) || isReturnTransaction(tx));
+
+        if (tx.getId() != null) {
+            List<TransactionLink> links = transactionLinkDao.findByTransactionId(tx.getId());
+            for (TransactionLink link : links) {
+                info.addLink(link);
+            }
+        }
+        info.recalculateStatus();
+        return info;
+    }
+
+    /**
+     * Computes settlement info for a batch of transactions in an efficient single query,
+     * avoiding N+1 round trips to the database.
+     *
+     * @param transactions List of transactions
+     * @return Map of transaction ID to {@link TransactionSettlementInfo}
+     */
+    public Map<Long, TransactionSettlementInfo> getSettlementInfoMap(List<Transaction> transactions) {
+        Map<Long, TransactionSettlementInfo> result = new HashMap<>();
+        if (transactions == null || transactions.isEmpty()) return result;
+
+        for (Transaction tx : transactions) {
+            if (tx.getId() != null) {
+                TransactionSettlementInfo info = new TransactionSettlementInfo(tx.getId(), tx.getAmount());
+                info.setCandidate(isGiveTransaction(tx) || isReturnTransaction(tx));
+                result.put(tx.getId(), info);
+            }
+        }
+
+        List<TransactionLink> allLinks = transactionLinkDao.findAllLinks();
+        for (TransactionLink link : allLinks) {
+            TransactionSettlementInfo giveInfo = result.get(link.getGiveTxId());
+            if (giveInfo != null) {
+                giveInfo.addLink(link);
+            }
+
+            TransactionSettlementInfo returnInfo = result.get(link.getReturnTxId());
+            if (returnInfo != null) {
+                returnInfo.addLink(link);
+            }
+        }
+
+        for (TransactionSettlementInfo info : result.values()) {
+            info.recalculateStatus();
+        }
+
+        return result;
+    }
+
+    /**
+     * Persists or updates a transaction along with its associated counterpart links.
+     *
+     * @param tx    Transaction to save
+     * @param links Selected settlement links
+     * @param oldTx Old transaction state if editing, or {@code null} if new
+     * @return Persisted transaction
+     */
+    public Transaction saveTransactionWithLinks(Transaction tx, List<TransactionLink> links, Transaction oldTx) {
+        Transaction saved;
+        if (oldTx == null || tx.getId() == null) {
+            saved = createTransaction(tx);
+        } else {
+            updateTransaction(tx, oldTx);
+            saved = tx;
+            transactionLinkDao.deleteByTransactionId(saved.getId());
+        }
+
+        if (saved != null && links != null) {
+            for (TransactionLink link : links) {
+                if (saved.getType() == TransactionType.EXPENSE) {
+                    link.setGiveTxId(saved.getId());
+                } else {
+                    link.setReturnTxId(saved.getId());
+                }
+                if (link.getGiveTxId() != null && link.getReturnTxId() != null && link.getAmount() > 0.001) {
+                    transactionLinkDao.insert(link);
+                }
+            }
+        }
+
+        return saved;
+    }
 }

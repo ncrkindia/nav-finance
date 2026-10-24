@@ -7,6 +7,7 @@ import com.navfinance.model.CreditCard;
 import com.navfinance.model.Emi;
 import com.navfinance.model.Person;
 import com.navfinance.model.Transaction;
+import com.navfinance.model.TransactionLink;
 import com.navfinance.model.TransactionType;
 import com.navfinance.service.FinanceService;
 import com.navfinance.ui.components.DatePickerField;
@@ -33,6 +34,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -81,6 +83,13 @@ public class TransactionDialog extends JDialog {
 
     /** Dropdown for attributing loan transactions to a specific contact. */
     private JComboBox<Person> cmbPerson;
+
+    /** Panel and components for linking Give/Return counterpart transactions. */
+    private JPanel pnlLinking;
+    private JLabel lblLinkingTitle;
+    private JLabel lblLinkingSummary;
+    private JButton btnManageLinks;
+    private List<TransactionLink> pendingLinks = new ArrayList<>();
 
     /** Text area for transaction memo or notes. */
     private JTextArea txtNotes;
@@ -226,7 +235,27 @@ public class TransactionDialog extends JDialog {
         populatePersons();
         mainPanel.add(cmbPerson, gbc);
 
-        // 8. Notes
+        // 8. Linking Section (Give <-> Return received counterpart linking)
+        lblLinkingTitle = new JLabel("Linked Settlement:");
+        lblLinkingTitle.setFont(UiUtils.regularFont());
+        gbc.gridx = 0; gbc.gridy = row;
+        mainPanel.add(lblLinkingTitle, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        pnlLinking = new JPanel(new BorderLayout(8, 0));
+        pnlLinking.setOpaque(false);
+        lblLinkingSummary = new JLabel("Unlinked (0 counterparts linked)");
+        lblLinkingSummary.setFont(UiUtils.regularFont());
+        lblLinkingSummary.setForeground(UiUtils.COLOR_TEXT_MUTED);
+
+        btnManageLinks = UiUtils.createSecondaryButton("Link Counterparts...", NavIcons.link(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnManageLinks.addActionListener(e -> onOpenLinkingDialog());
+
+        pnlLinking.add(lblLinkingSummary, BorderLayout.CENTER);
+        pnlLinking.add(btnManageLinks, BorderLayout.EAST);
+        mainPanel.add(pnlLinking, gbc);
+
+        // 9. Notes
         gbc.gridx = 0; gbc.gridy = row;
         JLabel lblNotes = new JLabel(I18n.get("transactions.table.notes") + ":");
         lblNotes.setFont(UiUtils.regularFont());
@@ -241,7 +270,7 @@ public class TransactionDialog extends JDialog {
 
         add(mainPanel, BorderLayout.CENTER);
 
-        // 9. Bottom Action Buttons
+        // 10. Bottom Action Buttons
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
         btnPanel.setBackground(new Color(248, 250, 252));
         btnPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UiUtils.COLOR_BORDER));
@@ -258,11 +287,20 @@ public class TransactionDialog extends JDialog {
         btnPanel.add(btnSave);
         add(btnPanel, BorderLayout.SOUTH);
 
-
         // Event listeners
-        rbIncome.addActionListener(e -> onTypeChanged(TransactionType.INCOME));
-        rbExpense.addActionListener(e -> onTypeChanged(TransactionType.EXPENSE));
-        cmbCategory.addActionListener(e -> onCategoryChanged());
+        rbIncome.addActionListener(e -> {
+            onTypeChanged(TransactionType.INCOME);
+            updateLinkingVisibility();
+        });
+        rbExpense.addActionListener(e -> {
+            onTypeChanged(TransactionType.EXPENSE);
+            updateLinkingVisibility();
+        });
+        cmbCategory.addActionListener(e -> {
+            onCategoryChanged();
+            updateLinkingVisibility();
+        });
+        cmbPerson.addActionListener(e -> updateLinkingVisibility());
 
         // Prepopulate if editing
         if (existingTransaction != null) {
@@ -302,6 +340,11 @@ public class TransactionDialog extends JDialog {
                 onTypeChanged(TransactionType.EXPENSE);
             }
         }
+
+        if (existingTransaction != null && existingTransaction.getId() != null) {
+            pendingLinks = financeService.getTransactionLinks(existingTransaction.getId());
+        }
+        updateLinkingVisibility();
     }
 
     /**
@@ -534,14 +577,102 @@ public class TransactionDialog extends JDialog {
         tx.setCreditCardId(creditCardId);
         tx.setNotes(txtNotes.getText().trim());
 
-        if (existingTransaction == null) {
-            financeService.createTransaction(tx);
-        } else {
-            financeService.updateTransaction(tx, existingTransaction);
-        }
+        financeService.saveTransactionWithLinks(tx, pendingLinks, existingTransaction);
 
         saved = true;
         dispose();
+    }
+
+    /**
+     * Determines whether linking is relevant and updates visibility of the linking section.
+     */
+    private void updateLinkingVisibility() {
+        String cat = cmbCategory.getSelectedItem() != null ? cmbCategory.getSelectedItem().toString().trim() : "";
+        boolean isIncome = rbIncome.isSelected();
+        boolean isExpense = rbExpense.isSelected();
+
+        boolean isReturn = isIncome && ("Return".equalsIgnoreCase(cat) || cmbPerson.getSelectedIndex() > 0);
+        boolean isGive = isExpense && ("Loan Given".equalsIgnoreCase(cat) || cmbPerson.getSelectedIndex() > 0);
+
+        boolean eligible = isReturn || isGive;
+        lblLinkingTitle.setVisible(eligible);
+        pnlLinking.setVisible(eligible);
+
+        if (eligible) {
+            lblLinkingTitle.setText(isReturn ? "Link Give Tx(s):" : "Link Return Tx(s):");
+            updateLinkingSummary();
+        }
+    }
+
+    /**
+     * Refreshes the label displaying linked amount, transaction count, and settlement status.
+     */
+    private void updateLinkingSummary() {
+        if (pendingLinks == null || pendingLinks.isEmpty()) {
+            lblLinkingSummary.setText("Unlinked (0 counterparts linked)");
+            lblLinkingSummary.setForeground(UiUtils.COLOR_TEXT_MUTED);
+            lblLinkingSummary.setIcon(null);
+            return;
+        }
+
+        double totalLinked = 0.0;
+        for (TransactionLink l : pendingLinks) {
+            totalLinked += l.getAmount();
+        }
+
+        double targetAmount = 0.0;
+        try {
+            targetAmount = Double.parseDouble(txtAmount.getText().trim());
+        } catch (Exception ignored) {}
+
+        if (targetAmount > 0 && totalLinked >= targetAmount - 0.01) {
+            lblLinkingSummary.setText(String.format("✓ Nullified (%s across %d tx)",
+                    AppConfig.formatCurrency(totalLinked), pendingLinks.size()));
+            lblLinkingSummary.setForeground(UiUtils.COLOR_INCOME);
+            lblLinkingSummary.setIcon(NavIcons.checkCircle(13, UiUtils.COLOR_INCOME));
+        } else {
+            lblLinkingSummary.setText(String.format("⏳ Partial (%s across %d tx)",
+                    AppConfig.formatCurrency(totalLinked), pendingLinks.size()));
+            lblLinkingSummary.setForeground(UiUtils.COLOR_AMBER);
+            lblLinkingSummary.setIcon(NavIcons.statusDot(8, UiUtils.COLOR_AMBER));
+        }
+    }
+
+    /**
+     * Opens the modal counterpart linking dialog to pick transactions and assign allocated amounts.
+     */
+    private void onOpenLinkingDialog() {
+        String strAmount = txtAmount.getText().trim();
+        double amount;
+        try {
+            amount = Double.parseDouble(strAmount);
+            if (amount <= 0) throw new NumberFormatException();
+        } catch (Exception ex) {
+            UiUtils.showError(this, "Please enter a valid amount before configuring counterpart links.");
+            txtAmount.requestFocus();
+            return;
+        }
+
+        Transaction sample = new Transaction();
+        sample.setId(existingTransaction != null ? existingTransaction.getId() : null);
+        sample.setType(rbIncome.isSelected() ? TransactionType.INCOME : TransactionType.EXPENSE);
+        sample.setAmount(amount);
+        sample.setCategory(cmbCategory.getSelectedItem() != null ? cmbCategory.getSelectedItem().toString() : "");
+        sample.setSubCategory(cmbSubCategory.getSelectedItem() != null ? cmbSubCategory.getSelectedItem().toString() : "");
+        sample.setTxDate(txtDate.getDate());
+
+        Person p = (Person) cmbPerson.getSelectedItem();
+        if (p != null) {
+            sample.setPersonId(p.getId());
+            sample.setPersonName(p.getName());
+        }
+
+        TransactionLinkDialog dlg = new TransactionLinkDialog(this, sample, pendingLinks);
+        dlg.setVisible(true);
+        if (dlg.isSaved()) {
+            this.pendingLinks = dlg.getResultLinks();
+            updateLinkingSummary();
+        }
     }
 
     /**

@@ -455,6 +455,29 @@ public final class NavIcons {
     }
 
     /**
+     * Creates a checkmark enclosed within a circle.
+     *
+     * @param size dimension in pixels
+     * @param color stroke and fill color
+     * @return vector {@link Icon}
+     */
+    public static Icon checkCircle(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            g2.setStroke(new BasicStroke(Math.max(1.4f, s * 0.1f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            // Circle
+            g2.draw(new Ellipse2D.Float(s * 0.08f, s * 0.08f, s * 0.84f, s * 0.84f));
+            // Checkmark
+            GeneralPath p = new GeneralPath();
+            p.moveTo(s * 0.28f, s * 0.50f);
+            p.lineTo(s * 0.44f, s * 0.68f);
+            p.lineTo(s * 0.72f, s * 0.34f);
+            g2.draw(p);
+        });
+    }
+
+    /**
      * Creates a cross icon for Delete / Cancel / Close actions.
      *
      * @param size dimension in pixels
@@ -1021,6 +1044,46 @@ public final class NavIcons {
             g2.draw(new Line2D.Float(s * 0.10f, s * 0.50f, s * 0.90f, s * 0.50f));
             // Vertical meridian ellipse
             g2.draw(new Ellipse2D.Float(s * 0.30f, s * 0.10f, s * 0.40f, s * 0.80f));
+        });
+    }
+
+    /**
+     * Creates a chain link icon for transaction links and settlements.
+     *
+     * @param size dimension in pixels
+     * @param color stroke color
+     * @return vector {@link Icon}
+     */
+    public static Icon link(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            g2.setStroke(new BasicStroke(Math.max(1.5f, s * 0.12f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            // First loop (top-left)
+            g2.draw(new RoundRectangle2D.Float(s * 0.15f, s * 0.15f, s * 0.45f, s * 0.30f, s * 0.15f, s * 0.15f));
+            // Second loop (bottom-right)
+            g2.draw(new RoundRectangle2D.Float(s * 0.40f, s * 0.55f, s * 0.45f, s * 0.30f, s * 0.15f, s * 0.15f));
+            // Connecting line
+            g2.draw(new Line2D.Float(s * 0.38f, s * 0.38f, s * 0.62f, s * 0.62f));
+        });
+    }
+
+    /**
+     * Creates an unlink / broken link icon.
+     *
+     * @param size dimension in pixels
+     * @param color stroke color
+     * @return vector {@link Icon}
+     */
+    public static Icon unlink(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            g2.setStroke(new BasicStroke(Math.max(1.5f, s * 0.12f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.draw(new RoundRectangle2D.Float(s * 0.15f, s * 0.15f, s * 0.35f, s * 0.25f, s * 0.12f, s * 0.12f));
+            g2.draw(new RoundRectangle2D.Float(s * 0.50f, s * 0.60f, s * 0.35f, s * 0.25f, s * 0.12f, s * 0.12f));
+            // Slash line indicating unlinked
+            g2.draw(new Line2D.Float(s * 0.25f, s * 0.75f, s * 0.75f, s * 0.25f));
         });
     }
 }

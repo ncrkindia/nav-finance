@@ -216,6 +216,21 @@ public class DatabaseManager {
                 );
             """);
 
+            // Transaction Links Table (Linking Give and Return Transactions)
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS transaction_links (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    give_tx_id BIGINT NOT NULL,
+                    return_tx_id BIGINT NOT NULL,
+                    amount DECIMAL(15,2) NOT NULL,
+                    notes VARCHAR(500),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (give_tx_id) REFERENCES transactions(id) ON DELETE CASCADE,
+                    FOREIGN KEY (return_tx_id) REFERENCES transactions(id) ON DELETE CASCADE,
+                    CONSTRAINT uc_give_return UNIQUE (give_tx_id, return_tx_id)
+                );
+            """);
+
             // Create helpful indices
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(tx_date);");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_tx_type ON transactions(type);");
@@ -223,6 +238,8 @@ public class DatabaseManager {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_due_date ON due_payments(due_date);");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_due_status ON due_payments(status);");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_logs(log_timestamp);");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_link_give ON transaction_links(give_tx_id);");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_link_return ON transaction_links(return_tx_id);");
 
             // Seed master data if tables are empty
             seedInitialData(conn);
@@ -325,9 +342,33 @@ public class DatabaseManager {
                 stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, credit_card_id, notes) " +
                         "VALUES ('EXPENSE', '%s', FALSE, 18450.00, 'Credit Card', 'Credit Card', 'HDFC Millennia', 1, 'Monthly Credit Card statement settlement')", now.minusDays(12)));
                 stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, person_id, notes) " +
+                        "VALUES ('EXPENSE', '%s', FALSE, 15000.00, 'UPI', 'Loan Given', 'Rahul Sharma', 1, 'Personal loan given to Rahul for emergency')", now.minusDays(60)));
+                stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, person_id, notes) " +
                         "VALUES ('EXPENSE', '%s', FALSE, 20000.00, 'UPI', 'Loan Given', 'Amit Verma', 2, 'Personal loan lent to friend for urgent assistance')", now.minusDays(18)));
+                stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, person_id, notes) " +
+                        "VALUES ('INCOME', '%s', FALSE, 10000.00, 'UPI', 'Return', 'Amit Verma', 2, 'Partial return received from Amit')", now.minusDays(5)));
                 stmt.execute(String.format("INSERT INTO transactions (type, tx_date, is_expected, amount, payment_via, category, sub_category, notes) " +
                         "VALUES ('EXPENSE', '%s', FALSE, 8500.00, 'Cash', 'Special Expense', 'Family Dinner & Outing', 'Weekend celebration')", now.minusDays(6)));
+
+                // Link Rahul's loan given with Rahul's return (Fully Nullified - 100%)
+                stmt.execute("""
+                    INSERT INTO transaction_links (give_tx_id, return_tx_id, amount, notes)
+                    SELECT g.id, r.id, 15000.00, 'Full repayment of loan'
+                    FROM transactions g, transactions r
+                    WHERE g.category = 'Loan Given' AND g.person_id = 1
+                      AND r.category = 'Return' AND r.person_id = 1
+                    LIMIT 1
+                """);
+
+                // Link Amit's loan given with Amit's partial return (Partially Settled - 50%)
+                stmt.execute("""
+                    INSERT INTO transaction_links (give_tx_id, return_tx_id, amount, notes)
+                    SELECT g.id, r.id, 10000.00, 'First installment repayment'
+                    FROM transactions g, transactions r
+                    WHERE g.category = 'Loan Given' AND g.person_id = 2
+                      AND r.category = 'Return' AND r.person_id = 2
+                    LIMIT 1
+                """);
 
                 // Add audit entry for initial seed
                 stmt.execute("INSERT INTO audit_logs (entity_type, entity_id, action, details) " +

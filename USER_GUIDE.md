@@ -209,6 +209,22 @@ Open the **`💳 Transactions`** tab:
 - **Double-click** any transaction row to open the edit dialog.
 - Alternatively, select a row and click **`✎ Edit`** or **`🗑 Delete`**.
 
+### Bidirectional Transaction Linking & Nullified Status (Give & Return Received)
+Nav Finance provides an intelligent settlement linking mechanism between money given out (loans/lending) and repayments received:
+1. **Bidirectional Linking Options**:
+   - **For Return Received transactions**: Link against one or more previously **Given Transactions** (Expenses).
+   - **For Given transactions**: Link against one or more **Return Received Transactions** (Incomes).
+   - Linking can be performed directly when creating or editing a transaction (via the **Link Counterparts...** button), or from the Transactions table by right-clicking any transaction row and choosing **Link Given / Received Transactions...**.
+2. **Interactive Settlement Allocation**:
+   - The linking dialog automatically lists counterpart candidates filtered by the associated contact person.
+   - Shows total amount, already settled amount, and available remaining amount for each counterpart.
+   - Click **`⚡ Auto-Allocate`** to automatically distribute the settlement across counterpart transactions up to the principal amount, or manually type exact amounts per line.
+3. **Visual Distinction & Color Coding for Nullified Transactions**:
+   - **✓ Nullified (Fully Paid / Received)**: Marked in distinctive **Royal Purple (`#6D28D9`)** on both the Amount and Settlement columns, with a soft lilac background tint and checkmark icon (`✓ Nullified`). This contrasts immediately with active green (Income) and red (Expense).
+   - **⏳ Partial Settlement**: Displayed in **Amber (`#D97706`)** showing the exact settlement percentage (e.g., `Partial (50%)`).
+   - **Rich Hover Tooltips**: Hover over any settlement badge or amount to view full details of all linked transactions (counterpart IDs, dates, linked amounts, and remaining balances).
+   - **Settlement Filter Dropdown**: Use the top filter bar's **Settlement Filter** to instantly filter by *All*, *Nullified Only*, *Partial Only*, or *Unlinked Only*.
+
 ---
 
 ## 8. Exporting Reports
