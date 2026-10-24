@@ -7,7 +7,6 @@ import javax.swing.JPanel;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -75,7 +74,7 @@ public class TrendChartPanel extends JPanel {
         g2.drawRoundRect(0, 0, w - 1, h - 1, 12, 12);
 
         // 2. Title
-        g2.setFont(UiUtils.FONT_BOLD);
+        g2.setFont(UiUtils.boldFont());
         g2.setColor(new Color(30, 41, 59));
         g2.drawString(title, 18, 26);
 
@@ -83,7 +82,7 @@ public class TrendChartPanel extends JPanel {
         int legendX = w - 210;
         g2.setColor(UiUtils.COLOR_INCOME);
         g2.fillRect(legendX, 16, 12, 12);
-        g2.setFont(UiUtils.FONT_SUBTITLE);
+        g2.setFont(UiUtils.subtitleFont());
         g2.setColor(UiUtils.COLOR_TEXT_MUTED);
         g2.drawString("Income (In)", legendX + 18, 26);
 
@@ -92,7 +91,7 @@ public class TrendChartPanel extends JPanel {
         g2.drawString("Expense (Out)", legendX + 118, 26);
 
         if (points.isEmpty()) {
-            g2.setFont(UiUtils.FONT_REGULAR);
+            g2.setFont(UiUtils.regularFont());
             g2.setColor(UiUtils.COLOR_TEXT_MUTED);
             g2.drawString("No transaction data available for this period.", 20, h / 2);
             g2.dispose();
@@ -125,7 +124,7 @@ public class TrendChartPanel extends JPanel {
 
             double v = (maxVal * i) / gridSteps;
             String vLabel = v >= 1000 ? String.format("%.0fk", v / 1000) : String.format("%.0f", v);
-            g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            g2.setFont(UiUtils.regularFont().deriveFont(10f));
             g2.setColor(new Color(148, 163, 184));
             g2.drawString(vLabel, 8, y + 4);
         }
@@ -161,7 +160,7 @@ public class TrendChartPanel extends JPanel {
             }
 
             // X-Axis centered date/label
-            g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            g2.setFont(UiUtils.regularFont().deriveFont(10f));
             g2.setColor(UiUtils.COLOR_TEXT_MUTED);
             FontMetrics fm = g2.getFontMetrics();
             int strW = fm.stringWidth(tp.getLabel());

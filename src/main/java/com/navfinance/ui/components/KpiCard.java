@@ -68,15 +68,15 @@ public class KpiCard extends JPanel {
         contentPanel.setOpaque(false);
 
         lblTitle = new JLabel(title);
-        lblTitle.setFont(UiUtils.FONT_SUBTITLE);
+        lblTitle.setFont(UiUtils.subtitleFont());
         lblTitle.setForeground(UiUtils.COLOR_TEXT_MUTED);
 
         lblValue = new JLabel(initialValue);
-        lblValue.setFont(UiUtils.FONT_KPI_VALUE);
+        lblValue.setFont(UiUtils.kpiFont());
         lblValue.setForeground(accentColor);
 
         lblSubtitle = new JLabel(subtitle != null ? subtitle : "");
-        lblSubtitle.setFont(UiUtils.FONT_SUBTITLE);
+        lblSubtitle.setFont(UiUtils.subtitleFont());
         lblSubtitle.setForeground(UiUtils.COLOR_TEXT_MUTED);
 
         contentPanel.add(lblTitle);
@@ -101,6 +101,7 @@ public class KpiCard extends JPanel {
      */
     public void setValue(String value) {
         lblValue.setText(value);
+        lblValue.setFont(UiUtils.kpiFont());
     }
 
     /**
@@ -110,6 +111,7 @@ public class KpiCard extends JPanel {
      */
     public void setSubtitle(String subtitle) {
         lblSubtitle.setText(subtitle != null ? subtitle : "");
+        lblSubtitle.setFont(UiUtils.subtitleFont());
     }
 
     /**
@@ -119,6 +121,16 @@ public class KpiCard extends JPanel {
      */
     public void setTitle(String title) {
         lblTitle.setText(title != null ? title : "");
+        lblTitle.setFont(UiUtils.subtitleFont());
+    }
+
+    /**
+     * Refreshes label font references to match current system language and scaling.
+     */
+    public void refreshFonts() {
+        lblTitle.setFont(UiUtils.subtitleFont());
+        lblValue.setFont(UiUtils.kpiFont());
+        lblSubtitle.setFont(UiUtils.subtitleFont());
     }
 
     /**

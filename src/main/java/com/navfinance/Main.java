@@ -6,7 +6,6 @@ import com.navfinance.ui.MainFrame;
 
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
-import java.awt.Font;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,12 +35,12 @@ public class Main {
         // Step 1: Set Look and Feel to Modern FlatLaf Light
         try {
             FlatLightLaf.setup();
-            // Refine default UI font to modern Segoe UI
-            UIManager.put("defaultFont", new Font("Segoe UI", Font.PLAIN, 12));
+            com.navfinance.i18n.I18n.applyGlobalFontDefaults();
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Failed to initialize FlatLaf look and feel, falling back to system L&F", e);
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                com.navfinance.i18n.I18n.applyGlobalFontDefaults();
             } catch (Exception ignored) {
                 // Fallback to basic Swing look and feel
             }

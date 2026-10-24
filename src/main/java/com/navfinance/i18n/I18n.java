@@ -44,10 +44,6 @@ public final class I18n {
     /** Registered observers to notify upon language switch. */
     private static final List<LanguageChangeListener> LISTENERS = Collections.synchronizedList(new ArrayList<>());
 
-    // Font families for high-clarity premium rendering
-    private static final String FONT_NAME_LATIN = "Segoe UI";
-    private static final String FONT_NAME_DEVANAGARI = "Nirmala UI";
-
     static {
         loadAllBundles();
         // Restore persisted user language preference if saved
@@ -186,13 +182,38 @@ public final class I18n {
     // Typography System (Clear & Premium Fonts supporting Devanagari & Latin)
     // =========================================================================
 
+    private static String cachedPrimaryFont = null;
+
     /**
-     * Determines the optimal font family name based on the active language script.
+     * Determines the optimal font family name.
+     * Prefers "Nirmala UI" on Windows because it natively covers BOTH Latin (English)
+     * and Devanagari (Hindi) scripts with zero missing glyph boxes / squares.
+     * Falls back to "Mangal" or logical Font.SANS_SERIF if "Nirmala UI" is unavailable.
      *
-     * @return font family name ("Nirmala UI" for Hindi, "Segoe UI" for English/Hinglish)
+     * @return resilient font family name
      */
     public static String getFontFamily() {
-        return currentLanguage == AppLanguage.HINDI ? FONT_NAME_DEVANAGARI : FONT_NAME_LATIN;
+        if (cachedPrimaryFont != null) {
+            return cachedPrimaryFont;
+        }
+        try {
+            java.awt.GraphicsEnvironment ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment();
+            String[] fonts = ge.getAvailableFontFamilyNames();
+            for (String f : fonts) {
+                if ("Nirmala UI".equalsIgnoreCase(f)) {
+                    cachedPrimaryFont = "Nirmala UI";
+                    return cachedPrimaryFont;
+                }
+            }
+            for (String f : fonts) {
+                if ("Mangal".equalsIgnoreCase(f)) {
+                    cachedPrimaryFont = "Mangal";
+                    return cachedPrimaryFont;
+                }
+            }
+        } catch (Exception ignored) {}
+        cachedPrimaryFont = Font.SANS_SERIF;
+        return cachedPrimaryFont;
     }
 
     /**
@@ -250,13 +271,16 @@ public final class I18n {
     }
 
     /**
-     * Configures Swing / FlatLaf global font mappings for standard UI widgets.
+     * Configures Swing / FlatLaf global font mappings for standard UI widgets and TitlePanes.
      */
     public static void applyGlobalFontDefaults() {
         Font defaultFont = getRegularFont();
+        Font boldFont = getBoldFont();
+        Font titleFont = getTitleFont();
+
         UIManager.put("defaultFont", defaultFont);
         UIManager.put("Label.font", defaultFont);
-        UIManager.put("Button.font", getBoldFont());
+        UIManager.put("Button.font", boldFont);
         UIManager.put("ToggleButton.font", defaultFont);
         UIManager.put("RadioButton.font", defaultFont);
         UIManager.put("CheckBox.font", defaultFont);
@@ -264,8 +288,20 @@ public final class I18n {
         UIManager.put("TextField.font", defaultFont);
         UIManager.put("TextArea.font", defaultFont);
         UIManager.put("Table.font", defaultFont);
-        UIManager.put("TableHeader.font", getBoldFont());
-        UIManager.put("TabbedPane.font", getBoldFont());
-        UIManager.put("TitledBorder.font", getBoldFont());
+        UIManager.put("TableHeader.font", boldFont);
+        UIManager.put("TabbedPane.font", boldFont);
+        UIManager.put("TitledBorder.font", boldFont);
+
+        // Windows & FlatLaf TitlePane support for clean non-square window titles
+        UIManager.put("TitlePane.font", titleFont);
+        UIManager.put("TitlePane.titleFont", titleFont);
+        UIManager.put("RootPane.titlePane.font", titleFont);
+        UIManager.put("InternalFrame.titleFont", titleFont);
+        UIManager.put("MenuItem.font", defaultFont);
+        UIManager.put("PopupMenu.font", defaultFont);
+        UIManager.put("ToolTip.font", defaultFont);
+
+        // Update centralized UiUtils static font caches
+        com.navfinance.ui.util.UiUtils.refreshFonts();
     }
 }

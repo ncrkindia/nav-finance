@@ -29,6 +29,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -431,6 +432,7 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
             mainTabs.setTitleAt(8, I18n.get("tab.settings"));
         }
 
+        SwingUtilities.updateComponentTreeUI(this);
         revalidate();
         repaint();
     }

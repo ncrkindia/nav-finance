@@ -6,7 +6,6 @@ import com.navfinance.ui.util.UiUtils;
 import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -88,13 +87,13 @@ public class CategoryPieChartPanel extends JPanel {
         g2.drawRoundRect(0, 0, w - 1, h - 1, 12, 12);
 
         // 2. Title header
-        g2.setFont(UiUtils.FONT_BOLD);
+        g2.setFont(UiUtils.boldFont());
         g2.setColor(new Color(30, 41, 59));
         g2.drawString(title, 18, 26);
 
         // Empty state check
         if (data.isEmpty()) {
-            g2.setFont(UiUtils.FONT_REGULAR);
+            g2.setFont(UiUtils.regularFont());
             g2.setColor(UiUtils.COLOR_TEXT_MUTED);
             g2.drawString("No category expenses in this period.", 20, h / 2);
             g2.dispose();
@@ -106,7 +105,7 @@ public class CategoryPieChartPanel extends JPanel {
         for (double val : data.values()) total += val;
 
         if (total <= 0) {
-            g2.setFont(UiUtils.FONT_REGULAR);
+            g2.setFont(UiUtils.regularFont());
             g2.setColor(UiUtils.COLOR_TEXT_MUTED);
             g2.drawString("No expense data recorded.", 20, h / 2);
             g2.dispose();
@@ -142,7 +141,7 @@ public class CategoryPieChartPanel extends JPanel {
         g2.fill(new Ellipse2D.Double(holeX, holeY, holeDiameter, holeDiameter));
 
         // 5. Center metric label inside donut hole
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        g2.setFont(UiUtils.boldFont().deriveFont(11f));
         g2.setColor(new Color(30, 41, 59));
         FontMetrics fm = g2.getFontMetrics();
         String totalStr = AppConfig.formatCurrencyPlain(total);
@@ -155,7 +154,7 @@ public class CategoryPieChartPanel extends JPanel {
         int legendY = 55;
         colorIdx = 0;
 
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        g2.setFont(UiUtils.regularFont().deriveFont(11f));
         for (Map.Entry<String, Double> entry : data.entrySet()) {
             if (legendY > h - 15) break; // Restrict legend within vertical boundary
 

@@ -13,6 +13,8 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
 - **Private & Local-First**: No external cloud tracking. All financial data is securely kept in an embedded H2 database located in your user profile: `~user/nav-finance/navfinance_db.mv.db`.
 - **Income & Expense Tracking**: Categorize daily transactions, recurring salaries, dividend returns, credit card payments, household utility bills, and personal EMIs.
 - **Personal Loans & Dues Ledger**: Track informal lending and borrowing between friends, relatives, and colleagues with exact contact, relation, and net settlement tracking (*Who owes whom*).
+- **Bidirectional Transaction Linking**: Link "Return Received" transactions directly to "Loan Given" transactions (and vice versa) with automatic calculation of partially settled or completely **Nullified** (fully paid) records.
+- **Multi-Language Support**: Seamless runtime switching between **English**, **Hindi (हिन्दी)**, and **Hinglish** (Roman Hindi) with clear Indian typography (`Nirmala UI`) preventing tofu/square characters (`□`).
 - **Audit Details**: Every creation, modification, and deletion records full timestamps and change logs for complete financial integrity.
 - **Executive Dashboard**: Visual trends of In vs Out (Green and Red) categorized by **Weekly**, **Monthly**, **Quarterly**, or **Annually**.
 - **Multi-Format Reports**: Export filtered records with a single click to **PDF**, **Excel (.xlsx)**, or **CSV**.
@@ -40,14 +42,36 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
     - When selecting **EMI Payment** → Pick from registered loan EMIs (e.g., *Home Loan EMI*, *Car Loan EMI*, *Laptop EMI*)
     - When selecting **Loan Given** → Pick from registered Persons (*Rahul*, *Amit*, *Suresh*, etc.)
 
-### 2. Comprehensive Masters Catalog
+### 2. Bidirectional Transaction Linking & Nullified Status
+- **Link Given & Return Transactions**:
+  - For any **Return Received** transaction (Income), easily link it to one or more prior **Loan Given** (Expense) transactions.
+  - For any **Loan Given** transaction (Expense), link it to incoming **Return Received** settlements.
+- **Visual Status Badges**:
+  - `🟢 Nullified (Fully Settled)`: Distinctive styling indicating the loan or return is 100% squared off.
+  - `🟡 Partially Settled`: Displays the exact remaining unlinked balance.
+  - `⚪ Open / Unlinked`: Indicates an unsettled loan or advance.
+- **Link Management Modal**:
+  - View all existing transaction links with breakdown of linked amounts.
+  - Add new links or unlink settlements with single-click actions and automatic ledger recalculations.
+
+### 3. Multi-Language System (English, Hindi & Hinglish)
+- **Three Supported Languages**:
+  1. **English**: Clean, standardized professional English terminology.
+  2. **Hindi (हिन्दी)**: Formal Hindi translation using native Devanagari script.
+  3. **Hinglish**: Conversational Hindi written in Latin script (e.g., *Kharcha*, *Kamai*, *Udhar Diya*, *Hisab-Kitab*).
+- **Runtime Switching**: Instant UI language update from the top bar dropdown (`🌐 English / हिन्दी / Hinglish`) without restarting the app.
+- **Typography & Tofu (`□`) Prevention**:
+  - Powered by **`Nirmala UI`** (with automatic fallback to `Mangal` or system SansSerif), ensuring 100% glyph coverage for Hindi characters, INR (`₹`), and Latin text.
+  - Automatically updates FlatLaf window title bar (`TitlePane.font`), KPI badges, charts, dialogs, and table headers.
+
+### 4. Comprehensive Masters Catalog
 - **Persons Master**: Maintains list of contacts with `Name`, `Contact`, `Relation` (Friend, Colleague, Relative, Family, Landlord), and `Notes`.
 - **Bills Master**: Pre-configured utility bills (e.g., *Airtel Bill*, *Electricity (Khardoni)*, *Electricity (Noida)*, *IGL Gas*, *Water*) with default expected amounts.
 - **EMI Master**: Pre-configured recurring loan installments (e.g., *Home Loan EMI*, *Car Loan EMI*, *Personal Loan*, *Laptop EMI*) with monthly dues and lender bank.
 - **Credit Cards Master**: Store bank name, card name, and last 4 digits for easy expense attribution.
 - **Payment Modes**: Manage payment modes used across transactions.
 
-### 3. Personal Loans & Dues Ledger
+### 5. Personal Loans & Dues Ledger
 - Dedicated ledger computing:
   - **Total Lent** (money lent to others)
   - **Total Returned** (money returned by others)
@@ -55,7 +79,7 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
   - **Total Repaid** (money paid back by you)
   - **Net Balance** (clearly indicates *Owes You* in Green or *You Owe* in Red)
 
-### 4. Interactive UI & Analytics Dashboard
+### 6. Interactive UI & Analytics Dashboard
 - **Period Breakdown**: Switch seamlessly between **Weekly**, **Monthly**, **Quarterly**, and **Annually** with `< Prev` and `Next >` timeline navigation.
 - **KPI Summary Cards**:
   - **Total Income (In)** in **Green**
@@ -66,7 +90,7 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
 - **Category Donut Chart**: Visual distribution of expenses by category with percentages and legends.
 - **Recent Activity**: Quick view of latest 10 transactions.
 
-### 5. Multi-Criteria Filtering & Sorting
+### 7. Multi-Criteria Filtering & Sorting
 - **Filter By**:
   - Type (`All`, `Income`, `Expense`)
   - Category & Dynamic Sub-Category
@@ -76,62 +100,41 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
   - Min / Max Amount range
   - Keyword Search (across notes, subcategory, and person names)
 - **Sort By**:
-  - Type (In/Out)
-  - Category
-  - Sub-Category
-  - Amount
-  - Date (Ascending / Descending)
+  - Type (In/Out), Category, Sub-Category, Amount, Date (Ascending / Descending)
 
-### 6. Audit Trail & Change Logging
+### 8. Audit Trail & Change Logging
 - Automatic logging of all **CREATE**, **UPDATE**, and **DELETE** actions.
 - Captures precise timestamps, entity modified, and human-readable diff details (e.g., *Amount changed from ₹2,000.00 to ₹2,500.00; Via: Cash -> UPI*).
 
-### 7. Exporting & Backup Options
+### 9. Exporting & Backup Options
 - **Export Filtered Results to PDF**: Clean document with title, summary metric cards, colored badges, and itemized table.
 - **Export Filtered Results to Excel (.xlsx)**: Formatted workbook with currency numbers, color-coded rows, and double-line totals.
 - **Export Filtered Results to CSV**: Standard comma-separated file.
-- **Export All Database as CSV Files**: One-click dump of all 7 database tables into individual CSV files.
+- **Export All Database as CSV Files**: One-click dump of all database tables into individual CSV files.
 
-### 8. Bulk CSV Import, Update & Deletion
+### 10. Bulk CSV Import, Update & Deletion
 - **Import Dialog**: Upload any standard CSV file to perform bulk transactions.
 - **Download CSV Template**: One-click generation of `nav_finance_template.csv` containing instructions and sample rows for `CREATE`, `UPDATE`, and `DELETE` actions.
 - **Auto Validation & Color-Coded Preview**: Table validation showing row numbers, badge-coded actions (`CREATE` in Green, `UPDATE` in Blue, `DELETE` in Red), and instant validation feedback.
 - **Batch Execution**: Executes all valid lines in a single batch, updating person links, auto-registering novel payment modes, and logging audit events for each change.
 
-### 9. Dynamic Zoom In / Out & UI Scaling
+### 11. Dynamic Zoom In / Out & UI Scaling
 - **Header Controls**: Magnify the UI using `🔍+` (Zoom In) and `🔍-` (Zoom Out), or click the percentage badge (e.g., `100%`) to reset.
 - **Scaling Range**: Scalable across `80%`, `90%`, `100%`, `115%`, `130%`, `150%`, and `175%`.
 - **Keyboard Shortcuts**:
   - `Ctrl` + `+` / `Ctrl` + `=`: Zoom In
   - `Ctrl` + `-`: Zoom Out
   - `Ctrl` + `0`: Reset Zoom to 100%
-- Fully scales UIManager fonts, cards, grids, buttons, and popups dynamically.
 
-### 10. In-App User Guide & About Us Documentation
-- **📖 In-App User Guide**: Searchable interactive documentation with a topic index on the left and HTML reader on the right explaining all operations, calculations, and shortcuts.
-- **ℹ️ About Us**: Technical architecture specifications, Java 21 runtime metrics, H2 database file paths, and local-first privacy commitments.
-
-### 11. Recurring Payment Schedules on Specific Dates of Month
-- **Specific Day of Month**: Configure recurring obligations on any day from `1` to `31` (e.g., *EMI of ₹20,000 on 5th of every month from Jan 2026 to Jan 2027*).
-- **Fixed vs Variable Amounts**:
-  - **Fixed Amount**: Recurring obligations with constant dues (e.g. EMIs, rent, SIP).
-  - **Variable Amount**: Repeating bills whose amounts vary each month (e.g. *Electricity Bill*, *Credit Card Bill*). The system alerts and prompts the user to enter the actual amount when due/settling.
-- **Auto-Payment vs Manual Execution**:
-  - `⚡ Auto-Payment`: Bank auto-debits, NACH mandates, and standing instructions.
-  - `🖐 Manual Payment`: Directly executed payments by the user.
-
-### 12. Due & Overdue Payments Tracker
-- **Dedicated Tab**: `⏰ Due & Recurring` featuring real-time KPI cards for **Overdue Amount/Count**, **Upcoming Due**, **Settled Amount**, and **Auto vs Manual Ratio**.
-- **Visual Status Badges**:
-  - `🔴 OVERDUE (+Xd)`: Highlights past due date unpaid bills in bright red.
-  - `🟡 DUE (in Xd)` / `DUE TODAY`: Upcoming bills due soon.
-  - `🟢 SETTLED`: Completely paid entries.
-- **Interactive Settlement (`✔ Settle / Pay`)**: Prompts for the exact bill amount (for variable bills), settlement date, payment mode, and automatically logs the transaction into your Expense ledger.
-- **Mark Unsettled (`↩ Mark Unsettled`)**: Reverts settled bills to pending and safely removes the linked ledger transaction if desired.
+### 12. Recurring Payment Schedules & Due Payment Tracker
+- **Specific Day of Month**: Configure recurring obligations on any day from `1` to `31` (e.g., *EMI of ₹20,000 on 5th of every month*).
+- **Fixed vs Variable Amounts**: Support for fixed commitments (EMIs, rent) and variable utility bills (electricity, water, credit cards).
+- **Due & Overdue Status Tracker**: Real-time KPI cards for **Overdue**, **Upcoming Due**, **Settled**, and **Auto vs Manual Ratio**.
+- **Interactive Settlement**: Prompts for exact amount and records expense entries directly into the ledger.
 
 ---
 
-## 📁 Database Architecture
+## 🗄️ Database Architecture & Entity Relationships
 
 The embedded database is created automatically upon first run at:
 ```text
@@ -139,16 +142,156 @@ C:\Users\<username>\nav-finance\navfinance_db.mv.db
 ```
 - **Engine**: H2 Database 2.2
 - **Mode**: Embedded Multi-Process (`AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1`)
-- **Tables**:
-  1. `transactions`
-  2. `persons`
-  3. `bills`
-  4. `emis`
-  5. `credit_cards`
-  6. `payment_modes`
-  7. `recurring_schedules`
-  8. `due_payments`
-  9. `audit_logs`
+
+### Entity-Relationship (ER) Diagram
+
+```mermaid
+erDiagram
+    PERSONS ||--o{ TRANSACTIONS : "person_id"
+    BILLS ||--o{ TRANSACTIONS : "bill_id"
+    EMIS ||--o{ TRANSACTIONS : "emi_id"
+    CREDIT_CARDS ||--o{ TRANSACTIONS : "credit_card_id"
+    TRANSACTIONS ||--o{ TRANSACTION_LINKS : "give_tx_id"
+    TRANSACTIONS ||--o{ TRANSACTION_LINKS : "return_tx_id"
+    RECURRING_SCHEDULES ||--o{ DUE_PAYMENTS : "schedule_id"
+    TRANSACTIONS ||--o{ DUE_PAYMENTS : "transaction_id"
+
+    PERSONS {
+        BIGINT id PK "Auto Increment"
+        VARCHAR name "Full contact name"
+        VARCHAR contact "Phone / Email"
+        VARCHAR relation "Friend, Family, Colleague, Landlord"
+        VARCHAR notes "General notes"
+        TIMESTAMP created_at "Creation timestamp"
+        TIMESTAMP updated_at "Update timestamp"
+    }
+
+    BILLS {
+        BIGINT id PK "Auto Increment"
+        VARCHAR bill_name "Bill name (e.g., Airtel, Electricity)"
+        VARCHAR provider "Utility provider"
+        DECIMAL default_amount "Expected default amount"
+        VARCHAR notes "Account or meter number"
+        TIMESTAMP created_at "Creation timestamp"
+        TIMESTAMP updated_at "Update timestamp"
+    }
+
+    EMIS {
+        BIGINT id PK "Auto Increment"
+        VARCHAR emi_name "Loan title (Home Loan, Car Loan)"
+        VARCHAR bank_lender "Financing bank or NBFC"
+        DECIMAL monthly_amount "Monthly installment amount"
+        VARCHAR notes "Loan account details"
+        TIMESTAMP created_at "Creation timestamp"
+        TIMESTAMP updated_at "Update timestamp"
+    }
+
+    CREDIT_CARDS {
+        BIGINT id PK "Auto Increment"
+        VARCHAR card_name "Card brand / product name"
+        VARCHAR bank "Issuing bank"
+        VARCHAR last_digits "Last 4 digits"
+        TIMESTAMP created_at "Creation timestamp"
+        TIMESTAMP updated_at "Update timestamp"
+    }
+
+    PAYMENT_MODES {
+        BIGINT id PK "Auto Increment"
+        VARCHAR mode_name UK "Cash, UPI, Paytm, Net Banking"
+        BOOLEAN is_system "Pre-seeded system mode"
+        TIMESTAMP created_at "Creation timestamp"
+    }
+
+    TRANSACTIONS {
+        BIGINT id PK "Auto Increment"
+        VARCHAR type "INCOME or EXPENSE"
+        DATE tx_date "Transaction / Planned Date"
+        BOOLEAN is_expected "Flag for planned entries"
+        DECIMAL amount "Transaction value (15, 2)"
+        VARCHAR payment_via "Payment Mode name"
+        VARCHAR category "Primary category"
+        VARCHAR sub_category "Dynamic subcategory or description"
+        BIGINT person_id FK "References PERSONS(id)"
+        BIGINT bill_id FK "References BILLS(id)"
+        BIGINT emi_id FK "References EMIS(id)"
+        BIGINT credit_card_id FK "References CREDIT_CARDS(id)"
+        VARCHAR notes "Additional notes"
+        TIMESTAMP created_at "Creation timestamp"
+        TIMESTAMP updated_at "Update timestamp"
+    }
+
+    TRANSACTION_LINKS {
+        BIGINT id PK "Auto Increment"
+        BIGINT give_tx_id FK "References TRANSACTIONS(id) [Give/Expense]"
+        BIGINT return_tx_id FK "References TRANSACTIONS(id) [Return/Income]"
+        DECIMAL amount "Settled linked amount"
+        VARCHAR notes "Settlement note"
+        TIMESTAMP created_at "Creation timestamp"
+    }
+
+    RECURRING_SCHEDULES {
+        BIGINT id PK "Auto Increment"
+        VARCHAR name "Schedule name (e.g., Rent, EMI)"
+        VARCHAR type "INCOME or EXPENSE"
+        VARCHAR category "Schedule category"
+        VARCHAR sub_category "Schedule subcategory"
+        INT day_of_month "Execution day of month (1-31)"
+        VARCHAR amount_type "FIXED or VARIABLE"
+        DECIMAL default_amount "Default estimated amount"
+        DATE start_date "Schedule activation date"
+        DATE end_date "Schedule termination date"
+        VARCHAR payment_via "Default payment mode"
+        BOOLEAN is_auto_pay "Auto-debit mandate flag"
+        VARCHAR notes "Schedule instructions"
+        BOOLEAN active "Active status flag"
+        TIMESTAMP created_at "Creation timestamp"
+        TIMESTAMP updated_at "Update timestamp"
+    }
+
+    DUE_PAYMENTS {
+        BIGINT id PK "Auto Increment"
+        BIGINT schedule_id FK "References RECURRING_SCHEDULES(id)"
+        VARCHAR title "Due item title"
+        VARCHAR type "INCOME or EXPENSE"
+        VARCHAR category "Due category"
+        VARCHAR sub_category "Due subcategory"
+        DATE due_date "Scheduled payment date"
+        DECIMAL expected_amount "Expected obligation amount"
+        BOOLEAN is_variable "Variable amount flag"
+        BOOLEAN is_auto_pay "Auto-debit flag"
+        VARCHAR status "PENDING, OVERDUE, SETTLED"
+        DECIMAL settled_amount "Actual settled amount"
+        DATE settled_date "Actual date paid"
+        VARCHAR settled_via "Actual payment mode"
+        BIGINT transaction_id FK "References TRANSACTIONS(id)"
+        VARCHAR notes "Settlement notes"
+        TIMESTAMP created_at "Creation timestamp"
+    }
+
+    AUDIT_LOGS {
+        BIGINT id PK "Auto Increment"
+        VARCHAR entity_type "TRANSACTION, PERSON, BILL, etc."
+        BIGINT entity_id "Modified entity ID"
+        VARCHAR action "CREATE, UPDATE, DELETE"
+        VARCHAR details "Change diff summary"
+        TIMESTAMP log_timestamp "Audit event timestamp"
+    }
+```
+
+### Table Summary & Primary Constraints
+
+| Table Name | Primary Purpose | Key Foreign Keys | Unique / Important Indexes |
+| :--- | :--- | :--- | :--- |
+| **`transactions`** | Core ledger entries for income and expenses. | `person_id`, `bill_id`, `emi_id`, `credit_card_id` | `idx_tx_date`, `idx_tx_type`, `idx_tx_category` |
+| **`transaction_links`** | Connects Loan Given expenses with Return Received income. | `give_tx_id`, `return_tx_id` (CASCADE delete) | `UNIQUE (give_tx_id, return_tx_id)`, `idx_link_give`, `idx_link_return` |
+| **`persons`** | Contacts directory for loans, dues, and relatives. | None | Primary Key (`id`) |
+| **`bills`** | Utility bills and recurring provider master. | None | Primary Key (`id`) |
+| **`emis`** | Loan installments and lender bank master. | None | Primary Key (`id`) |
+| **`credit_cards`** | Stored credit cards and issuing banks. | None | Primary Key (`id`) |
+| **`payment_modes`** | Standard and customized payment channels. | None | `mode_name` (UNIQUE) |
+| **`recurring_schedules`** | Rules for repeating monthly obligations. | None | Primary Key (`id`) |
+| **`due_payments`** | Materialized monthly obligations with due dates. | `schedule_id`, `transaction_id` | `idx_due_date`, `idx_due_status` |
+| **`audit_logs`** | Tamper-evident ledger history of all operations. | None | `idx_audit_time` |
 
 ---
 
@@ -156,77 +299,98 @@ C:\Users\<username>\nav-finance\navfinance_db.mv.db
 
 ```text
 nav-finance/
-├── pom.xml                               # Maven build descriptor (no test/junit dependencies)
-├── .gitignore                            # Windows & Java Git exclusions
+├── pom.xml                               # Maven build descriptor (Java 21, FlatLaf, H2, POI, OpenPDF)
+├── .gitignore                            # Windows, IDE, and build artifact exclusions
 ├── run.bat                               # Windows Batch double-click launcher
 ├── run.ps1                               # PowerShell launcher script
-├── README.md                             # Project overview & technical specification
-├── USER_GUIDE.md                         # End-user operational manual
-└── src/main/java/com/navfinance/
-    ├── Main.java                         # Application entry point & FlatLaf launcher
-    ├── config/
-    │   └── AppConfig.java                # Global constants, DB paths, currency & date formatters
-    ├── database/
-    │   └── DatabaseManager.java          # H2 initialization, schema migration & CSV backups
-    ├── model/
-    │   ├── AmountType.java               # FIXED vs VARIABLE amount enum
-    │   ├── DuePayment.java               # Individual due date instance entity
-    │   ├── DueStatus.java                # PENDING, OVERDUE, SETTLED status enum
-    │   ├── RecurringSchedule.java        # Recurring rule entity (day of month, auto-pay)
-    │   ├── Transaction.java              # Transaction entity
-    │   ├── TransactionType.java          # INCOME / EXPENSE enum
-    │   ├── Person.java                   # Person master entity
-    │   ├── Bill.java                     # Utility bill master entity
-    │   ├── Emi.java                      # EMI master entity
-    │   ├── CreditCard.java               # Credit card master entity
-    │   ├── AuditLog.java                 # Audit trail entity
-    │   ├── FilterCriteria.java           # Multi-criteria filter & sort model
-    │   └── DashboardSummary.java         # Metric aggregation & trend points
-    ├── dao/
-    │   ├── DuePaymentDao.java            # Due payments CRUD & settlement tracking
-    │   ├── RecurringScheduleDao.java     # Recurring rules repository
-    │   ├── TransactionDao.java           # Transaction queries, filters & aggregations
-    │   ├── PersonDao.java                # Person CRUD
-    │   ├── BillDao.java                  # Bill CRUD
-    │   ├── EmiDao.java                   # EMI CRUD
-    │   ├── CreditCardDao.java            # Credit Card CRUD
-    │   ├── PaymentModeDao.java           # Payment mode repository
-    │   └── AuditDao.java                 # Audit log repository
-    ├── service/
-    │   ├── FinanceService.java           # Central business logic & audit coordinator
-    │   ├── AnalyticsService.java         # Periodic metrics & chart calculations
-    │   ├── ExportService.java            # PDF, Excel, and CSV export engines
-    │   ├── CsvImportService.java         # Bulk CSV validation, template & batch executor
-    │   └── RecurringService.java         # Recurring schedule generation & due settlement
-    └── ui/
-        ├── MainFrame.java                # Main GUI window with tabbed layout & zoom shortcuts
-        ├── util/
-        │   ├── UiUtils.java              # Palette colors, button factories & dialog helpers
-        │   └── ZoomManager.java          # Font & FlatLaf scaling engine (80% - 175%)
-        ├── components/
-        │   ├── DatePickerField.java      # Dual manual entry + calendar popup picker
-        │   ├── KpiCard.java              # Gradient KPI summary card
-        │   ├── TrendChartPanel.java      # Anti-aliased dual bar chart (In vs Out)
-        │   └── CategoryPieChartPanel.java# Anti-aliased category donut chart
-        ├── dialogs/
-        │   ├── TransactionDialog.java    # Dynamic Income/Expense modal dialog
-        │   ├── CsvImportDialog.java      # CSV file preview, template download & executor
-        │   ├── RecurringScheduleDialog.java # Register & edit monthly recurring schedules
-        │   ├── SettlePaymentDialog.java  # Settle due payments with variable amount prompts
-        │   ├── PersonDialog.java         # Add/Edit Person modal dialog
-        │   ├── BillDialog.java           # Add/Edit Bill modal dialog
-        │   ├── EmiDialog.java            # Add/Edit EMI modal dialog
-        │   └── CreditCardDialog.java     # Add/Edit Credit Card modal dialog
-        └── panels/
-            ├── DashboardPanel.java       # Visual executive dashboard
-            ├── TransactionsPanel.java    # Search, filter, sort & export transactions
-            ├── DuePaymentsPanel.java     # Due & overdue tracker & recurring rules manager
-            ├── LoansDuesPanel.java       # Person-wise loan & dues ledger
-            ├── MastersPanel.java         # Masters management tabs
-            ├── AuditLogPanel.java        # Audit trail viewer
-            ├── UserGuidePanel.java       # Interactive in-app user guide & documentation
-            ├── AboutUsPanel.java         # Architecture, runtime specs & privacy philosophy
-            └── SettingsPanel.java        # Database details, CSV backup & themes
+├── build.bat                             # Automated native installer builder (JAR, Zip, MSI)
+├── README.md                             # Comprehensive project documentation & ER diagram
+├── USER_GUIDE.md                         # Detailed end-user manual & operations handbook
+├── src/
+│   ├── main/
+│   │   ├── resources/
+│   │   │   └── i18n/
+│   │   │       ├── messages_en.properties       # English UI strings & templates
+│   │   │       ├── messages_hi.properties       # Hindi (हिन्दी) Devanagari strings
+│   │   │       └── messages_hinglish.properties # Hinglish conversational strings
+│   │   └── java/com/navfinance/
+│   │       ├── Main.java                        # App entry point, FlatLaf & font initialization
+│   │       ├── config/
+│   │       │   └── AppConfig.java               # Global paths, formatters, and currencies
+│   │       ├── database/
+│   │       │   └── DatabaseManager.java         # H2 schema DDL, foreign keys, CSV backup engine
+│   │       ├── i18n/
+│   │       │   ├── AppLanguage.java             # ENGLISH, HINDI, HINGLISH enum
+│   │       │   └── I18n.java                    # Bundle manager, listeners, Nirmala UI font resolution
+│   │       ├── model/
+│   │       │   ├── AmountType.java              # FIXED vs VARIABLE amount enum
+│   │       │   ├── DuePayment.java              # Due payment entity
+│   │       │   ├── DueStatus.java               # PENDING, OVERDUE, SETTLED enum
+│   │       │   ├── RecurringSchedule.java       # Recurring schedule rule entity
+│   │       │   ├── Transaction.java             # Transaction entity
+│   │       │   ├── TransactionType.java         # INCOME / EXPENSE enum
+│   │       │   ├── TransactionLink.java         # Give vs Return linking entity
+│   │       │   ├── TransactionSettlementInfo.java # Settlement status, linked amount, remaining balance
+│   │       │   ├── SettlementStatus.java        # UNLINKED, PARTIAL, FULLY_SETTLED enum
+│   │       │   ├── Person.java                  # Contact master entity
+│   │       │   ├── Bill.java                    # Bill master entity
+│   │       │   ├── Emi.java                     # EMI master entity
+│   │       │   ├── CreditCard.java              # Credit card master entity
+│   │       │   ├── AuditLog.java                # Audit trail entity
+│   │       │   ├── FilterCriteria.java          # Multi-criteria filter & sort state
+│   │       │   └── DashboardSummary.java        # Period summary metrics & chart datasets
+│   │       ├── dao/
+│   │       │   ├── DuePaymentDao.java           # Due payments CRUD & settlement tracking
+│   │       │   ├── RecurringScheduleDao.java    # Recurring schedule rules repository
+│   │       │   ├── TransactionDao.java          # Transaction persistence, queries & filters
+│   │       │   ├── TransactionLinkDao.java      # Transaction link repository & settlement joins
+│   │       │   ├── PersonDao.java               # Person CRUD
+│   │       │   ├── BillDao.java                 # Bill CRUD
+│   │       │   ├── EmiDao.java                  # EMI CRUD
+│   │       │   ├── CreditCardDao.java           # Credit Card CRUD
+│   │       │   ├── PaymentModeDao.java          # Payment mode repository
+│   │       │   └── AuditDao.java                # Audit log repository
+│   │       ├── service/
+│   │       │   ├── FinanceService.java          # Business logic, link orchestrator, audit events
+│   │       │   ├── AnalyticsService.java        # Dashboard KPI metrics & trend chart computations
+│   │       │   ├── ExportService.java           # PDF, Excel (.xlsx), and CSV exporters
+│   │       │   ├── CsvImportService.java        # Bulk CSV parsing, validation, batch updates
+│   │       │   └── RecurringService.java        # Recurring schedule generation & due settlements
+│   │       └── ui/
+│   │           ├── MainFrame.java               # Main window, navigation tabs, language switcher, zoom
+│   │           ├── util/
+│   │           │   ├── UiUtils.java             # Dynamic typography, palette colors, UI helpers
+│   │           │   ├── NavIcons.java            # Vector SVG / Java2D icon graphics
+│   │           │   └── ZoomManager.java         # Dynamic UI scaling engine (80% - 175%)
+│   │           ├── components/
+│   │           │   ├── DatePickerField.java     # Dual manual entry + calendar popup picker
+│   │           │   ├── KpiCard.java             # Gradient KPI card with dynamic typography refresh
+│   │           │   ├── TrendChartPanel.java     # Anti-aliased 2D Bar Chart (In vs Out)
+│   │           │   └── CategoryPieChartPanel.java # Anti-aliased 2D Donut Chart
+│   │           ├── dialogs/
+│   │           │   ├── TransactionDialog.java   # Dynamic Income/Expense modal dialog
+│   │           │   ├── LinkTransactionDialog.java # Modal to link Give and Return transactions
+│   │           │   ├── CsvImportDialog.java     # CSV preview, validation & batch executor
+│   │           │   ├── RecurringScheduleDialog.java # Recurring schedule configuration
+│   │           │   ├── SettlePaymentDialog.java # Variable/Fixed due settlement dialog
+│   │           │   ├── PersonDialog.java        # Contact modal dialog
+│   │           │   ├── BillDialog.java          # Bill modal dialog
+│   │           │   ├── EmiDialog.java           # EMI modal dialog
+│   │           │   └── CreditCardDialog.java    # Credit card modal dialog
+│   │           └── panels/
+│   │               ├── DashboardPanel.java      # Executive KPI & visual trends panel
+│   │               ├── TransactionsPanel.java   # Search, filter, link, sort & export transactions
+│   │               ├── DuePaymentsPanel.java    # Due tracker & recurring rules manager
+│   │               ├── LoansDuesPanel.java      # Person-wise loan & dues ledger
+│   │               ├── MastersPanel.java        # Masters management tabs
+│   │               ├── AuditLogPanel.java       # Audit trail viewer
+│   │               ├── UserGuidePanel.java      # Searchable in-app user guide
+│   │               ├── AboutUsPanel.java        # Runtime metrics & local-first specifications
+│   │               └── SettingsPanel.java       # Database details, CSV backup & themes
+│   └── test/java/com/navfinance/
+│       ├── FontRenderingTest.java               # Verifies Devanagari glyph coverage without tofu
+│       └── service/
+│           └── TransactionLinkTest.java         # Verifies bidirectional transaction link calculations
 ```
 
 ---
@@ -235,6 +399,7 @@ nav-finance/
 
 - **Java JDK**: 21 or higher (Oracle JDK, GraalVM JDK 21, Eclipse Temurin 21)
 - **Maven**: 3.8+ or 3.9+
+- **Operating System**: Windows 10 or 11 (includes native support for `Nirmala UI` font)
 
 ---
 
@@ -250,7 +415,7 @@ Double-click `run.bat` in the project directory. It compiles the project (if not
 
 ### Method 3: Using Maven Command Line
 ```powershell
-# 1. Compile and package the executable JAR (no test/junit)
+# 1. Compile and package the executable JAR
 mvn clean package
 
 # 2. Run the packaged Fat JAR
@@ -259,9 +424,9 @@ java -jar target/nav-finance-1.0.0.jar
 
 ---
 
-## 📦 Building Native Installers & Artifacts
+## 📦 Building Native Installers & Distribution Artifacts
 
-NavFinance includes automated tooling to generate standalone and production-ready distribution packages:
+Nav Finance includes automated tooling to generate standalone and production-ready distribution packages:
 
 ### Automated One-Click Build Script
 Run the automated installer builder script:

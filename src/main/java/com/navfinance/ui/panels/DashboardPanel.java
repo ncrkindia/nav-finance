@@ -235,8 +235,8 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
 
         tblRecent = new JTable(recentTableModel);
         tblRecent.setRowHeight(28);
-        tblRecent.getTableHeader().setFont(UiUtils.FONT_BOLD);
-        tblRecent.setFont(UiUtils.FONT_REGULAR);
+        tblRecent.getTableHeader().setFont(UiUtils.boldFont());
+        tblRecent.setFont(UiUtils.regularFont());
         tblRecent.setShowGrid(false);
         tblRecent.setIntercellSpacing(new Dimension(0, 0));
 
@@ -246,7 +246,7 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
                 l.setHorizontalAlignment(CENTER);
-                l.setFont(UiUtils.FONT_BOLD);
+                l.setFont(UiUtils.boldFont());
                 if ("Income".equalsIgnoreCase(String.valueOf(value))) {
                     l.setForeground(UiUtils.COLOR_INCOME);
                     l.setIcon(NavIcons.plus(11, UiUtils.COLOR_INCOME));
@@ -264,7 +264,7 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
                 l.setHorizontalAlignment(CENTER);
-                l.setFont(UiUtils.FONT_REGULAR);
+                l.setFont(UiUtils.regularFont());
                 if ("Settled".equalsIgnoreCase(String.valueOf(value))) {
                     l.setForeground(UiUtils.COLOR_INCOME);
                     l.setIcon(NavIcons.statusDot(8, UiUtils.COLOR_INCOME));
@@ -282,7 +282,7 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
                 setHorizontalAlignment(RIGHT);
-                setFont(UiUtils.FONT_BOLD);
+                setFont(UiUtils.boldFont());
                 Object typeVal = table.getValueAt(row, 0);
                 if ("Income".equalsIgnoreCase(String.valueOf(typeVal))) {
                     setForeground(UiUtils.COLOR_INCOME);

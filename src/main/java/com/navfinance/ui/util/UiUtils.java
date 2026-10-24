@@ -67,26 +67,36 @@ public final class UiUtils {
     public static final Color COLOR_TEXT_MUTED = new Color(100, 116, 139);
 
     // =========================================================================
-    // Typography Scales
+    // Typography Scales (Seamless Devanagari & Latin Typography)
     // =========================================================================
 
-    /** Prominent screen and dialog title font (Segoe UI / Nirmala UI 18pt Bold). */
-    public static final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 18);
+    /** Prominent screen and dialog title font (18pt Bold). */
+    public static Font FONT_TITLE = com.navfinance.i18n.I18n.getTitleFont();
 
-    /** Section heading font (Segoe UI / Nirmala UI 14pt Bold). */
-    public static final Font FONT_HEADER = new Font("Segoe UI", Font.BOLD, 14);
+    /** Section heading font (14pt Bold). */
+    public static Font FONT_HEADER = com.navfinance.i18n.I18n.getHeaderFont();
 
-    /** Subtitle and secondary descriptive font (Segoe UI / Nirmala UI 12pt Plain). */
-    public static final Font FONT_SUBTITLE = new Font("Segoe UI", Font.PLAIN, 12);
+    /** Subtitle and secondary descriptive font (12pt Plain). */
+    public static Font FONT_SUBTITLE = com.navfinance.i18n.I18n.getSubFont();
 
-    /** Emphasized bold text font for tables, buttons, and badges (Segoe UI / Nirmala UI 12pt Bold). */
-    public static final Font FONT_BOLD = new Font("Segoe UI", Font.BOLD, 12);
+    /** Emphasized bold text font for tables, buttons, and badges (12pt Bold). */
+    public static Font FONT_BOLD = com.navfinance.i18n.I18n.getBoldFont();
 
-    /** Standard body copy font (Segoe UI / Nirmala UI 12pt Plain). */
-    public static final Font FONT_REGULAR = new Font("Segoe UI", Font.PLAIN, 12);
+    /** Standard body copy font (12pt Plain). */
+    public static Font FONT_REGULAR = com.navfinance.i18n.I18n.getRegularFont();
 
-    /** Large metric headline font for KPI dashboard cards (Segoe UI / Nirmala UI 22pt Bold). */
-    public static final Font FONT_KPI_VALUE = new Font("Segoe UI", Font.BOLD, 22);
+    /** Large metric headline font for KPI dashboard cards (22pt Bold). */
+    public static Font FONT_KPI_VALUE = com.navfinance.i18n.I18n.getKpiFont();
+
+    /** Refreshes all cached static font scales when the system language changes. */
+    public static void refreshFonts() {
+        FONT_TITLE = com.navfinance.i18n.I18n.getTitleFont();
+        FONT_HEADER = com.navfinance.i18n.I18n.getHeaderFont();
+        FONT_SUBTITLE = com.navfinance.i18n.I18n.getSubFont();
+        FONT_BOLD = com.navfinance.i18n.I18n.getBoldFont();
+        FONT_REGULAR = com.navfinance.i18n.I18n.getRegularFont();
+        FONT_KPI_VALUE = com.navfinance.i18n.I18n.getKpiFont();
+    }
 
     /** @return active localized title font */
     public static Font titleFont() { return com.navfinance.i18n.I18n.getTitleFont(); }
