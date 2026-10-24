@@ -1,0 +1,343 @@
+package com.navfinance.ui;
+
+import com.navfinance.config.AppConfig;
+import com.navfinance.model.TransactionType;
+import com.navfinance.ui.dialogs.TransactionDialog;
+import com.navfinance.ui.panels.AboutUsPanel;
+import com.navfinance.ui.panels.AuditLogPanel;
+import com.navfinance.ui.panels.DashboardPanel;
+import com.navfinance.ui.panels.DuePaymentsPanel;
+import com.navfinance.ui.panels.MastersPanel;
+import com.navfinance.ui.panels.SettingsPanel;
+import com.navfinance.ui.panels.TransactionsPanel;
+import com.navfinance.ui.panels.UdharTrackerPanel;
+import com.navfinance.ui.panels.UserGuidePanel;
+import com.navfinance.ui.util.NavIcons;
+import com.navfinance.ui.util.UiUtils;
+import com.navfinance.ui.util.ZoomManager;
+
+import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTabbedPane;
+import javax.swing.KeyStroke;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+
+/**
+ * Main application frame and primary navigation window for NavFinance.
+ * <p>
+ * This frame organizes and orchestrates the user interface into three distinct regions:
+ * <ul>
+ *   <li><b>Top Header Bar:</b> Application branding, responsive zoom controllers (80% to 175%),
+ *       and quick action shortcut buttons ({@code + New Income}, {@code - New Expense}, {@code 🔄 Refresh}).</li>
+ *   <li><b>Center Workspace (Tabbed Navigation):</b> Houses the 9 core functional modules:
+ *     <ol>
+ *       <li><b>Dashboard:</b> Financial KPIs, income vs expense trend bar charts, and category donut distribution.</li>
+ *       <li><b>Transactions:</b> Searchable income/expense ledger with multi-column sorting and report exports.</li>
+ *       <li><b>Due &amp; Recurring:</b> Tracking due and overdue bills/EMIs with one-click settlements.</li>
+ *       <li><b>Udhaar &amp; Loans:</b> Personal loans ledger tracking counterparty balances.</li>
+ *       <li><b>Masters:</b> Management of reusable catalogs (Persons, Bills, EMIs, Cards, Modes).</li>
+ *       <li><b>Audit Trail:</b> Immutable historical activity log of all inserts, updates, and deletes.</li>
+ *       <li><b>User Guide:</b> Interactive searchable documentation handbook.</li>
+ *       <li><b>About Us:</b> Developer credits, system specifications, and technology architecture.</li>
+ *       <li><b>Settings &amp; Database:</b> H2 database diagnostics, full backups, themes, and currency symbols.</li>
+ *     </ol>
+ *   </li>
+ *   <li><b>Bottom Status Bar:</b> Real-time indicators of embedded H2 connection health and active runtime version.</li>
+ * </ul>
+ * Also registers global keyboard shortcuts for UI scaling:
+ * <ul>
+ *   <li>{@code Ctrl + Plus} or {@code Ctrl + =}: Zoom In</li>
+ *   <li>{@code Ctrl + Minus}: Zoom Out</li>
+ *   <li>{@code Ctrl + 0}: Reset Zoom to 100%</li>
+ * </ul>
+ */
+public class MainFrame extends JFrame {
+
+    /** Primary tabbed container hosting the application's functional modules. */
+    private JTabbedPane mainTabs;
+
+    /** Panel displaying aggregated metrics, financial charts, and KPI summary cards. */
+    private DashboardPanel dashboardPanel;
+
+    /** Panel managing the itemized transactional income and expense ledger. */
+    private TransactionsPanel transactionsPanel;
+
+    /** Panel tracking upcoming, due, and overdue payment obligations and recurring rules. */
+    private DuePaymentsPanel duePaymentsPanel;
+
+    /** Panel tracking personal loans and informal debts across individual persons. */
+    private UdharTrackerPanel udharPanel;
+
+    /** Panel managing reference catalogs for Persons, Bills, EMIs, Cards, and Modes. */
+    private MastersPanel mastersPanel;
+
+    /** Panel rendering immutable chronological audit event logs. */
+    private AuditLogPanel auditPanel;
+
+    /** Panel providing diagnostics, backups, Look and Feel switching, and preferences. */
+    private SettingsPanel settingsPanel;
+
+    /** Panel rendering interactive offline user manual chapters. */
+    private UserGuidePanel userGuidePanel;
+
+    /** Panel displaying application metadata, author details, and architecture notes. */
+    private AboutUsPanel aboutUsPanel;
+
+    /**
+     * Constructs the main application window, initializing layout managers,
+     * child panels, global key bindings, and centering the frame on screen.
+     */
+    public MainFrame() {
+        super(AppConfig.APP_NAME + " - " + AppConfig.APP_SUBTITLE);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setMinimumSize(new Dimension(1100, 750));
+        setPreferredSize(new Dimension(1280, 840));
+
+        loadAppIcon();
+        initComponents();
+        setupKeyBindings();
+        pack();
+        setLocationRelativeTo(null);
+    }
+
+    /**
+     * Loads the window frame and taskbar application icon from classpath resources.
+     */
+    private void loadAppIcon() {
+        try {
+            java.net.URL iconUrl = getClass().getResource("/icon.png");
+            if (iconUrl != null) {
+                setIconImage(javax.imageio.ImageIO.read(iconUrl));
+            }
+        } catch (java.io.IOException ignored) {
+            // Graceful fallback to standard host platform icon
+        }
+    }
+
+    /**
+     * Instantiates and arranges all visual elements, top action bars,
+     * central tabbed panels, and bottom status bar.
+     */
+    private void initComponents() {
+        setLayout(new BorderLayout());
+
+        // TOP APP HEADER
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(Color.WHITE);
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, UiUtils.COLOR_BORDER),
+                BorderFactory.createEmptyBorder(10, 18, 10, 18)
+        ));
+
+        // Brand Title
+        JPanel brandPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        brandPanel.setOpaque(false);
+
+        JLabel lblLogo = new JLabel(NavIcons.appLogo(28));
+        brandPanel.add(lblLogo);
+
+        JPanel titleBlock = new JPanel(new BorderLayout());
+        titleBlock.setOpaque(false);
+        JLabel lblAppName = new JLabel(AppConfig.APP_NAME);
+        lblAppName.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblAppName.setForeground(new Color(15, 23, 42));
+
+        JLabel lblAppSub = new JLabel(AppConfig.APP_SUBTITLE + " | Local H2 Database Engine");
+        lblAppSub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblAppSub.setForeground(UiUtils.COLOR_TEXT_MUTED);
+
+        titleBlock.add(lblAppName, BorderLayout.NORTH);
+        titleBlock.add(lblAppSub, BorderLayout.SOUTH);
+        brandPanel.add(titleBlock);
+
+        headerPanel.add(brandPanel, BorderLayout.WEST);
+
+        // Header Action Buttons + Zoom Controls
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        headerActions.setOpaque(false);
+
+        // Zoom Controller Bar
+        JPanel zoomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
+        zoomBar.setOpaque(false);
+        JLabel lblZoom = new JLabel("Zoom:");
+        lblZoom.setFont(UiUtils.FONT_SUBTITLE);
+        lblZoom.setForeground(UiUtils.COLOR_TEXT_MUTED);
+        zoomBar.add(lblZoom);
+
+        JButton btnZoomOut = UiUtils.createSecondaryButton("", NavIcons.zoomOut(14, UiUtils.COLOR_TEXT_MUTED));
+        btnZoomOut.setToolTipText("Zoom Out (Ctrl + Minus)");
+        btnZoomOut.addActionListener(e -> ZoomManager.zoomOut(this));
+
+        JButton btnZoomReset = UiUtils.createSecondaryButton(ZoomManager.getZoomLabel(), NavIcons.zoomReset(13, UiUtils.COLOR_TEXT_MUTED));
+        btnZoomReset.setFont(UiUtils.FONT_BOLD);
+        btnZoomReset.setToolTipText("Reset Zoom (Ctrl + 0)");
+        btnZoomReset.addActionListener(e -> ZoomManager.resetZoom(this));
+
+        JButton btnZoomIn = UiUtils.createSecondaryButton("", NavIcons.zoomIn(14, UiUtils.COLOR_TEXT_MUTED));
+        btnZoomIn.setToolTipText("Zoom In (Ctrl + Plus)");
+        btnZoomIn.addActionListener(e -> ZoomManager.zoomIn(this));
+
+        ZoomManager.addZoomListener(() -> btnZoomReset.setText(ZoomManager.getZoomLabel()));
+
+        zoomBar.add(btnZoomOut);
+        zoomBar.add(btnZoomReset);
+        zoomBar.add(btnZoomIn);
+
+        headerActions.add(zoomBar);
+        headerActions.add(new JLabel("  |  "));
+
+        // Quick Global Entry Action Buttons
+        JButton btnQuickIncome = UiUtils.createSuccessButton("New Income", NavIcons.plus(13, Color.WHITE));
+        btnQuickIncome.addActionListener(e -> {
+            TransactionDialog d = new TransactionDialog(this, null, TransactionType.INCOME);
+            d.setVisible(true);
+            if (d.isSaved()) {
+                refreshAllViews();
+            }
+        });
+
+        JButton btnQuickExpense = UiUtils.createDangerButton("New Expense", NavIcons.minus(13, Color.WHITE));
+        btnQuickExpense.addActionListener(e -> {
+            TransactionDialog d = new TransactionDialog(this, null, TransactionType.EXPENSE);
+            d.setVisible(true);
+            if (d.isSaved()) {
+                refreshAllViews();
+            }
+        });
+
+        JButton btnRefreshAll = UiUtils.createSecondaryButton("Refresh", NavIcons.refresh(13, UiUtils.COLOR_PRIMARY));
+        btnRefreshAll.addActionListener(e -> refreshAllViews());
+
+        headerActions.add(btnQuickIncome);
+        headerActions.add(btnQuickExpense);
+        headerActions.add(btnRefreshAll);
+
+        headerPanel.add(headerActions, BorderLayout.EAST);
+        add(headerPanel, BorderLayout.NORTH);
+
+        // MAIN CONTENT: Tabbed Navigation
+        mainTabs = new JTabbedPane(JTabbedPane.TOP);
+        mainTabs.setFont(new Font("Segoe UI", Font.BOLD, 13));
+
+        dashboardPanel = new DashboardPanel();
+        transactionsPanel = new TransactionsPanel();
+        duePaymentsPanel = new DuePaymentsPanel();
+        udharPanel = new UdharTrackerPanel();
+        mastersPanel = new MastersPanel();
+        auditPanel = new AuditLogPanel();
+        userGuidePanel = new UserGuidePanel();
+        aboutUsPanel = new AboutUsPanel();
+        settingsPanel = new SettingsPanel(this::refreshAllViews);
+
+        mainTabs.addTab("Dashboard", NavIcons.dashboard(16, UiUtils.COLOR_PRIMARY), dashboardPanel);
+        mainTabs.addTab("Transactions", NavIcons.transactions(16, UiUtils.COLOR_PRIMARY), transactionsPanel);
+        mainTabs.addTab("Due & Recurring", NavIcons.duePayments(16, UiUtils.COLOR_AMBER), duePaymentsPanel);
+        mainTabs.addTab("Udhaar & Loans", NavIcons.udhar(16, UiUtils.COLOR_INCOME), udharPanel);
+        mainTabs.addTab("Masters", NavIcons.masters(16, UiUtils.COLOR_PRIMARY), mastersPanel);
+        mainTabs.addTab("Audit Trail", NavIcons.audit(16, UiUtils.COLOR_TEXT_MUTED), auditPanel);
+        mainTabs.addTab("User Guide", NavIcons.userGuide(16, UiUtils.COLOR_PRIMARY), userGuidePanel);
+        mainTabs.addTab("About Us", NavIcons.aboutUs(16, UiUtils.COLOR_PRIMARY), aboutUsPanel);
+        mainTabs.addTab("Settings & Database", NavIcons.settings(16, UiUtils.COLOR_TEXT_MUTED), settingsPanel);
+
+        // Auto refresh tab data on tab switch
+        mainTabs.addChangeListener(e -> {
+            switch (mainTabs.getSelectedIndex()) {
+                case 0 -> dashboardPanel.refreshData();
+                case 1 -> transactionsPanel.applyFilters();
+                case 2 -> duePaymentsPanel.refreshAll();
+                case 3 -> udharPanel.refreshData();
+                case 4 -> mastersPanel.refreshAll();
+                case 5 -> auditPanel.refreshLogs();
+                default -> {}
+            }
+        });
+
+        add(mainTabs, BorderLayout.CENTER);
+
+        // BOTTOM STATUS BAR
+        JPanel statusBar = new JPanel(new BorderLayout());
+        statusBar.setBackground(new Color(241, 245, 249));
+        statusBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, UiUtils.COLOR_BORDER),
+                BorderFactory.createEmptyBorder(6, 16, 6, 16)
+        ));
+
+        JLabel lblDbStatus = new JLabel("● Database: Connected | " + AppConfig.APP_DATA_DIR.getAbsolutePath() + " | Multi-User Ready");
+        lblDbStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblDbStatus.setForeground(new Color(15, 118, 110)); // Teal green dot
+        statusBar.add(lblDbStatus, BorderLayout.WEST);
+
+        JLabel lblVersion = new JLabel(AppConfig.APP_NAME + " v" + AppConfig.APP_VERSION + " | Windows Java 21");
+        lblVersion.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblVersion.setForeground(UiUtils.COLOR_TEXT_MUTED);
+        statusBar.add(lblVersion, BorderLayout.EAST);
+
+        add(statusBar, BorderLayout.SOUTH);
+    }
+
+    /**
+     * Registers global keyboard shortcuts for responsive UI zooming.
+     */
+    private void setupKeyBindings() {
+        // Zoom In: Ctrl + Plus, Ctrl + Equals
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, InputEvent.CTRL_DOWN_MASK), "zoomIn");
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_ADD, InputEvent.CTRL_DOWN_MASK), "zoomIn");
+        getRootPane().getActionMap().put("zoomIn", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ZoomManager.zoomIn(MainFrame.this);
+            }
+        });
+
+        // Zoom Out: Ctrl + Minus
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, InputEvent.CTRL_DOWN_MASK), "zoomOut");
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_SUBTRACT, InputEvent.CTRL_DOWN_MASK), "zoomOut");
+        getRootPane().getActionMap().put("zoomOut", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ZoomManager.zoomOut(MainFrame.this);
+            }
+        });
+
+        // Reset Zoom: Ctrl + 0
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_0, InputEvent.CTRL_DOWN_MASK), "zoomReset");
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_NUMPAD0, InputEvent.CTRL_DOWN_MASK), "zoomReset");
+        getRootPane().getActionMap().put("zoomReset", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ZoomManager.resetZoom(MainFrame.this);
+            }
+        });
+    }
+
+    /**
+     * Broadcasts a refresh command to all active panel models, recalculating KPIs,
+     * re-running transaction filters, scanning recurring obligations, and updating audit logs.
+     */
+    public void refreshAllViews() {
+        dashboardPanel.refreshData();
+        transactionsPanel.applyFilters();
+        duePaymentsPanel.refreshAll();
+        udharPanel.refreshData();
+        mastersPanel.refreshAll();
+        auditPanel.refreshLogs();
+    }
+}

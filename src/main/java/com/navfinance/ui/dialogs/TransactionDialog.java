@@ -1,0 +1,531 @@
+package com.navfinance.ui.dialogs;
+
+import com.navfinance.config.AppConfig;
+import com.navfinance.model.Bill;
+import com.navfinance.model.CreditCard;
+import com.navfinance.model.Emi;
+import com.navfinance.model.Person;
+import com.navfinance.model.Transaction;
+import com.navfinance.model.TransactionType;
+import com.navfinance.service.FinanceService;
+import com.navfinance.ui.components.DatePickerField;
+import com.navfinance.ui.util.NavIcons;
+import com.navfinance.ui.util.UiUtils;
+
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.time.LocalDate;
+import java.util.List;
+
+/**
+ * Primary modal dialog for adding and editing financial income and expense ledger entries.
+ * <p>
+ * Provides interactive category-to-subcategory cascading, foreign key resolution for
+ * persons, bills, credit cards, and EMIs, hybrid date picking (calendar + manual ISO entry),
+ * editable payment channels with automatic memory, and planned/expected flags.
+ * </p>
+ */
+public class TransactionDialog extends JDialog {
+
+    /** Service coordinator for finance ledger mutations and master entities. */
+    private final FinanceService financeService = FinanceService.getInstance();
+
+    /** The existing transaction being modified, or {@code null} if recording a new transaction. */
+    private final Transaction existingTransaction;
+
+    /** Flag indicating whether the transaction entry was successfully saved. */
+    private boolean saved = false;
+
+    // UI Fields
+    /** Radio button selecting income transaction flow. */
+    private JRadioButton rbIncome;
+
+    /** Radio button selecting expense transaction flow. */
+    private JRadioButton rbExpense;
+
+    /** Composite date picker supporting calendar clicks and manual text entry. */
+    private DatePickerField txtDate;
+
+    /** Checkbox designating planned/expected unrealized amounts. */
+    private JCheckBox chkExpected;
+
+    /** Text input field for the financial transaction amount. */
+    private JTextField txtAmount;
+
+    /** Editable dropdown for selecting or typing payment channels (UPI, Cash, etc.). */
+    private JComboBox<String> cmbPaymentVia;
+
+    /** Dropdown for selecting primary financial category. */
+    private JComboBox<String> cmbCategory;
+
+    /** Editable dropdown for selecting or typing sub-category specifics. */
+    private JComboBox<String> cmbSubCategory;
+
+    /** Dropdown for attributing udhaar or loan transactions to a specific contact. */
+    private JComboBox<Person> cmbPerson;
+
+    /** Text area for transaction memo or notes. */
+    private JTextArea txtNotes;
+
+    /** Dynamic label adjusting date title between actual and expected/planned. */
+    private JLabel lblDateTitle;
+
+    /** Label for the sub-category selector. */
+    private JLabel lblSubCategoryTitle;
+
+    /** Label for the optional associated person selector. */
+    private JLabel lblPersonTitle;
+
+    /**
+     * Constructs a transaction entry dialog.
+     *
+     * @param parent owner window frame
+     * @param transactionToEdit transaction entity to edit, or {@code null} for a new entry
+     * @param defaultType initial transaction type to preselect if creating a new entry
+     */
+    public TransactionDialog(JFrame parent, Transaction transactionToEdit, TransactionType defaultType) {
+        super(parent, transactionToEdit == null ? "Add Transaction" : "Edit Transaction #" + transactionToEdit.getId(), true);
+        this.existingTransaction = transactionToEdit;
+
+        initComponents(defaultType != null ? defaultType : TransactionType.EXPENSE);
+        pack();
+        setLocationRelativeTo(parent);
+        setResizable(false);
+    }
+
+    /**
+     * Initializes visual form components, GridBag constraints, radio buttons, and action buttons.
+     *
+     * @param defaultType initial transaction type
+     */
+    private void initComponents(TransactionType defaultType) {
+        setLayout(new BorderLayout());
+        JPanel mainPanel = new JPanel(new GridBagLayout());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+
+        int row = 0;
+
+        // 1. Type selection (Income vs Expense)
+        gbc.gridx = 0; gbc.gridy = row;
+        mainPanel.add(new JLabel("Transaction Type:"), gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        rbIncome = new JRadioButton("Income (In)");
+        rbExpense = new JRadioButton("Expense (Out)");
+        rbIncome.setFont(UiUtils.FONT_BOLD);
+        rbIncome.setForeground(UiUtils.COLOR_INCOME);
+        rbExpense.setFont(UiUtils.FONT_BOLD);
+        rbExpense.setForeground(UiUtils.COLOR_EXPENSE);
+
+        ButtonGroup bg = new ButtonGroup();
+        bg.add(rbIncome);
+        bg.add(rbExpense);
+        typePanel.add(rbIncome);
+        typePanel.add(rbExpense);
+        mainPanel.add(typePanel, gbc);
+
+        // 2. Date & Expected checkbox (DatePicker + Manual entry)
+        lblDateTitle = new JLabel("Date (yyyy-MM-dd):");
+        gbc.gridx = 0; gbc.gridy = row;
+        mainPanel.add(lblDateTitle, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        JPanel datePanel = new JPanel(new BorderLayout(8, 0));
+        txtDate = new DatePickerField(LocalDate.now(), 12);
+        chkExpected = new JCheckBox("Expected / Planned (Not Yet Realized)");
+        datePanel.add(txtDate, BorderLayout.WEST);
+        datePanel.add(chkExpected, BorderLayout.CENTER);
+        mainPanel.add(datePanel, gbc);
+
+        // 3. Amount
+        gbc.gridx = 0; gbc.gridy = row;
+        mainPanel.add(new JLabel("Amount (" + AppConfig.getCurrencySymbol() + "):"), gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        txtAmount = new JTextField();
+        txtAmount.setFont(UiUtils.FONT_BOLD);
+        mainPanel.add(txtAmount, gbc);
+
+        // 4. Payment Via
+        gbc.gridx = 0; gbc.gridy = row;
+        mainPanel.add(new JLabel("Payment Via:"), gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        cmbPaymentVia = new JComboBox<>();
+        cmbPaymentVia.setEditable(true); // Allow custom editing
+        populatePaymentModes();
+        mainPanel.add(cmbPaymentVia, gbc);
+
+        // 5. Category
+        gbc.gridx = 0; gbc.gridy = row;
+        mainPanel.add(new JLabel("Category:"), gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        cmbCategory = new JComboBox<>();
+        cmbCategory.setEditable(true);
+        mainPanel.add(cmbCategory, gbc);
+
+        // 6. Sub Category
+        lblSubCategoryTitle = new JLabel("Sub-Category:");
+        gbc.gridx = 0; gbc.gridy = row;
+        mainPanel.add(lblSubCategoryTitle, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        cmbSubCategory = new JComboBox<>();
+        cmbSubCategory.setEditable(true);
+        mainPanel.add(cmbSubCategory, gbc);
+
+        // 7. Associated Person (Optional / Udhar / Loan)
+        lblPersonTitle = new JLabel("Associated Person:");
+        gbc.gridx = 0; gbc.gridy = row;
+        mainPanel.add(lblPersonTitle, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        cmbPerson = new JComboBox<>();
+        populatePersons();
+        mainPanel.add(cmbPerson, gbc);
+
+        // 8. Notes
+        gbc.gridx = 0; gbc.gridy = row;
+        mainPanel.add(new JLabel("Notes / Remarks:"), gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        txtNotes = new JTextArea(3, 24);
+        txtNotes.setLineWrap(true);
+        txtNotes.setWrapStyleWord(true);
+        mainPanel.add(new JScrollPane(txtNotes), gbc);
+
+        add(mainPanel, BorderLayout.CENTER);
+
+        // 9. Bottom Action Buttons
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
+        btnPanel.setBackground(new Color(248, 250, 252));
+        btnPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UiUtils.COLOR_BORDER));
+
+        JButton btnCancel = UiUtils.createSecondaryButton("Cancel", NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnCancel.addActionListener(e -> dispose());
+
+        JButton btnSave = UiUtils.createPrimaryButton(existingTransaction == null ? "Save Entry" : "Update Entry", NavIcons.check(13, Color.WHITE));
+        btnSave.addActionListener(e -> onSave());
+
+        btnPanel.add(btnCancel);
+        btnPanel.add(btnSave);
+        add(btnPanel, BorderLayout.SOUTH);
+
+        // Event listeners
+        rbIncome.addActionListener(e -> onTypeChanged(TransactionType.INCOME));
+        rbExpense.addActionListener(e -> onTypeChanged(TransactionType.EXPENSE));
+        cmbCategory.addActionListener(e -> onCategoryChanged());
+
+        // Prepopulate if editing
+        if (existingTransaction != null) {
+            if (existingTransaction.getType() == TransactionType.INCOME) {
+                rbIncome.setSelected(true);
+                onTypeChanged(TransactionType.INCOME);
+            } else {
+                rbExpense.setSelected(true);
+                onTypeChanged(TransactionType.EXPENSE);
+            }
+
+            if (existingTransaction.getTxDate() != null) {
+                txtDate.setDate(existingTransaction.getTxDate());
+            }
+            chkExpected.setSelected(existingTransaction.isExpected());
+            txtAmount.setText(String.valueOf(existingTransaction.getAmount()));
+            cmbPaymentVia.setSelectedItem(existingTransaction.getPaymentVia());
+            cmbCategory.setSelectedItem(existingTransaction.getCategory());
+            cmbSubCategory.setSelectedItem(existingTransaction.getSubCategory());
+            txtNotes.setText(existingTransaction.getNotes() != null ? existingTransaction.getNotes() : "");
+
+            if (existingTransaction.getPersonId() != null) {
+                for (int i = 0; i < cmbPerson.getItemCount(); i++) {
+                    Person p = cmbPerson.getItemAt(i);
+                    if (p != null && p.getId() != null && p.getId().equals(existingTransaction.getPersonId())) {
+                        cmbPerson.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            }
+        } else {
+            if (defaultType == TransactionType.INCOME) {
+                rbIncome.setSelected(true);
+                onTypeChanged(TransactionType.INCOME);
+            } else {
+                rbExpense.setSelected(true);
+                onTypeChanged(TransactionType.EXPENSE);
+            }
+        }
+    }
+
+    /**
+     * Populates payment modes dropdown from the repository.
+     */
+    private void populatePaymentModes() {
+        cmbPaymentVia.removeAllItems();
+        List<String> modes = financeService.getAllPaymentModes();
+        for (String m : modes) {
+            cmbPaymentVia.addItem(m);
+        }
+        if (cmbPaymentVia.getItemCount() > 0) {
+            cmbPaymentVia.setSelectedIndex(0);
+        }
+    }
+
+    /**
+     * Populates contacts dropdown with person directory entities.
+     */
+    private void populatePersons() {
+        cmbPerson.removeAllItems();
+        cmbPerson.addItem(null); // Option for None
+        List<Person> persons = financeService.getAllPersons();
+        for (Person p : persons) {
+            cmbPerson.addItem(p);
+        }
+    }
+
+    /**
+     * Reconfigures category options and labels upon toggling between Income and Expense.
+     *
+     * @param type active transaction type
+     */
+    private void onTypeChanged(TransactionType type) {
+        cmbCategory.removeAllItems();
+        if (type == TransactionType.INCOME) {
+            lblDateTitle.setText("Date / Expected Date:");
+            chkExpected.setText("Expected (Not Received Yet)");
+            // Income Categories requested: Salary, Relative, Return, Loan, Udhaar
+            cmbCategory.addItem("Salary");
+            cmbCategory.addItem("Relative");
+            cmbCategory.addItem("Return");
+            cmbCategory.addItem("Loan");
+            cmbCategory.addItem("Udhaar");
+            cmbCategory.addItem("Freelance / Business");
+            cmbCategory.addItem("Other Income");
+        } else {
+            lblDateTitle.setText("Date / Planned Date:");
+            chkExpected.setText("Planned / Due (Not Paid Yet)");
+            // Expense Categories requested: EMI Payment, Credit Card, Udhar Given, Bill, Special Expense, etc.
+            cmbCategory.addItem("EMI Payment");
+            cmbCategory.addItem("Credit Card");
+            cmbCategory.addItem("Udhar Given");
+            cmbCategory.addItem("Bill");
+            cmbCategory.addItem("Special Expense");
+            cmbCategory.addItem("Groceries & Food");
+            cmbCategory.addItem("Shopping");
+            cmbCategory.addItem("Health & Medical");
+            cmbCategory.addItem("Fuel & Travel");
+            cmbCategory.addItem("Other Expense");
+        }
+        onCategoryChanged();
+    }
+
+    /**
+     * Dynamically filters and populates sub-category options based on the chosen category
+     * by querying configured master entities (Bills, Cards, EMIs, Persons).
+     */
+    private void onCategoryChanged() {
+        Object catObj = cmbCategory.getSelectedItem();
+        String cat = catObj != null ? catObj.toString().trim() : "";
+        cmbSubCategory.removeAllItems();
+
+        if (rbExpense.isSelected()) {
+            if ("Bill".equalsIgnoreCase(cat)) {
+                // Populate from Bills master (e.g. Airtel Bill, Electricity Khardoni, Noida)
+                List<Bill> bills = financeService.getAllBills();
+                for (Bill b : bills) {
+                    cmbSubCategory.addItem(b.getBillName());
+                }
+                cmbSubCategory.addItem("Other Bill");
+            } else if ("Credit Card".equalsIgnoreCase(cat)) {
+                // Populate from Credit Cards master
+                List<CreditCard> cards = financeService.getAllCreditCards();
+                for (CreditCard c : cards) {
+                    cmbSubCategory.addItem(c.toString());
+                }
+                cmbSubCategory.addItem("Other Card");
+            } else if ("EMI Payment".equalsIgnoreCase(cat)) {
+                // Populate from EMIs master
+                List<Emi> emis = financeService.getAllEmis();
+                for (Emi e : emis) {
+                    cmbSubCategory.addItem(e.getEmiName());
+                }
+                cmbSubCategory.addItem("Other Loan EMI");
+            } else if ("Udhar Given".equalsIgnoreCase(cat)) {
+                // Populate with Persons
+                List<Person> persons = financeService.getAllPersons();
+                for (Person p : persons) {
+                    cmbSubCategory.addItem(p.getName());
+                }
+            } else if ("Special Expense".equalsIgnoreCase(cat)) {
+                cmbSubCategory.addItem("Family Gathering / Dinner");
+                cmbSubCategory.addItem("Vacation / Trip");
+                cmbSubCategory.addItem("Festival / Celebration");
+                cmbSubCategory.addItem("Electronics Purchase");
+                cmbSubCategory.addItem("Home Renovation");
+            }
+        } else {
+            // Income
+            if ("Salary".equalsIgnoreCase(cat)) {
+                cmbSubCategory.addItem("Primary Employer");
+                cmbSubCategory.addItem("Bonus / Incentive");
+                cmbSubCategory.addItem("Arrears / Reimbursement");
+            } else if ("Relative".equalsIgnoreCase(cat) || "Udhaar".equalsIgnoreCase(cat) || "Return".equalsIgnoreCase(cat)) {
+                List<Person> persons = financeService.getAllPersons();
+                for (Person p : persons) {
+                    cmbSubCategory.addItem(p.getName());
+                }
+                cmbSubCategory.addItem("Other Person");
+            } else if ("Loan".equalsIgnoreCase(cat)) {
+                cmbSubCategory.addItem("Personal Loan Disbursal");
+                cmbSubCategory.addItem("Gold Loan");
+                cmbSubCategory.addItem("Friend Loan");
+            }
+        }
+    }
+
+    /**
+     * Validates input parameters, resolves foreign key mappings for masters, persists
+     * the transaction, and closes the dialog.
+     */
+    private void onSave() {
+        String strAmount = txtAmount.getText().trim();
+        if (strAmount.isEmpty()) {
+            UiUtils.showError(this, "Please enter a valid amount.");
+            txtAmount.requestFocus();
+            return;
+        }
+
+        double amount;
+        try {
+            amount = Double.parseDouble(strAmount);
+            if (amount <= 0) {
+                UiUtils.showError(this, "Amount must be greater than zero.");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            UiUtils.showError(this, "Invalid amount format. Please enter numbers only.");
+            return;
+        }
+
+        LocalDate txDate = txtDate.getDate();
+        if (txDate == null) {
+            UiUtils.showError(this, "Invalid date format. Please use YYYY-MM-DD or select from the calendar picker.");
+            txtDate.getTextField().requestFocus();
+            return;
+        }
+
+        TransactionType type = rbIncome.isSelected() ? TransactionType.INCOME : TransactionType.EXPENSE;
+        String category = cmbCategory.getSelectedItem() != null ? cmbCategory.getSelectedItem().toString().trim() : "";
+        String subCategory = cmbSubCategory.getSelectedItem() != null ? cmbSubCategory.getSelectedItem().toString().trim() : "";
+        String paymentVia = cmbPaymentVia.getSelectedItem() != null ? cmbPaymentVia.getSelectedItem().toString().trim() : "Cash";
+
+        if (paymentVia.isEmpty()) paymentVia = "Cash";
+
+        // Remember new custom payment mode if not already present
+        financeService.addPaymentMode(paymentVia);
+
+        Person selectedPerson = (Person) cmbPerson.getSelectedItem();
+        Long personId = selectedPerson != null ? selectedPerson.getId() : null;
+
+        // Auto-match person if subCategory matches a person's name
+        if (personId == null && !subCategory.isEmpty()) {
+            List<Person> persons = financeService.getAllPersons();
+            for (Person p : persons) {
+                if (p.getName().equalsIgnoreCase(subCategory)) {
+                    personId = p.getId();
+                    break;
+                }
+            }
+        }
+
+        // Match Bill ID if category is Bill
+        Long billId = null;
+        if (type == TransactionType.EXPENSE && "Bill".equalsIgnoreCase(category)) {
+            List<Bill> bills = financeService.getAllBills();
+            for (Bill b : bills) {
+                if (b.getBillName().equalsIgnoreCase(subCategory)) {
+                    billId = b.getId();
+                    break;
+                }
+            }
+        }
+
+        // Match EMI ID if category is EMI Payment
+        Long emiId = null;
+        if (type == TransactionType.EXPENSE && "EMI Payment".equalsIgnoreCase(category)) {
+            List<Emi> emis = financeService.getAllEmis();
+            for (Emi e : emis) {
+                if (e.getEmiName().equalsIgnoreCase(subCategory)) {
+                    emiId = e.getId();
+                    break;
+                }
+            }
+        }
+
+        // Match Credit Card ID
+        Long creditCardId = null;
+        if (type == TransactionType.EXPENSE && "Credit Card".equalsIgnoreCase(category)) {
+            List<CreditCard> cards = financeService.getAllCreditCards();
+            for (CreditCard c : cards) {
+                if (subCategory.contains(c.getCardName())) {
+                    creditCardId = c.getId();
+                    break;
+                }
+            }
+        }
+
+        Transaction tx = existingTransaction != null ? existingTransaction : new Transaction();
+        tx.setType(type);
+        tx.setTxDate(txDate);
+        tx.setExpected(chkExpected.isSelected());
+        tx.setAmount(amount);
+        tx.setPaymentVia(paymentVia);
+        tx.setCategory(category);
+        tx.setSubCategory(subCategory);
+        tx.setPersonId(personId);
+        tx.setBillId(billId);
+        tx.setEmiId(emiId);
+        tx.setCreditCardId(creditCardId);
+        tx.setNotes(txtNotes.getText().trim());
+
+        if (existingTransaction == null) {
+            financeService.createTransaction(tx);
+        } else {
+            financeService.updateTransaction(tx, existingTransaction);
+        }
+
+        saved = true;
+        dispose();
+    }
+
+    /**
+     * Indicates whether the transaction was saved or updated.
+     *
+     * @return {@code true} if saved successfully, {@code false} otherwise
+     */
+    public boolean isSaved() {
+        return saved;
+    }
+}
