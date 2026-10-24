@@ -1,6 +1,9 @@
 package com.navfinance.ui.panels;
 
 import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.AppLanguage;
+import com.navfinance.i18n.I18n;
+import com.navfinance.i18n.LanguageChangeListener;
 import com.navfinance.model.Bill;
 import com.navfinance.model.CreditCard;
 import com.navfinance.model.Emi;
@@ -42,7 +45,7 @@ import java.util.List;
  *   <li><b>Payment Modes:</b> Dynamic transactional channels (Cash, UPI, Paytm, PhonePe, NetBanking, Cards).</li>
  * </ul>
  */
-public class MastersPanel extends JPanel {
+public class MastersPanel extends JPanel implements LanguageChangeListener {
 
     /** Business service managing persistent master data and transactional entities. */
     private final FinanceService financeService = FinanceService.getInstance();
@@ -87,6 +90,7 @@ public class MastersPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
         initComponents();
+        I18n.addListener(this);
         refreshAll();
     }
 
@@ -98,13 +102,13 @@ public class MastersPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
 
-        JLabel lblTitle = new JLabel("Masters & Catalog Management");
-        lblTitle.setFont(UiUtils.FONT_TITLE);
+        JLabel lblTitle = new JLabel(I18n.get("masters.title"));
+        lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
         header.add(lblTitle, BorderLayout.WEST);
 
-        JLabel lblDesc = new JLabel("Manage Persons, Bills, EMIs, Credit Cards, and Payment Modes for auto-suggestions & categorizations.");
-        lblDesc.setFont(UiUtils.FONT_SUBTITLE);
+        JLabel lblDesc = new JLabel(I18n.get("masters.subtitle"));
+        lblDesc.setFont(UiUtils.subtitleFont());
         lblDesc.setForeground(UiUtils.COLOR_TEXT_MUTED);
         header.add(lblDesc, BorderLayout.SOUTH);
 
@@ -112,13 +116,13 @@ public class MastersPanel extends JPanel {
 
         // Tabbed Pane for Master Catalogs
         JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(UiUtils.FONT_BOLD);
+        tabbedPane.setFont(UiUtils.boldFont());
 
-        tabbedPane.addTab("Persons (Udhar / Loans)", NavIcons.person(15, UiUtils.COLOR_PRIMARY), createPersonsPanel());
-        tabbedPane.addTab("Bills (Airtel, Electricity Khardoni/Noida)", NavIcons.bill(15, UiUtils.COLOR_PRIMARY), createBillsPanel());
-        tabbedPane.addTab("EMI Master", NavIcons.emi(15, UiUtils.COLOR_PRIMARY), createEmisPanel());
-        tabbedPane.addTab("Credit Cards", NavIcons.card(15, UiUtils.COLOR_PRIMARY), createCardsPanel());
-        tabbedPane.addTab("Payment Modes (Via)", NavIcons.paymentMode(15, UiUtils.COLOR_PRIMARY), createModesPanel());
+        tabbedPane.addTab(I18n.get("masters.tab.persons"), NavIcons.person(15, UiUtils.COLOR_PRIMARY), createPersonsPanel());
+        tabbedPane.addTab(I18n.get("masters.tab.bills"), NavIcons.bill(15, UiUtils.COLOR_PRIMARY), createBillsPanel());
+        tabbedPane.addTab(I18n.get("masters.tab.emis"), NavIcons.emi(15, UiUtils.COLOR_PRIMARY), createEmisPanel());
+        tabbedPane.addTab(I18n.get("masters.tab.cards"), NavIcons.card(15, UiUtils.COLOR_PRIMARY), createCardsPanel());
+        tabbedPane.addTab(I18n.get("masters.tab.paymentModes"), NavIcons.paymentMode(15, UiUtils.COLOR_PRIMARY), createModesPanel());
 
         add(tabbedPane, BorderLayout.CENTER);
     }
@@ -140,7 +144,7 @@ public class MastersPanel extends JPanel {
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         topBar.setOpaque(false);
 
-        JButton btnAdd = UiUtils.createPrimaryButton("Add Person", NavIcons.plus(13, Color.WHITE));
+        JButton btnAdd = UiUtils.createPrimaryButton(I18n.get("masters.btn.addPerson"), NavIcons.plus(13, Color.WHITE));
         btnAdd.addActionListener(e -> {
             JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
             PersonDialog d = new PersonDialog(frame, null);
@@ -148,7 +152,7 @@ public class MastersPanel extends JPanel {
             if (d.isSaved()) refreshPersons();
         });
 
-        JButton btnEdit = UiUtils.createSecondaryButton("Edit", NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnEdit = UiUtils.createSecondaryButton(I18n.get("btn.edit"), NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnEdit.addActionListener(e -> {
             int row = tblPersons.getSelectedRow();
             if (row < 0) {
@@ -165,7 +169,7 @@ public class MastersPanel extends JPanel {
             }
         });
 
-        JButton btnDelete = UiUtils.createSecondaryButton("Delete", NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        JButton btnDelete = UiUtils.createSecondaryButton(I18n.get("btn.delete"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
         btnDelete.addActionListener(e -> {
             int row = tblPersons.getSelectedRow();
             if (row < 0) {
@@ -184,15 +188,21 @@ public class MastersPanel extends JPanel {
         topBar.add(btnDelete);
         panel.add(topBar, BorderLayout.NORTH);
 
-        String[] cols = {"ID", "Full Name", "Relation", "Contact", "Notes"};
+        String[] cols = {
+                "ID",
+                I18n.get("masters.table.name"),
+                I18n.get("masters.table.relation"),
+                I18n.get("masters.table.contact"),
+                I18n.get("masters.table.notes")
+        };
         modelPersons = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         tblPersons = new JTable(modelPersons);
         tblPersons.setRowHeight(28);
-        tblPersons.setFont(UiUtils.FONT_REGULAR);
-        tblPersons.getTableHeader().setFont(UiUtils.FONT_BOLD);
+        tblPersons.setFont(UiUtils.regularFont());
+        tblPersons.getTableHeader().setFont(UiUtils.boldFont());
 
         JScrollPane sp = new JScrollPane(tblPersons);
         sp.setBorder(UiUtils.createCardBorder());
@@ -217,7 +227,7 @@ public class MastersPanel extends JPanel {
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         topBar.setOpaque(false);
 
-        JButton btnAdd = UiUtils.createPrimaryButton("Add Bill", NavIcons.plus(13, Color.WHITE));
+        JButton btnAdd = UiUtils.createPrimaryButton(I18n.get("masters.btn.addBill"), NavIcons.plus(13, Color.WHITE));
         btnAdd.addActionListener(e -> {
             JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
             BillDialog d = new BillDialog(frame, null);
@@ -225,7 +235,7 @@ public class MastersPanel extends JPanel {
             if (d.isSaved()) refreshBills();
         });
 
-        JButton btnEdit = UiUtils.createSecondaryButton("Edit", NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnEdit = UiUtils.createSecondaryButton(I18n.get("btn.edit"), NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnEdit.addActionListener(e -> {
             int row = tblBills.getSelectedRow();
             if (row < 0) {
@@ -242,7 +252,7 @@ public class MastersPanel extends JPanel {
             }
         });
 
-        JButton btnDelete = UiUtils.createSecondaryButton("Delete", NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        JButton btnDelete = UiUtils.createSecondaryButton(I18n.get("btn.delete"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
         btnDelete.addActionListener(e -> {
             int row = tblBills.getSelectedRow();
             if (row < 0) {
@@ -261,15 +271,21 @@ public class MastersPanel extends JPanel {
         topBar.add(btnDelete);
         panel.add(topBar, BorderLayout.NORTH);
 
-        String[] cols = {"ID", "Bill Name", "Provider", "Typical Amount", "Notes"};
+        String[] cols = {
+                "ID",
+                I18n.get("masters.table.name"),
+                I18n.get("masters.table.provider"),
+                I18n.get("masters.table.defaultAmount"),
+                I18n.get("masters.table.notes")
+        };
         modelBills = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         tblBills = new JTable(modelBills);
         tblBills.setRowHeight(28);
-        tblBills.setFont(UiUtils.FONT_REGULAR);
-        tblBills.getTableHeader().setFont(UiUtils.FONT_BOLD);
+        tblBills.setFont(UiUtils.regularFont());
+        tblBills.getTableHeader().setFont(UiUtils.boldFont());
 
         JScrollPane sp = new JScrollPane(tblBills);
         sp.setBorder(UiUtils.createCardBorder());
@@ -294,7 +310,7 @@ public class MastersPanel extends JPanel {
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         topBar.setOpaque(false);
 
-        JButton btnAdd = UiUtils.createPrimaryButton("Add EMI", NavIcons.plus(13, Color.WHITE));
+        JButton btnAdd = UiUtils.createPrimaryButton(I18n.get("masters.btn.addEmi"), NavIcons.plus(13, Color.WHITE));
         btnAdd.addActionListener(e -> {
             JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
             EmiDialog d = new EmiDialog(frame, null);
@@ -302,7 +318,7 @@ public class MastersPanel extends JPanel {
             if (d.isSaved()) refreshEmis();
         });
 
-        JButton btnEdit = UiUtils.createSecondaryButton("Edit", NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnEdit = UiUtils.createSecondaryButton(I18n.get("btn.edit"), NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnEdit.addActionListener(e -> {
             int row = tblEmis.getSelectedRow();
             if (row < 0) {
@@ -319,7 +335,7 @@ public class MastersPanel extends JPanel {
             }
         });
 
-        JButton btnDelete = UiUtils.createSecondaryButton("Delete", NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        JButton btnDelete = UiUtils.createSecondaryButton(I18n.get("btn.delete"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
         btnDelete.addActionListener(e -> {
             int row = tblEmis.getSelectedRow();
             if (row < 0) {
@@ -338,15 +354,21 @@ public class MastersPanel extends JPanel {
         topBar.add(btnDelete);
         panel.add(topBar, BorderLayout.NORTH);
 
-        String[] cols = {"ID", "EMI Name", "Bank / Lender", "Monthly Amount", "Notes"};
+        String[] cols = {
+                "ID",
+                I18n.get("masters.table.name"),
+                I18n.get("masters.table.bank"),
+                I18n.get("masters.table.monthlyAmount"),
+                I18n.get("masters.table.notes")
+        };
         modelEmis = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         tblEmis = new JTable(modelEmis);
         tblEmis.setRowHeight(28);
-        tblEmis.setFont(UiUtils.FONT_REGULAR);
-        tblEmis.getTableHeader().setFont(UiUtils.FONT_BOLD);
+        tblEmis.setFont(UiUtils.regularFont());
+        tblEmis.getTableHeader().setFont(UiUtils.boldFont());
 
         JScrollPane sp = new JScrollPane(tblEmis);
         sp.setBorder(UiUtils.createCardBorder());
@@ -371,7 +393,7 @@ public class MastersPanel extends JPanel {
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         topBar.setOpaque(false);
 
-        JButton btnAdd = UiUtils.createPrimaryButton("Add Card", NavIcons.plus(13, Color.WHITE));
+        JButton btnAdd = UiUtils.createPrimaryButton(I18n.get("masters.btn.addCard"), NavIcons.plus(13, Color.WHITE));
         btnAdd.addActionListener(e -> {
             JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
             CreditCardDialog d = new CreditCardDialog(frame, null);
@@ -379,7 +401,7 @@ public class MastersPanel extends JPanel {
             if (d.isSaved()) refreshCards();
         });
 
-        JButton btnEdit = UiUtils.createSecondaryButton("Edit", NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnEdit = UiUtils.createSecondaryButton(I18n.get("btn.edit"), NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnEdit.addActionListener(e -> {
             int row = tblCards.getSelectedRow();
             if (row < 0) {
@@ -396,7 +418,7 @@ public class MastersPanel extends JPanel {
             }
         });
 
-        JButton btnDelete = UiUtils.createSecondaryButton("Delete", NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        JButton btnDelete = UiUtils.createSecondaryButton(I18n.get("btn.delete"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
         btnDelete.addActionListener(e -> {
             int row = tblCards.getSelectedRow();
             if (row < 0) {
@@ -415,15 +437,20 @@ public class MastersPanel extends JPanel {
         topBar.add(btnDelete);
         panel.add(topBar, BorderLayout.NORTH);
 
-        String[] cols = {"ID", "Card Name", "Bank", "Last Digits"};
+        String[] cols = {
+                "ID",
+                I18n.get("masters.table.name"),
+                I18n.get("masters.table.bank"),
+                I18n.get("masters.table.lastDigits")
+        };
         modelCards = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         tblCards = new JTable(modelCards);
         tblCards.setRowHeight(28);
-        tblCards.setFont(UiUtils.FONT_REGULAR);
-        tblCards.getTableHeader().setFont(UiUtils.FONT_BOLD);
+        tblCards.setFont(UiUtils.regularFont());
+        tblCards.getTableHeader().setFont(UiUtils.boldFont());
 
         JScrollPane sp = new JScrollPane(tblCards);
         sp.setBorder(UiUtils.createCardBorder());
@@ -448,9 +475,9 @@ public class MastersPanel extends JPanel {
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         topBar.setOpaque(false);
 
-        JButton btnAdd = UiUtils.createPrimaryButton("Add Payment Mode", NavIcons.plus(13, Color.WHITE));
+        JButton btnAdd = UiUtils.createPrimaryButton(I18n.get("masters.btn.addMode"), NavIcons.plus(13, Color.WHITE));
         btnAdd.addActionListener(e -> {
-            String mode = JOptionPane.showInputDialog(this, "Enter New Payment Mode (Via):", "Add Payment Mode", JOptionPane.PLAIN_MESSAGE);
+            String mode = JOptionPane.showInputDialog(this, I18n.get("masters.prompt.addMode"), I18n.get("masters.btn.addMode"), JOptionPane.PLAIN_MESSAGE);
             if (mode != null && !mode.trim().isEmpty()) {
                 financeService.addPaymentMode(mode.trim());
                 refreshModes();
@@ -460,15 +487,15 @@ public class MastersPanel extends JPanel {
         topBar.add(btnAdd);
         panel.add(topBar, BorderLayout.NORTH);
 
-        String[] cols = {"#", "Payment Mode Name (Via)"};
+        String[] cols = {"#", I18n.get("masters.table.modeName")};
         modelModes = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         tblModes = new JTable(modelModes);
         tblModes.setRowHeight(28);
-        tblModes.setFont(UiUtils.FONT_REGULAR);
-        tblModes.getTableHeader().setFont(UiUtils.FONT_BOLD);
+        tblModes.setFont(UiUtils.regularFont());
+        tblModes.getTableHeader().setFont(UiUtils.boldFont());
 
         JScrollPane sp = new JScrollPane(tblModes);
         sp.setBorder(UiUtils.createCardBorder());
@@ -559,4 +586,14 @@ public class MastersPanel extends JPanel {
             modelModes.addRow(new Object[]{seq++, m});
         }
     }
+
+    @Override
+    public void onLanguageChanged(AppLanguage newLanguage) {
+        removeAll();
+        initComponents();
+        revalidate();
+        repaint();
+        refreshAll();
+    }
 }
+

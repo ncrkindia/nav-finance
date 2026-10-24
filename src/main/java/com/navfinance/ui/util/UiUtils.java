@@ -70,23 +70,41 @@ public final class UiUtils {
     // Typography Scales
     // =========================================================================
 
-    /** Prominent screen and dialog title font (Segoe UI 18pt Bold). */
+    /** Prominent screen and dialog title font (Segoe UI / Nirmala UI 18pt Bold). */
     public static final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 18);
 
-    /** Section heading font (Segoe UI 14pt Bold). */
+    /** Section heading font (Segoe UI / Nirmala UI 14pt Bold). */
     public static final Font FONT_HEADER = new Font("Segoe UI", Font.BOLD, 14);
 
-    /** Subtitle and secondary descriptive font (Segoe UI 12pt Plain). */
+    /** Subtitle and secondary descriptive font (Segoe UI / Nirmala UI 12pt Plain). */
     public static final Font FONT_SUBTITLE = new Font("Segoe UI", Font.PLAIN, 12);
 
-    /** Emphasized bold text font for tables, buttons, and badges (Segoe UI 12pt Bold). */
+    /** Emphasized bold text font for tables, buttons, and badges (Segoe UI / Nirmala UI 12pt Bold). */
     public static final Font FONT_BOLD = new Font("Segoe UI", Font.BOLD, 12);
 
-    /** Standard body copy font (Segoe UI 12pt Plain). */
+    /** Standard body copy font (Segoe UI / Nirmala UI 12pt Plain). */
     public static final Font FONT_REGULAR = new Font("Segoe UI", Font.PLAIN, 12);
 
-    /** Large metric headline font for KPI dashboard cards (Segoe UI 22pt Bold). */
+    /** Large metric headline font for KPI dashboard cards (Segoe UI / Nirmala UI 22pt Bold). */
     public static final Font FONT_KPI_VALUE = new Font("Segoe UI", Font.BOLD, 22);
+
+    /** @return active localized title font */
+    public static Font titleFont() { return com.navfinance.i18n.I18n.getTitleFont(); }
+
+    /** @return active localized header font */
+    public static Font headerFont() { return com.navfinance.i18n.I18n.getHeaderFont(); }
+
+    /** @return active localized subtitle font */
+    public static Font subtitleFont() { return com.navfinance.i18n.I18n.getSubFont(); }
+
+    /** @return active localized bold font */
+    public static Font boldFont() { return com.navfinance.i18n.I18n.getBoldFont(); }
+
+    /** @return active localized regular body font */
+    public static Font regularFont() { return com.navfinance.i18n.I18n.getRegularFont(); }
+
+    /** @return active localized large KPI metric font */
+    public static Font kpiFont() { return com.navfinance.i18n.I18n.getKpiFont(); }
 
     // =========================================================================
     // Button Factories

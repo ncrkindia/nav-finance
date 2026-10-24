@@ -1,6 +1,7 @@
 package com.navfinance.ui.dialogs;
 
 import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.I18n;
 import com.navfinance.model.Bill;
 import com.navfinance.service.FinanceService;
 import com.navfinance.ui.util.NavIcons;
@@ -57,7 +58,7 @@ public class BillDialog extends JDialog {
      * @param bill existing bill entity to edit, or {@code null} to create a new one
      */
     public BillDialog(JFrame parent, Bill bill) {
-        super(parent, bill == null ? "Add Bill" : "Edit Bill", true);
+        super(parent, bill == null ? I18n.get("masters.btn.addBill") : I18n.get("btn.edit") + " " + I18n.get("masters.table.name"), true);
         this.bill = bill;
 
         initComponents();
@@ -83,49 +84,64 @@ public class BillDialog extends JDialog {
 
         // Bill Name (e.g. Airtel Bill, Electricity (Khardoni), Electricity (Noida))
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Bill Name:*"), gbc);
+        JLabel lblName = new JLabel(I18n.get("masters.table.name") + ":*");
+        lblName.setFont(UiUtils.regularFont());
+        mainPanel.add(lblName, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtBillName = new JTextField(20);
+        txtBillName.setFont(UiUtils.regularFont());
         mainPanel.add(txtBillName, gbc);
 
         // Provider / Agency
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Provider / Agency:"), gbc);
+        JLabel lblProvider = new JLabel(I18n.get("masters.table.provider") + ":");
+        lblProvider.setFont(UiUtils.regularFont());
+        mainPanel.add(lblProvider, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtProvider = new JTextField(20);
+        txtProvider.setFont(UiUtils.regularFont());
         mainPanel.add(txtProvider, gbc);
 
         // Typical / Default Amount
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Typical Amount (" + AppConfig.getCurrencySymbol() + "):"), gbc);
+        JLabel lblAmt = new JLabel(I18n.get("masters.table.defaultAmount") + " (" + AppConfig.getCurrencySymbol() + "):");
+        lblAmt.setFont(UiUtils.regularFont());
+        mainPanel.add(lblAmt, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtDefaultAmount = new JTextField(20);
+        txtDefaultAmount.setFont(UiUtils.regularFont());
         mainPanel.add(txtDefaultAmount, gbc);
 
         // Notes / Remarks
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Notes:"), gbc);
+        JLabel lblNotes = new JLabel(I18n.get("masters.table.notes") + ":");
+        lblNotes.setFont(UiUtils.regularFont());
+        mainPanel.add(lblNotes, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtNotes = new JTextArea(3, 20);
+        txtNotes.setFont(UiUtils.regularFont());
         mainPanel.add(new JScrollPane(txtNotes), gbc);
 
         add(mainPanel, BorderLayout.CENTER);
 
         // Action Buttons: Cancel and Save
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        JButton btnCancel = UiUtils.createSecondaryButton("Cancel", NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnCancel = UiUtils.createSecondaryButton(I18n.get("btn.cancel"), NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnCancel.setFont(UiUtils.boldFont());
         btnCancel.addActionListener(e -> dispose());
 
-        JButton btnSave = UiUtils.createPrimaryButton("Save Bill", NavIcons.check(13, Color.WHITE));
+        JButton btnSave = UiUtils.createPrimaryButton(I18n.get("btn.save"), NavIcons.check(13, Color.WHITE));
+        btnSave.setFont(UiUtils.boldFont());
         btnSave.addActionListener(e -> onSave());
 
         btnPanel.add(btnCancel);
         btnPanel.add(btnSave);
         add(btnPanel, BorderLayout.SOUTH);
+
 
         // Pre-populate fields when in edit mode
         if (bill != null) {

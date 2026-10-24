@@ -1,6 +1,7 @@
 package com.navfinance.ui.dialogs;
 
 import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.I18n;
 import com.navfinance.service.CsvImportService;
 import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
@@ -63,7 +64,7 @@ public class CsvImportDialog extends JDialog {
      * @param parent owner window frame
      */
     public CsvImportDialog(JFrame parent) {
-        super(parent, "Bulk CSV Import & Update Manager", true);
+        super(parent, I18n.get("dialog.csv.title"), true);
         setPreferredSize(new Dimension(1000, 600));
         setMinimumSize(new Dimension(850, 480));
 
@@ -87,12 +88,12 @@ public class CsvImportDialog extends JDialog {
 
         JPanel headerText = new JPanel(new BorderLayout(0, 3));
         headerText.setOpaque(false);
-        JLabel lblTitle = new JLabel("Bulk Import, Update & Delete via CSV");
-        lblTitle.setFont(UiUtils.FONT_TITLE);
+        JLabel lblTitle = new JLabel(I18n.get("dialog.csv.title"));
+        lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
 
         JLabel lblSub = new JLabel("<html>Select a CSV file to create new transactions, update existing records by ID, or delete entries. Download the template below for reference.</html>");
-        lblSub.setFont(UiUtils.FONT_SUBTITLE);
+        lblSub.setFont(UiUtils.subtitleFont());
         lblSub.setForeground(UiUtils.COLOR_TEXT_MUTED);
 
         headerText.add(lblTitle, BorderLayout.NORTH);
@@ -102,14 +103,16 @@ public class CsvImportDialog extends JDialog {
         JPanel btnBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         btnBar.setOpaque(false);
 
-        JButton btnChooseFile = UiUtils.createPrimaryButton("Select CSV File...", NavIcons.importIcon(13, Color.WHITE));
+        JButton btnChooseFile = UiUtils.createPrimaryButton(I18n.get("btn.import"), NavIcons.importIcon(13, Color.WHITE));
+        btnChooseFile.setFont(UiUtils.boldFont());
         btnChooseFile.addActionListener(e -> onSelectFile());
 
-        JButton btnDownloadTemplate = UiUtils.createSecondaryButton("Download CSV Template", NavIcons.export(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnDownloadTemplate = UiUtils.createSecondaryButton(I18n.get("transactions.export.template"), NavIcons.export(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnDownloadTemplate.setFont(UiUtils.boldFont());
         btnDownloadTemplate.addActionListener(e -> onDownloadTemplate());
 
         lblStatus = new JLabel("No file selected yet.");
-        lblStatus.setFont(UiUtils.FONT_BOLD);
+        lblStatus.setFont(UiUtils.boldFont());
         lblStatus.setForeground(UiUtils.COLOR_TEXT_MUTED);
 
         btnBar.add(btnChooseFile);
@@ -118,6 +121,7 @@ public class CsvImportDialog extends JDialog {
         btnBar.add(lblStatus);
 
         topPanel.add(btnBar, BorderLayout.SOUTH);
+
         root.add(topPanel, BorderLayout.NORTH);
 
         // 2. CENTER: Preview Table
@@ -181,10 +185,12 @@ public class CsvImportDialog extends JDialog {
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
         bottomBar.setOpaque(false);
 
-        JButton btnCancel = UiUtils.createSecondaryButton("Cancel", NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnCancel = UiUtils.createSecondaryButton(I18n.get("btn.cancel"), NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnCancel.setFont(UiUtils.boldFont());
         btnCancel.addActionListener(e -> dispose());
 
-        btnExecute = UiUtils.createSuccessButton("Execute Import", NavIcons.check(13, Color.WHITE));
+        btnExecute = UiUtils.createSuccessButton(I18n.get("btn.apply"), NavIcons.check(13, Color.WHITE));
+        btnExecute.setFont(UiUtils.boldFont());
         btnExecute.setEnabled(false);
         btnExecute.addActionListener(e -> onExecuteImport());
 

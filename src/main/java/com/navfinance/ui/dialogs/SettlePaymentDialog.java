@@ -1,6 +1,7 @@
 package com.navfinance.ui.dialogs;
 
 import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.I18n;
 import com.navfinance.model.DuePayment;
 import com.navfinance.service.FinanceService;
 import com.navfinance.service.RecurringService;
@@ -21,7 +22,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -72,7 +72,7 @@ public class SettlePaymentDialog extends JDialog {
      * @param payment due payment record to settle
      */
     public SettlePaymentDialog(JFrame parent, DuePayment payment) {
-        super(parent, "Settle Payment - " + payment.getTitle(), true);
+        super(parent, I18n.get("dialog.settle.title") + " - " + payment.getTitle(), true);
         this.payment = payment;
 
         setPreferredSize(new Dimension(520, 480));
@@ -95,8 +95,8 @@ public class SettlePaymentDialog extends JDialog {
         banner.setBackground(Color.WHITE);
         banner.setBorder(UiUtils.createCardBorder());
 
-        JLabel lblTitle = new JLabel("Settle Due Payment", NavIcons.check(18, UiUtils.COLOR_INCOME), JLabel.LEFT);
-        lblTitle.setFont(UiUtils.FONT_TITLE);
+        JLabel lblTitle = new JLabel(I18n.get("dialog.settle.title"), NavIcons.check(18, UiUtils.COLOR_INCOME), JLabel.LEFT);
+        lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(UiUtils.COLOR_INCOME);
 
         String modeBadge = payment.isAutoPay() ? "[Auto-Debit]" : "[Manual]";
@@ -106,7 +106,7 @@ public class SettlePaymentDialog extends JDialog {
                 payment.getCategory(),
                 modeBadge);
         JLabel lblSub = new JLabel(dueInfo);
-        lblSub.setFont(UiUtils.FONT_SUBTITLE);
+        lblSub.setFont(UiUtils.subtitleFont());
         lblSub.setForeground(new Color(51, 65, 85));
 
         banner.add(lblTitle, BorderLayout.NORTH);
@@ -126,22 +126,22 @@ public class SettlePaymentDialog extends JDialog {
         // If Variable, show prominent prompt
         if (payment.isVariable()) {
             gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2;
-            JLabel lblVarNotice = new JLabel("<html><b style='color:#0284c7;'>Variable Amount Bill:</b> Please enter the exact billed amount for this period:</html>");
+            JLabel lblVarNotice = new JLabel("<html><b style='color:#0284c7;'>" + I18n.get("dialog.settle.variablePrompt") + "</b></html>");
             lblVarNotice.setIcon(NavIcons.bill(16, new Color(2, 132, 199)));
-            lblVarNotice.setFont(UiUtils.FONT_REGULAR);
+            lblVarNotice.setFont(UiUtils.regularFont());
             form.add(lblVarNotice, gbc);
             gbc.gridwidth = 1;
         }
 
         // Amount Field
         gbc.gridx = 0; gbc.gridy = row;
-        JLabel lblAmt = new JLabel("Actual Amount (" + AppConfig.getCurrencySymbol() + "):*");
-        lblAmt.setFont(UiUtils.FONT_BOLD);
+        JLabel lblAmt = new JLabel(I18n.get("dialog.settle.actualAmount"));
+        lblAmt.setFont(UiUtils.boldFont());
         form.add(lblAmt, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtAmount = new JTextField(12);
-        txtAmount.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        txtAmount.setFont(UiUtils.boldFont());
         if (payment.getExpectedAmount() > 0) {
             txtAmount.setText(String.format("%.2f", payment.getExpectedAmount()));
         }
@@ -149,8 +149,8 @@ public class SettlePaymentDialog extends JDialog {
 
         // Settlement Date (Picker + Manual)
         gbc.gridx = 0; gbc.gridy = row;
-        JLabel lblDate = new JLabel("Settlement Date:*");
-        lblDate.setFont(UiUtils.FONT_BOLD);
+        JLabel lblDate = new JLabel(I18n.get("dialog.settle.date"));
+        lblDate.setFont(UiUtils.boldFont());
         form.add(lblDate, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
@@ -161,12 +161,13 @@ public class SettlePaymentDialog extends JDialog {
 
         // Payment Via
         gbc.gridx = 0; gbc.gridy = row;
-        JLabel lblVia = new JLabel("Paid Via:*");
-        lblVia.setFont(UiUtils.FONT_BOLD);
+        JLabel lblVia = new JLabel(I18n.get("transactions.table.via") + ":*");
+        lblVia.setFont(UiUtils.boldFont());
         form.add(lblVia, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         cmbPaymentVia = new JComboBox<>();
+        cmbPaymentVia.setFont(UiUtils.regularFont());
         List<String> modes = financeService.getAllPaymentModes();
         for (String m : modes) cmbPaymentVia.addItem(m);
         cmbPaymentVia.setSelectedItem(payment.isAutoPay() ? "Net Banking" : "UPI");
@@ -174,19 +175,20 @@ public class SettlePaymentDialog extends JDialog {
 
         // Notes
         gbc.gridx = 0; gbc.gridy = row;
-        JLabel lblNotes = new JLabel("Remarks / Reference:");
-        lblNotes.setFont(UiUtils.FONT_BOLD);
+        JLabel lblNotes = new JLabel(I18n.get("transactions.table.notes") + ":");
+        lblNotes.setFont(UiUtils.boldFont());
         form.add(lblNotes, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtNotes = new JTextField(15);
+        txtNotes.setFont(UiUtils.regularFont());
         txtNotes.setText(payment.isAutoPay() ? "Auto-debited from bank account" : "Paid manually");
         form.add(txtNotes, gbc);
 
         // Checkbox: Create Transaction in Ledger
         gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2;
-        chkCreateTx = new JCheckBox("Record as transaction in Expenses/Income ledger", true);
-        chkCreateTx.setFont(UiUtils.FONT_BOLD);
+        chkCreateTx = new JCheckBox(I18n.get("dialog.settle.recordTxn"), true);
+        chkCreateTx.setFont(UiUtils.boldFont());
         chkCreateTx.setForeground(UiUtils.COLOR_PRIMARY);
         chkCreateTx.setOpaque(false);
         form.add(chkCreateTx, gbc);
@@ -197,10 +199,12 @@ public class SettlePaymentDialog extends JDialog {
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         bottomBar.setOpaque(false);
 
-        JButton btnCancel = UiUtils.createSecondaryButton("Cancel", NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnCancel = UiUtils.createSecondaryButton(I18n.get("btn.cancel"), NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnCancel.setFont(UiUtils.boldFont());
         btnCancel.addActionListener(e -> dispose());
 
-        JButton btnConfirm = UiUtils.createSuccessButton("Confirm Settlement", NavIcons.check(13, Color.WHITE));
+        JButton btnConfirm = UiUtils.createSuccessButton(I18n.get("btn.settle"), NavIcons.check(13, Color.WHITE));
+        btnConfirm.setFont(UiUtils.boldFont());
         btnConfirm.addActionListener(e -> onConfirmSettle());
 
         bottomBar.add(btnCancel);

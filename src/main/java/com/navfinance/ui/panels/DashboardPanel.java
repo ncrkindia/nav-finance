@@ -9,6 +9,9 @@ import com.navfinance.ui.components.CategoryPieChartPanel;
 import com.navfinance.ui.components.KpiCard;
 import com.navfinance.ui.components.TrendChartPanel;
 import com.navfinance.ui.dialogs.TransactionDialog;
+import com.navfinance.i18n.AppLanguage;
+import com.navfinance.i18n.I18n;
+import com.navfinance.i18n.LanguageChangeListener;
 import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
 
@@ -40,7 +43,7 @@ import java.util.List;
  * quick entry shortcuts, and a recent transactions ledger preview.
  * </p>
  */
-public class DashboardPanel extends JPanel {
+public class DashboardPanel extends JPanel implements LanguageChangeListener {
 
     /** Service coordinator for financial statistics and time-series aggregation. */
     private final AnalyticsService analyticsService = AnalyticsService.getInstance();
@@ -88,6 +91,7 @@ public class DashboardPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
         initComponents();
+        I18n.addListener(this);
         refreshData();
     }
 
@@ -96,6 +100,8 @@ public class DashboardPanel extends JPanel {
      * and recent transactions table.
      */
     private void initComponents() {
+        removeAll();
+
         // TOP: Period Selector & Quick Actions
         JPanel topBar = new JPanel(new BorderLayout(15, 0));
         topBar.setOpaque(false);
@@ -104,15 +110,15 @@ public class DashboardPanel extends JPanel {
         JPanel navPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         navPanel.setOpaque(false);
 
-        JLabel lblView = new JLabel("Time Period:");
-        lblView.setFont(UiUtils.FONT_BOLD);
+        JLabel lblView = new JLabel(I18n.get("transactions.filter.datePreset"));
+        lblView.setFont(UiUtils.boldFont());
         navPanel.add(lblView);
 
         String[] periods = {"Weekly", "Monthly", "Quarterly", "Annually"};
         ButtonGroup bg = new ButtonGroup();
         for (String p : periods) {
             JRadioButton rb = new JRadioButton(p);
-            rb.setFont(UiUtils.FONT_REGULAR);
+            rb.setFont(UiUtils.regularFont());
             rb.setOpaque(false);
             if (p.equals(currentPeriodType)) rb.setSelected(true);
             rb.addActionListener(e -> {
@@ -132,7 +138,7 @@ public class DashboardPanel extends JPanel {
         });
 
         lblPeriodLabel = new JLabel("October 2026", JLabel.CENTER);
-        lblPeriodLabel.setFont(UiUtils.FONT_BOLD);
+        lblPeriodLabel.setFont(UiUtils.boldFont());
         lblPeriodLabel.setPreferredSize(new Dimension(200, 26));
 
         JButton btnNext = UiUtils.createSecondaryButton("Next", NavIcons.chevronRight(12, UiUtils.COLOR_TEXT_PRIMARY));
@@ -141,7 +147,7 @@ public class DashboardPanel extends JPanel {
             refreshData();
         });
 
-        JButton btnToday = UiUtils.createSecondaryButton("Current Period", NavIcons.calendar(13, UiUtils.COLOR_PRIMARY));
+        JButton btnToday = UiUtils.createSecondaryButton(I18n.get("btn.today"), NavIcons.calendar(13, UiUtils.COLOR_PRIMARY));
         btnToday.addActionListener(e -> {
             currentOffset = 0;
             refreshData();
@@ -158,10 +164,10 @@ public class DashboardPanel extends JPanel {
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actionPanel.setOpaque(false);
 
-        JButton btnAddIncome = UiUtils.createSuccessButton("Add Income", NavIcons.plus(13, Color.WHITE));
+        JButton btnAddIncome = UiUtils.createSuccessButton(I18n.get("action.recordIncome"), NavIcons.plus(13, Color.WHITE));
         btnAddIncome.addActionListener(e -> openTransactionDialog(TransactionType.INCOME));
 
-        JButton btnAddExpense = UiUtils.createDangerButton("Add Expense", NavIcons.minus(13, Color.WHITE));
+        JButton btnAddExpense = UiUtils.createDangerButton(I18n.get("action.recordExpense"), NavIcons.minus(13, Color.WHITE));
         btnAddExpense.addActionListener(e -> openTransactionDialog(TransactionType.EXPENSE));
 
         actionPanel.add(btnAddIncome);
@@ -178,10 +184,10 @@ public class DashboardPanel extends JPanel {
         JPanel kpiRow = new JPanel(new GridLayout(1, 4, 14, 0));
         kpiRow.setOpaque(false);
 
-        kpiIncome = new KpiCard("Total Income (In)", "₹ 0.00", "Current Period", UiUtils.COLOR_INCOME, NavIcons.plus(22, UiUtils.COLOR_INCOME));
-        kpiExpense = new KpiCard("Total Expense (Out)", "₹ 0.00", "Current Period", UiUtils.COLOR_EXPENSE, NavIcons.minus(22, UiUtils.COLOR_EXPENSE));
-        kpiBalance = new KpiCard("Net Savings / Balance", "₹ 0.00", "Income minus Expense", UiUtils.COLOR_PRIMARY, NavIcons.dashboard(22, UiUtils.COLOR_PRIMARY));
-        kpiUdhar = new KpiCard("Udhaar Ledger Position", "₹ 0.00", "Total Given vs Taken", UiUtils.COLOR_AMBER, NavIcons.udhar(22, UiUtils.COLOR_AMBER));
+        kpiIncome = new KpiCard(I18n.get("dashboard.kpi.totalIncome"), "₹ 0.00", I18n.get("dashboard.period.thisMonth"), UiUtils.COLOR_INCOME, NavIcons.plus(22, UiUtils.COLOR_INCOME));
+        kpiExpense = new KpiCard(I18n.get("dashboard.kpi.totalExpense"), "₹ 0.00", I18n.get("dashboard.period.thisMonth"), UiUtils.COLOR_EXPENSE, NavIcons.minus(22, UiUtils.COLOR_EXPENSE));
+        kpiBalance = new KpiCard(I18n.get("dashboard.kpi.netBalance"), "₹ 0.00", I18n.get("dashboard.title"), UiUtils.COLOR_PRIMARY, NavIcons.dashboard(22, UiUtils.COLOR_PRIMARY));
+        kpiUdhar = new KpiCard(I18n.get("tab.udhar"), "₹ 0.00", I18n.get("udhar.subtitle"), UiUtils.COLOR_AMBER, NavIcons.udhar(22, UiUtils.COLOR_AMBER));
 
         kpiRow.add(kpiIncome);
         kpiRow.add(kpiExpense);
@@ -194,8 +200,8 @@ public class DashboardPanel extends JPanel {
         chartsRow.setOpaque(false);
         chartsRow.setPreferredSize(new Dimension(900, 310));
 
-        trendChart = new TrendChartPanel("Income vs Expense Trend (In / Out)");
-        categoryPieChart = new CategoryPieChartPanel("Expense Breakdown by Category");
+        trendChart = new TrendChartPanel(I18n.get("report.title"));
+        categoryPieChart = new CategoryPieChartPanel(I18n.get("dashboard.categoryBreakdown"));
 
         chartsRow.add(trendChart, BorderLayout.CENTER);
         chartsRow.add(categoryPieChart, BorderLayout.EAST);
@@ -204,12 +210,22 @@ public class DashboardPanel extends JPanel {
         JPanel lowerPanel = new JPanel(new BorderLayout(0, 8));
         lowerPanel.setOpaque(false);
 
-        JLabel lblRecentTitle = new JLabel("Recent Activity");
-        lblRecentTitle.setFont(UiUtils.FONT_HEADER);
+        JLabel lblRecentTitle = new JLabel(I18n.get("dashboard.recentTransactions"));
+        lblRecentTitle.setFont(UiUtils.headerFont());
         lblRecentTitle.setBorder(BorderFactory.createEmptyBorder(6, 4, 2, 4));
         lowerPanel.add(lblRecentTitle, BorderLayout.NORTH);
 
-        String[] cols = {"Type", "Date", "Status", "Amount", "Via", "Category", "Sub-Category", "Person", "Notes"};
+        String[] cols = {
+                I18n.get("transactions.table.type"),
+                I18n.get("transactions.table.date"),
+                I18n.get("transactions.table.status"),
+                I18n.get("transactions.table.amount"),
+                I18n.get("transactions.table.via"),
+                I18n.get("transactions.table.category"),
+                I18n.get("transactions.table.subCategory"),
+                I18n.get("transactions.table.person"),
+                I18n.get("transactions.table.notes")
+        };
         recentTableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -349,5 +365,11 @@ public class DashboardPanel extends JPanel {
         if (dialog.isSaved()) {
             refreshData();
         }
+    }
+
+    @Override
+    public void onLanguageChanged(AppLanguage newLanguage) {
+        initComponents();
+        refreshData();
     }
 }

@@ -1,6 +1,9 @@
 package com.navfinance.ui.panels;
 
 import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.AppLanguage;
+import com.navfinance.i18n.I18n;
+import com.navfinance.i18n.LanguageChangeListener;
 import com.navfinance.model.AuditLog;
 import com.navfinance.service.FinanceService;
 import com.navfinance.ui.util.NavIcons;
@@ -28,9 +31,10 @@ import java.util.List;
  * <p>
  * Provides real-time searching, action type filtering (CREATE, UPDATE, DELETE), color-coded
  * status indicators, and detailed before-and-after change diffs with timestamps.
+ * Fully localized for English, Hindi, and Hinglish.
  * </p>
  */
-public class AuditLogPanel extends JPanel {
+public class AuditLogPanel extends JPanel implements LanguageChangeListener {
 
     /** Service layer coordinating audit record retrieval. */
     private final FinanceService financeService = FinanceService.getInstance();
@@ -56,6 +60,7 @@ public class AuditLogPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
         initComponents();
+        I18n.addListener(this);
         refreshLogs();
     }
 
@@ -69,12 +74,12 @@ public class AuditLogPanel extends JPanel {
 
         JPanel titlePanel = new JPanel(new BorderLayout(0, 4));
         titlePanel.setOpaque(false);
-        JLabel lblTitle = new JLabel("Audit Log & System Change History");
-        lblTitle.setFont(UiUtils.FONT_TITLE);
+        JLabel lblTitle = new JLabel(I18n.get("audit.title"));
+        lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
 
-        JLabel lblSub = new JLabel("Immutable trail of creations, modifications, and deletions with timestamps & diffs.");
-        lblSub.setFont(UiUtils.FONT_SUBTITLE);
+        JLabel lblSub = new JLabel(I18n.get("audit.subtitle"));
+        lblSub.setFont(UiUtils.subtitleFont());
         lblSub.setForeground(UiUtils.COLOR_TEXT_MUTED);
 
         titlePanel.add(lblTitle, BorderLayout.NORTH);
@@ -85,22 +90,36 @@ public class AuditLogPanel extends JPanel {
         JPanel searchBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         searchBar.setOpaque(false);
 
-        searchBar.add(new JLabel("Action:"));
-        cmbActionFilter = new JComboBox<>(new String[]{"All Actions", "CREATE", "UPDATE", "DELETE"});
+        JLabel lblAction = new JLabel(I18n.get("audit.filter.action"));
+        lblAction.setFont(UiUtils.regularFont());
+        searchBar.add(lblAction);
+
+        cmbActionFilter = new JComboBox<>(new String[]{
+                I18n.get("audit.filter.allActions"),
+                I18n.get("audit.filter.create"),
+                I18n.get("audit.filter.update"),
+                I18n.get("audit.filter.delete")
+        });
+        cmbActionFilter.setFont(UiUtils.regularFont());
         cmbActionFilter.addActionListener(e -> refreshLogs());
         searchBar.add(cmbActionFilter);
 
-        searchBar.add(new JLabel("Search:"));
+        JLabel lblSearch = new JLabel(I18n.get("transactions.filter.search"));
+        lblSearch.setFont(UiUtils.regularFont());
+        searchBar.add(lblSearch);
+
         txtSearch = new JTextField(14);
-        txtSearch.setToolTipText("Filter details or entity");
+        txtSearch.setFont(UiUtils.regularFont());
         txtSearch.addActionListener(e -> refreshLogs());
         searchBar.add(txtSearch);
 
-        JButton btnSearch = UiUtils.createPrimaryButton("Filter", NavIcons.filter(12, Color.WHITE));
+        JButton btnSearch = UiUtils.createPrimaryButton(I18n.get("transactions.filter.apply"), NavIcons.filter(12, Color.WHITE));
+        btnSearch.setFont(UiUtils.boldFont());
         btnSearch.addActionListener(e -> refreshLogs());
         searchBar.add(btnSearch);
 
-        JButton btnRefresh = UiUtils.createSecondaryButton("Refresh", NavIcons.refresh(12, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnRefresh = UiUtils.createSecondaryButton(I18n.get("transactions.filter.reset"), NavIcons.refresh(12, UiUtils.COLOR_TEXT_PRIMARY));
+        btnRefresh.setFont(UiUtils.boldFont());
         btnRefresh.addActionListener(e -> {
             txtSearch.setText("");
             cmbActionFilter.setSelectedIndex(0);
@@ -112,7 +131,14 @@ public class AuditLogPanel extends JPanel {
         add(topPanel, BorderLayout.NORTH);
 
         // 2. CENTER: Audit Table
-        String[] cols = {"Log ID", "Date & Time", "Action", "Entity", "Entity ID", "Change Details / Diff"};
+        String[] cols = {
+                I18n.get("transactions.table.id"),
+                I18n.get("audit.table.time"),
+                I18n.get("audit.table.action"),
+                I18n.get("audit.table.entity"),
+                I18n.get("audit.table.entityId"),
+                I18n.get("audit.table.details")
+        };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -120,8 +146,8 @@ public class AuditLogPanel extends JPanel {
 
         tblAudit = new JTable(tableModel);
         tblAudit.setRowHeight(30);
-        tblAudit.setFont(UiUtils.FONT_REGULAR);
-        tblAudit.getTableHeader().setFont(UiUtils.FONT_BOLD);
+        tblAudit.setFont(UiUtils.regularFont());
+        tblAudit.getTableHeader().setFont(UiUtils.boldFont());
         tblAudit.setShowGrid(false);
         tblAudit.setIntercellSpacing(new Dimension(0, 0));
 
@@ -131,7 +157,7 @@ public class AuditLogPanel extends JPanel {
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
                 l.setHorizontalAlignment(CENTER);
-                l.setFont(UiUtils.FONT_BOLD);
+                l.setFont(UiUtils.boldFont());
                 String act = String.valueOf(value);
                 switch (act) {
                     case "CREATE" -> {
@@ -176,14 +202,21 @@ public class AuditLogPanel extends JPanel {
         List<AuditLog> logs = financeService.getAuditLogs(300);
         tableModel.setRowCount(0);
 
-        String actFilter = (String) cmbActionFilter.getSelectedItem();
-        String search = txtSearch.getText().trim().toLowerCase();
+        int selectedAction = cmbActionFilter != null ? cmbActionFilter.getSelectedIndex() : 0;
+        String search = txtSearch != null ? txtSearch.getText().trim().toLowerCase() : "";
 
         for (AuditLog log : logs) {
-            // Filter by Action Type
-            if (actFilter != null && !actFilter.equals("All Actions") && !actFilter.equalsIgnoreCase(log.getAction())) {
+            // Index 0 is "All Actions", Index 1 is CREATE, Index 2 is UPDATE, Index 3 is DELETE
+            if (selectedAction == 1 && !"CREATE".equalsIgnoreCase(log.getAction())) {
                 continue;
             }
+            if (selectedAction == 2 && !"UPDATE".equalsIgnoreCase(log.getAction())) {
+                continue;
+            }
+            if (selectedAction == 3 && !"DELETE".equalsIgnoreCase(log.getAction())) {
+                continue;
+            }
+
             // Filter by search keyword
             if (!search.isEmpty()) {
                 String d = log.getDetails() != null ? log.getDetails().toLowerCase() : "";
@@ -203,4 +236,14 @@ public class AuditLogPanel extends JPanel {
             });
         }
     }
+
+    @Override
+    public void onLanguageChanged(AppLanguage newLanguage) {
+        removeAll();
+        initComponents();
+        revalidate();
+        repaint();
+        refreshLogs();
+    }
 }
+

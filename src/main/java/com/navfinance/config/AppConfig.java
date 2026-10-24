@@ -61,6 +61,73 @@ public final class AppConfig {
     /** Configurable currency symbol (default: ₹). */
     private static String currencySymbol = "₹";
 
+    /** Configurable active language code (default: "en"). */
+    private static String language = "en";
+
+    /** Settings file in user data directory. */
+    private static final File SETTINGS_FILE = new File(APP_DATA_DIR, "settings.properties");
+
+    static {
+        loadSettings();
+    }
+
+    /**
+     * Loads persisted user configuration settings from settings.properties.
+     */
+    private static void loadSettings() {
+        if (!SETTINGS_FILE.exists()) return;
+        try (java.io.FileInputStream fis = new java.io.FileInputStream(SETTINGS_FILE)) {
+            java.util.Properties props = new java.util.Properties();
+            props.load(fis);
+            String curr = props.getProperty("currencySymbol");
+            if (curr != null && !curr.trim().isEmpty()) {
+                currencySymbol = curr.trim();
+            }
+            String lang = props.getProperty("language");
+            if (lang != null && !lang.trim().isEmpty()) {
+                language = lang.trim();
+            }
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * Persists current settings to settings.properties.
+     */
+    public static synchronized void saveSettings() {
+        try {
+            if (!APP_DATA_DIR.exists()) {
+                APP_DATA_DIR.mkdirs();
+            }
+            java.util.Properties props = new java.util.Properties();
+            props.setProperty("currencySymbol", currencySymbol);
+            props.setProperty("language", language);
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(SETTINGS_FILE)) {
+                props.store(fos, "Nav Finance User Settings");
+            }
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * Gets the active language code.
+     *
+     * @return language code (e.g. "en", "hi", "hinglish")
+     */
+    public static String getLanguage() {
+        return language;
+    }
+
+    /**
+     * Sets the active language code and persists to disk.
+     *
+     * @param lang target language code
+     */
+    public static void setLanguage(String lang) {
+        if (lang != null && !lang.trim().isEmpty()) {
+            language = lang.trim();
+            saveSettings();
+        }
+    }
+
     /**
      * Gets the active currency symbol.
      *
@@ -71,13 +138,14 @@ public final class AppConfig {
     }
 
     /**
-     * Sets the active currency symbol.
+     * Sets the active currency symbol and persists to disk.
      *
      * @param symbol The new currency symbol to apply across the application.
      */
     public static void setCurrencySymbol(String symbol) {
         if (symbol != null && !symbol.trim().isEmpty()) {
             currencySymbol = symbol.trim();
+            saveSettings();
         }
     }
 

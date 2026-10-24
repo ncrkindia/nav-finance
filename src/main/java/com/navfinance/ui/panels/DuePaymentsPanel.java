@@ -1,6 +1,9 @@
 package com.navfinance.ui.panels;
 
 import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.AppLanguage;
+import com.navfinance.i18n.I18n;
+import com.navfinance.i18n.LanguageChangeListener;
 import com.navfinance.model.DuePayment;
 import com.navfinance.model.RecurringSchedule;
 import com.navfinance.model.TransactionType;
@@ -54,7 +57,7 @@ import java.util.List;
  *       credit card statements, rental income) with auto-pay flags and variable/fixed amount support.</li>
  * </ul>
  */
-public class DuePaymentsPanel extends JPanel {
+public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
 
     /** Singleton business service managing recurring schedules and due payment state transitions. */
     private final RecurringService recurringService = RecurringService.getInstance();
@@ -117,6 +120,7 @@ public class DuePaymentsPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(14, 18, 14, 18));
 
         initComponents();
+        I18n.addListener(this);
         refreshAll();
     }
 
@@ -129,10 +133,10 @@ public class DuePaymentsPanel extends JPanel {
         JPanel kpiRow = new JPanel(new GridLayout(1, 4, 12, 0));
         kpiRow.setOpaque(false);
 
-        kpiOverdue = new KpiCard("Overdue Payments", "₹ 0.00", "0 past due date", UiUtils.COLOR_EXPENSE, NavIcons.cross(22, UiUtils.COLOR_EXPENSE));
-        kpiDuePending = new KpiCard("Upcoming Due Payments", "₹ 0.00", "0 awaiting payment", UiUtils.COLOR_AMBER, NavIcons.calendar(22, UiUtils.COLOR_AMBER));
-        kpiSettled = new KpiCard("Settled Payments", "₹ 0.00", "0 successfully paid", UiUtils.COLOR_INCOME, NavIcons.check(22, UiUtils.COLOR_INCOME));
-        kpiAutoPay = new KpiCard("Auto-Debit vs Manual", "0 / 0", "Auto-debited vs user paid", UiUtils.COLOR_PRIMARY, NavIcons.autoPay(22, UiUtils.COLOR_PRIMARY));
+        kpiOverdue = new KpiCard(I18n.get("due.kpi.overdue"), "₹ 0.00", "0 past due date", UiUtils.COLOR_EXPENSE, NavIcons.cross(22, UiUtils.COLOR_EXPENSE));
+        kpiDuePending = new KpiCard(I18n.get("due.kpi.dueThisMonth"), "₹ 0.00", "0 awaiting payment", UiUtils.COLOR_AMBER, NavIcons.calendar(22, UiUtils.COLOR_AMBER));
+        kpiSettled = new KpiCard(I18n.get("due.kpi.settledThisMonth"), "₹ 0.00", "0 successfully paid", UiUtils.COLOR_INCOME, NavIcons.check(22, UiUtils.COLOR_INCOME));
+        kpiAutoPay = new KpiCard(I18n.get("due.kpi.autoVsManual"), "0 / 0", "Auto-debited vs user paid", UiUtils.COLOR_PRIMARY, NavIcons.autoPay(22, UiUtils.COLOR_PRIMARY));
 
         kpiRow.add(kpiOverdue);
         kpiRow.add(kpiDuePending);
@@ -142,10 +146,10 @@ public class DuePaymentsPanel extends JPanel {
 
         // CENTER: Tabbed View (Due Payments Tracker + Recurring Rules Manager)
         JTabbedPane subTabs = new JTabbedPane();
-        subTabs.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        subTabs.setFont(UiUtils.boldFont());
 
-        subTabs.addTab("Due & Overdue Tracker", NavIcons.calendar(14, UiUtils.COLOR_PRIMARY), createDueTrackerPanel());
-        subTabs.addTab("Registered Recurring Rules", NavIcons.settings(14, UiUtils.COLOR_PRIMARY), createRulesManagerPanel());
+        subTabs.addTab(I18n.get("due.tab.tracker"), NavIcons.calendar(14, UiUtils.COLOR_PRIMARY), createDueTrackerPanel());
+        subTabs.addTab(I18n.get("due.tab.rules"), NavIcons.settings(14, UiUtils.COLOR_PRIMARY), createRulesManagerPanel());
 
         subTabs.addChangeListener(e -> {
             if (subTabs.getSelectedIndex() == 0) {
@@ -181,31 +185,31 @@ public class DuePaymentsPanel extends JPanel {
         JPanel actionRow = new JPanel(new BorderLayout());
         actionRow.setOpaque(false);
 
-        JLabel lblTitle = new JLabel("Payment Due Schedule & Settlement");
-        lblTitle.setFont(UiUtils.FONT_TITLE);
+        JLabel lblTitle = new JLabel(I18n.get("due.title"));
+        lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
         actionRow.add(lblTitle, BorderLayout.WEST);
 
         JPanel btnBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnBar.setOpaque(false);
 
-        JButton btnSettle = UiUtils.createSuccessButton("Settle / Pay Selected", NavIcons.check(13, Color.WHITE));
+        JButton btnSettle = UiUtils.createSuccessButton(I18n.get("due.btn.settleSelected"), NavIcons.check(13, Color.WHITE));
         btnSettle.addActionListener(e -> onSettleSelected());
 
-        JButton btnUnsettle = UiUtils.createSecondaryButton("Mark Unsettled", NavIcons.refresh(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnUnsettle = UiUtils.createSecondaryButton(I18n.get("due.btn.markUnsettled"), NavIcons.refresh(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnUnsettle.addActionListener(e -> onMarkUnsettled());
 
-        JButton btnNewSchedule = UiUtils.createPrimaryButton("Register Recurring Schedule", NavIcons.plus(13, Color.WHITE));
+        JButton btnNewSchedule = UiUtils.createPrimaryButton(I18n.get("due.btn.newSchedule"), NavIcons.plus(13, Color.WHITE));
         btnNewSchedule.addActionListener(e -> onNewSchedule());
 
-        JButton btnScan = UiUtils.createSecondaryButton("Scan Due Dates", NavIcons.calendar(13, UiUtils.COLOR_PRIMARY));
+        JButton btnScan = UiUtils.createSecondaryButton(I18n.get("due.btn.scan"), NavIcons.calendar(13, UiUtils.COLOR_PRIMARY));
         btnScan.addActionListener(e -> {
             recurringService.generateDuePayments(2);
             refreshAll();
             UiUtils.showSuccess(this, "Due payment occurrences scanned and refreshed!");
         });
 
-        JButton btnDelete = UiUtils.createSecondaryButton("Delete Entry", NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        JButton btnDelete = UiUtils.createSecondaryButton(I18n.get("due.btn.deleteEntry"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
         btnDelete.addActionListener(e -> onDeleteSelectedDue());
 
         btnBar.add(btnSettle);
@@ -227,7 +231,7 @@ public class DuePaymentsPanel extends JPanel {
         gbc.anchor = GridBagConstraints.WEST;
 
         gbc.gridx = 0; gbc.gridy = 0;
-        filterCard.add(new JLabel("Search:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.filter.search")), gbc);
         gbc.gridx = 1; gbc.gridy = 0;
         txtSearch = new JTextField(12);
         txtSearch.setToolTipText("Search title, category, subcategory, or notes");
@@ -235,35 +239,54 @@ public class DuePaymentsPanel extends JPanel {
         filterCard.add(txtSearch, gbc);
 
         gbc.gridx = 2; gbc.gridy = 0;
-        filterCard.add(new JLabel("Status:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.table.status") + ":"), gbc);
         gbc.gridx = 3; gbc.gridy = 0;
-        cmbStatusFilter = new JComboBox<>(new String[]{"All", "Overdue Only", "Due / Pending", "Settled Only"});
+        cmbStatusFilter = new JComboBox<>(new String[]{
+                I18n.get("due.filter.all"),
+                I18n.get("due.filter.overdue"),
+                I18n.get("due.status.upcoming"),
+                I18n.get("due.filter.settled")
+        });
         cmbStatusFilter.addActionListener(e -> applyDueFilters());
         filterCard.add(cmbStatusFilter, gbc);
 
         gbc.gridx = 4; gbc.gridy = 0;
-        filterCard.add(new JLabel("Period:"), gbc);
+        filterCard.add(new JLabel(I18n.get("due.filter.period")), gbc);
         gbc.gridx = 5; gbc.gridy = 0;
-        cmbPeriodFilter = new JComboBox<>(new String[]{"All Time", "Overdue + Next 30 Days", "Current Month", "Past 3 Months", "Next 3 Months"});
+        cmbPeriodFilter = new JComboBox<>(new String[]{
+                I18n.get("due.filter.allPeriods"),
+                I18n.get("due.filter.overdue30Days"),
+                I18n.get("due.filter.currentMonth"),
+                I18n.get("due.filter.past3Months"),
+                I18n.get("due.filter.next3Months")
+        });
         cmbPeriodFilter.setSelectedIndex(0);
         cmbPeriodFilter.addActionListener(e -> applyDueFilters());
         filterCard.add(cmbPeriodFilter, gbc);
 
         gbc.gridx = 6; gbc.gridy = 0;
-        filterCard.add(new JLabel("Mode:"), gbc);
+        filterCard.add(new JLabel(I18n.get("due.filter.mode")), gbc);
         gbc.gridx = 7; gbc.gridy = 0;
-        cmbExecutionFilter = new JComboBox<>(new String[]{"All", "Auto-Payment", "Manual Payment"});
+        cmbExecutionFilter = new JComboBox<>(new String[]{
+                I18n.get("due.filter.allModes"),
+                I18n.get("due.filter.autoPayment"),
+                I18n.get("due.filter.manualPayment")
+        });
         cmbExecutionFilter.addActionListener(e -> applyDueFilters());
         filterCard.add(cmbExecutionFilter, gbc);
 
         gbc.gridx = 8; gbc.gridy = 0;
-        filterCard.add(new JLabel("Type:"), gbc);
+        filterCard.add(new JLabel(I18n.get("due.filter.type")), gbc);
         gbc.gridx = 9; gbc.gridy = 0;
-        cmbTypeFilter = new JComboBox<>(new String[]{"All", "Expense (Out)", "Income (In)"});
+        cmbTypeFilter = new JComboBox<>(new String[]{
+                I18n.get("due.filter.allTypes"),
+                I18n.get("due.filter.expense"),
+                I18n.get("due.filter.income")
+        });
         cmbTypeFilter.addActionListener(e -> applyDueFilters());
         filterCard.add(cmbTypeFilter, gbc);
 
-        JButton btnApply = UiUtils.createSecondaryButton("Filter", NavIcons.filter(12, UiUtils.COLOR_PRIMARY));
+        JButton btnApply = UiUtils.createSecondaryButton(I18n.get("btn.filter"), NavIcons.filter(12, UiUtils.COLOR_PRIMARY));
         btnApply.addActionListener(e -> applyDueFilters());
         gbc.gridx = 10; gbc.gridy = 0;
         filterCard.add(btnApply, gbc);
@@ -272,7 +295,19 @@ public class DuePaymentsPanel extends JPanel {
         panel.add(topContainer, BorderLayout.NORTH);
 
         // 2. Due Payments Table configuration
-        String[] cols = {"ID", "Status", "Due Date", "Title", "Category", "Sub-Category", "Expected Amount", "Execution", "Settlement Info", "Via", "Notes"};
+        String[] cols = {
+                "ID",
+                I18n.get("due.table.status"),
+                I18n.get("due.table.dueDate"),
+                I18n.get("due.table.ruleName"),
+                I18n.get("transactions.table.category"),
+                I18n.get("transactions.table.subCategory"),
+                I18n.get("due.table.expectedAmount"),
+                I18n.get("due.table.execution"),
+                I18n.get("due.table.settlementInfo"),
+                I18n.get("due.table.via"),
+                I18n.get("due.table.notes")
+        };
         modelDue = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -280,8 +315,8 @@ public class DuePaymentsPanel extends JPanel {
 
         tblDue = new JTable(modelDue);
         tblDue.setRowHeight(30);
-        tblDue.setFont(UiUtils.FONT_REGULAR);
-        tblDue.getTableHeader().setFont(UiUtils.FONT_BOLD);
+        tblDue.setFont(UiUtils.regularFont());
+        tblDue.getTableHeader().setFont(UiUtils.boldFont());
         tblDue.setShowGrid(false);
 
         // Hide ID column from UI display while preserving access to row entity IDs
@@ -377,21 +412,21 @@ public class DuePaymentsPanel extends JPanel {
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setOpaque(false);
 
-        JLabel lblTitle = new JLabel("Registered Recurring Payment Schedules");
-        lblTitle.setFont(UiUtils.FONT_TITLE);
+        JLabel lblTitle = new JLabel(I18n.get("due.tab.rules"));
+        lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
         topBar.add(lblTitle, BorderLayout.WEST);
 
         JPanel btnBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnBar.setOpaque(false);
 
-        JButton btnAddRule = UiUtils.createPrimaryButton("Add Recurring Rule", NavIcons.plus(13, Color.WHITE));
+        JButton btnAddRule = UiUtils.createPrimaryButton(I18n.get("due.btn.addRule"), NavIcons.plus(13, Color.WHITE));
         btnAddRule.addActionListener(e -> onNewSchedule());
 
-        JButton btnEditRule = UiUtils.createSecondaryButton("Edit Rule", NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnEditRule = UiUtils.createSecondaryButton(I18n.get("due.btn.editRule"), NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnEditRule.addActionListener(e -> onEditSelectedRule());
 
-        JButton btnDeleteRule = UiUtils.createSecondaryButton("Delete Rule", NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        JButton btnDeleteRule = UiUtils.createSecondaryButton(I18n.get("due.btn.deleteRule"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
         btnDeleteRule.addActionListener(e -> onDeleteSelectedRule());
 
         btnBar.add(btnAddRule);
@@ -401,7 +436,20 @@ public class DuePaymentsPanel extends JPanel {
 
         panel.add(topBar, BorderLayout.NORTH);
 
-        String[] cols = {"ID", "Name", "Type", "Category", "Sub-Category", "Day of Month", "Amount Type", "Default Amount", "Date Range", "Execution Mode", "Channel", "Active"};
+        String[] cols = {
+                "ID",
+                I18n.get("due.table.ruleName"),
+                I18n.get("transactions.table.type"),
+                I18n.get("transactions.table.category"),
+                I18n.get("transactions.table.subCategory"),
+                I18n.get("due.table.dayOfMonth"),
+                I18n.get("due.table.amount") + " " + I18n.get("transactions.table.type"),
+                I18n.get("due.table.expectedAmount"),
+                I18n.get("due.table.dateRange"),
+                I18n.get("due.table.execution"),
+                I18n.get("transactions.table.via"),
+                I18n.get("due.table.status")
+        };
         modelRules = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -409,8 +457,8 @@ public class DuePaymentsPanel extends JPanel {
 
         tblRules = new JTable(modelRules);
         tblRules.setRowHeight(28);
-        tblRules.setFont(UiUtils.FONT_REGULAR);
-        tblRules.getTableHeader().setFont(UiUtils.FONT_BOLD);
+        tblRules.setFont(UiUtils.regularFont());
+        tblRules.getTableHeader().setFont(UiUtils.boldFont());
         tblRules.setShowGrid(false);
 
         // Hide ID column
@@ -458,10 +506,10 @@ public class DuePaymentsPanel extends JPanel {
         modelDue.setRowCount(0);
 
         String query = txtSearch != null ? txtSearch.getText().trim().toLowerCase() : "";
-        String statusFilter = cmbStatusFilter != null ? (String) cmbStatusFilter.getSelectedItem() : "All";
-        String periodFilter = cmbPeriodFilter != null ? (String) cmbPeriodFilter.getSelectedItem() : "All Time";
-        String modeFilter = cmbExecutionFilter != null ? (String) cmbExecutionFilter.getSelectedItem() : "All";
-        String typeFilter = cmbTypeFilter != null ? (String) cmbTypeFilter.getSelectedItem() : "All";
+        int statusIdx = cmbStatusFilter != null ? cmbStatusFilter.getSelectedIndex() : 0;
+        int periodIdx = cmbPeriodFilter != null ? cmbPeriodFilter.getSelectedIndex() : 0;
+        int modeIdx = cmbExecutionFilter != null ? cmbExecutionFilter.getSelectedIndex() : 0;
+        int typeIdx = cmbTypeFilter != null ? cmbTypeFilter.getSelectedIndex() : 0;
 
         LocalDate today = LocalDate.now();
 
@@ -474,28 +522,28 @@ public class DuePaymentsPanel extends JPanel {
                 }
             }
 
-            // Status Filter validation
+            // Status Filter validation (0: All, 1: Overdue, 2: Upcoming, 3: Settled)
             boolean isOverdue = p.isOverdue();
             boolean isSettled = p.isSettled();
-            if ("Overdue Only".equals(statusFilter) && !isOverdue) continue;
-            if ("Due / Pending".equals(statusFilter) && (isOverdue || isSettled)) continue;
-            if ("Settled Only".equals(statusFilter) && !isSettled) continue;
+            if (statusIdx == 1 && !isOverdue) continue;
+            if (statusIdx == 2 && (isOverdue || isSettled)) continue;
+            if (statusIdx == 3 && !isSettled) continue;
 
-            // Execution Mode Filter (Auto-Pay vs Manual)
-            if ("Auto-Payment".equals(modeFilter) && !p.isAutoPay()) continue;
-            if ("Manual Payment".equals(modeFilter) && p.isAutoPay()) continue;
+            // Execution Mode Filter (0: All, 1: Auto-Pay, 2: Manual)
+            if (modeIdx == 1 && !p.isAutoPay()) continue;
+            if (modeIdx == 2 && p.isAutoPay()) continue;
 
-            // Transaction Type Filter (Expense vs Income)
-            if ("Expense (Out)".equals(typeFilter) && p.getType() != TransactionType.EXPENSE) continue;
-            if ("Income (In)".equals(typeFilter) && p.getType() != TransactionType.INCOME) continue;
+            // Transaction Type Filter (0: All, 1: Expense, 2: Income)
+            if (typeIdx == 1 && p.getType() != TransactionType.EXPENSE) continue;
+            if (typeIdx == 2 && p.getType() != TransactionType.INCOME) continue;
 
             // Calendar Period Filter
-            if (p.getDueDate() != null && periodFilter != null) {
-                boolean skip = switch (periodFilter) {
-                    case "Overdue + Next 30 Days" -> p.getDueDate().isAfter(today.plusDays(30));
-                    case "Current Month" -> p.getDueDate().getYear() != today.getYear() || p.getDueDate().getMonth() != today.getMonth();
-                    case "Past 3 Months" -> p.getDueDate().isBefore(today.minusMonths(3)) || p.getDueDate().isAfter(today);
-                    case "Next 3 Months" -> p.getDueDate().isBefore(today) || p.getDueDate().isAfter(today.plusMonths(3));
+            if (p.getDueDate() != null && periodIdx > 0) {
+                boolean skip = switch (periodIdx) {
+                    case 1 -> p.getDueDate().isAfter(today.plusDays(30));
+                    case 2 -> p.getDueDate().getYear() != today.getYear() || p.getDueDate().getMonth() != today.getMonth();
+                    case 3 -> p.getDueDate().isBefore(today.minusMonths(3)) || p.getDueDate().isAfter(today);
+                    case 4 -> p.getDueDate().isBefore(today) || p.getDueDate().isAfter(today.plusMonths(3));
                     default -> false;
                 };
                 if (skip) {
@@ -747,4 +795,19 @@ public class DuePaymentsPanel extends JPanel {
             }
         }
     }
+
+    /**
+     * Responds to language updates by rebuilding localized visual labels, tabs, columns, and filter texts.
+     *
+     * @param newLanguage the newly selected system language
+     */
+    @Override
+    public void onLanguageChanged(AppLanguage newLanguage) {
+        removeAll();
+        initComponents();
+        revalidate();
+        repaint();
+        refreshAll();
+    }
 }
+

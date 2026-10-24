@@ -1,6 +1,9 @@
 package com.navfinance.ui.panels;
 
 import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.AppLanguage;
+import com.navfinance.i18n.I18n;
+import com.navfinance.i18n.LanguageChangeListener;
 import com.navfinance.model.Person;
 import com.navfinance.model.Transaction;
 import com.navfinance.model.TransactionType;
@@ -42,7 +45,7 @@ import java.util.List;
  *       disbursements or repayments directly ({@link TransactionDialog}).</li>
  * </ul>
  */
-public class UdharTrackerPanel extends JPanel {
+public class UdharTrackerPanel extends JPanel implements LanguageChangeListener {
 
     /** Business service managing transaction ledgers and Person master catalogs. */
     private final FinanceService financeService = FinanceService.getInstance();
@@ -72,6 +75,7 @@ public class UdharTrackerPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
         initComponents();
+        I18n.addListener(this);
         refreshData();
     }
 
@@ -83,21 +87,21 @@ public class UdharTrackerPanel extends JPanel {
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setOpaque(false);
 
-        JLabel lblTitle = new JLabel("Udhaar & Personal Loans Ledger");
-        lblTitle.setFont(UiUtils.FONT_TITLE);
+        JLabel lblTitle = new JLabel(I18n.get("udhar.title"));
+        lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
         topPanel.add(lblTitle, BorderLayout.WEST);
 
         JPanel btnGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnGroup.setOpaque(false);
 
-        JButton btnAddPerson = UiUtils.createSecondaryButton("Add Person", NavIcons.person(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnAddPerson = UiUtils.createSecondaryButton(I18n.get("udhar.btn.addContact"), NavIcons.person(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnAddPerson.addActionListener(e -> onAddPerson());
 
-        JButton btnGiveUdhar = UiUtils.createDangerButton("Give Udhar", NavIcons.minus(13, Color.WHITE));
+        JButton btnGiveUdhar = UiUtils.createDangerButton(I18n.get("udhar.btn.giveLoan"), NavIcons.minus(13, Color.WHITE));
         btnGiveUdhar.addActionListener(e -> onRecordUdhar(true));
 
-        JButton btnTakeUdhar = UiUtils.createSuccessButton("Take Udhar / Receive Return", NavIcons.plus(13, Color.WHITE));
+        JButton btnTakeUdhar = UiUtils.createSuccessButton(I18n.get("udhar.btn.takeLoan"), NavIcons.plus(13, Color.WHITE));
         btnTakeUdhar.addActionListener(e -> onRecordUdhar(false));
 
         btnGroup.add(btnAddPerson);
@@ -115,9 +119,9 @@ public class UdharTrackerPanel extends JPanel {
         JPanel kpiRow = new JPanel(new GridLayout(1, 3, 14, 0));
         kpiRow.setOpaque(false);
 
-        kpiGiven = new KpiCard("Total Udhar Given", "₹ 0.00", "Money Lent to Others", UiUtils.COLOR_AMBER, NavIcons.minus(22, UiUtils.COLOR_AMBER));
-        kpiTaken = new KpiCard("Total Udhar Taken", "₹ 0.00", "Money Borrowed from Others", UiUtils.COLOR_PRIMARY, NavIcons.plus(22, UiUtils.COLOR_PRIMARY));
-        kpiNet = new KpiCard("Net Udhar Position", "₹ 0.00", "Net Balance", UiUtils.COLOR_INCOME, NavIcons.udhar(22, UiUtils.COLOR_INCOME));
+        kpiGiven = new KpiCard(I18n.get("udhar.kpi.totalLent"), "₹ 0.00", "Money Lent to Others", UiUtils.COLOR_AMBER, NavIcons.minus(22, UiUtils.COLOR_AMBER));
+        kpiTaken = new KpiCard(I18n.get("udhar.kpi.totalBorrowed"), "₹ 0.00", "Money Borrowed from Others", UiUtils.COLOR_PRIMARY, NavIcons.plus(22, UiUtils.COLOR_PRIMARY));
+        kpiNet = new KpiCard(I18n.get("udhar.kpi.netOutstanding"), "₹ 0.00", "Net Balance", UiUtils.COLOR_INCOME, NavIcons.udhar(22, UiUtils.COLOR_INCOME));
 
         kpiRow.add(kpiGiven);
         kpiRow.add(kpiTaken);
@@ -125,7 +129,18 @@ public class UdharTrackerPanel extends JPanel {
         centerPanel.add(kpiRow, BorderLayout.NORTH);
 
         // Person-wise Udhaar Ledger Table
-        String[] cols = {"Person ID", "Person Name", "Relation", "Contact", "Total Given", "Total Returned", "Total Taken", "Total Repaid", "Net Position", "Status"};
+        String[] cols = {
+                I18n.get("udhar.table.personId"),
+                I18n.get("udhar.table.person"),
+                I18n.get("udhar.table.relation"),
+                I18n.get("udhar.table.contact"),
+                I18n.get("udhar.table.lent"),
+                I18n.get("udhar.table.returned"),
+                I18n.get("udhar.table.taken"),
+                I18n.get("udhar.table.repaid"),
+                I18n.get("udhar.table.netBalance"),
+                I18n.get("udhar.table.status")
+        };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -135,8 +150,8 @@ public class UdharTrackerPanel extends JPanel {
 
         tblUdhar = new JTable(tableModel);
         tblUdhar.setRowHeight(32);
-        tblUdhar.getTableHeader().setFont(UiUtils.FONT_BOLD);
-        tblUdhar.setFont(UiUtils.FONT_REGULAR);
+        tblUdhar.getTableHeader().setFont(UiUtils.boldFont());
+        tblUdhar.setFont(UiUtils.regularFont());
         tblUdhar.setShowGrid(false);
         tblUdhar.setIntercellSpacing(new Dimension(0, 0));
 
@@ -165,13 +180,16 @@ public class UdharTrackerPanel extends JPanel {
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
                 l.setHorizontalAlignment(CENTER);
-                l.setFont(UiUtils.FONT_BOLD);
+                l.setFont(UiUtils.boldFont());
                 String str = String.valueOf(value);
-                Color statusColor = switch (str) {
-                    case "Owes You" -> UiUtils.COLOR_INCOME;
-                    case "You Owe" -> UiUtils.COLOR_EXPENSE;
-                    default -> UiUtils.COLOR_TEXT_MUTED;
-                };
+                Color statusColor;
+                if (str.equals(I18n.get("udhar.status.simple.owesYou")) || str.contains("Owes")) {
+                    statusColor = UiUtils.COLOR_INCOME;
+                } else if (str.equals(I18n.get("udhar.status.simple.youOwe")) || str.contains("Owe")) {
+                    statusColor = UiUtils.COLOR_EXPENSE;
+                } else {
+                    statusColor = UiUtils.COLOR_TEXT_MUTED;
+                }
                 l.setForeground(statusColor);
                 l.setIcon(NavIcons.statusDot(8, statusColor));
                 return l;
@@ -206,13 +224,13 @@ public class UdharTrackerPanel extends JPanel {
             String status;
             String netStr;
             if (net > 0) {
-                status = "Owes You";
+                status = I18n.get("udhar.status.simple.owesYou");
                 netStr = "+ " + AppConfig.formatCurrency(net);
             } else if (net < 0) {
-                status = "You Owe";
+                status = I18n.get("udhar.status.simple.youOwe");
                 netStr = "- " + AppConfig.formatCurrency(Math.abs(net));
             } else {
-                status = "Settled";
+                status = I18n.get("udhar.status.simple.settled");
                 netStr = AppConfig.formatCurrency(0);
             }
 
@@ -235,7 +253,7 @@ public class UdharTrackerPanel extends JPanel {
 
         double netAll = sumGiven - sumTaken;
         kpiNet.setValue(AppConfig.formatCurrency(netAll));
-        kpiNet.setSubtitle(netAll >= 0 ? "Others owe you net" : "You owe others net");
+        kpiNet.setSubtitle(netAll >= 0 ? I18n.get("udhar.kpi.netOutstanding") : I18n.get("udhar.kpi.totalRepaid"));
     }
 
     /**
@@ -273,5 +291,19 @@ public class UdharTrackerPanel extends JPanel {
         if (dialog.isSaved()) {
             refreshData();
         }
+    }
+
+    /**
+     * Responds to language updates by rebuilding localized visual labels, columns, and metric texts.
+     *
+     * @param newLanguage the newly selected system language
+     */
+    @Override
+    public void onLanguageChanged(AppLanguage newLanguage) {
+        removeAll();
+        initComponents();
+        revalidate();
+        repaint();
+        refreshData();
     }
 }

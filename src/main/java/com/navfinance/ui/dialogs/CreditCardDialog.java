@@ -1,5 +1,6 @@
 package com.navfinance.ui.dialogs;
 
+import com.navfinance.i18n.I18n;
 import com.navfinance.model.CreditCard;
 import com.navfinance.service.FinanceService;
 import com.navfinance.ui.util.NavIcons;
@@ -51,7 +52,7 @@ public class CreditCardDialog extends JDialog {
      * @param card existing card to edit, or {@code null} to add a new card
      */
     public CreditCardDialog(JFrame parent, CreditCard card) {
-        super(parent, card == null ? "Add Credit Card" : "Edit Credit Card", true);
+        super(parent, card == null ? I18n.get("masters.btn.addCard") : I18n.get("btn.edit") + " " + I18n.get("masters.table.name"), true);
         this.card = card;
 
         initComponents();
@@ -77,41 +78,53 @@ public class CreditCardDialog extends JDialog {
 
         // Card Name
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Card Name:*"), gbc);
+        JLabel lblName = new JLabel(I18n.get("masters.table.name") + ":*");
+        lblName.setFont(UiUtils.regularFont());
+        mainPanel.add(lblName, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtCardName = new JTextField(20);
+        txtCardName.setFont(UiUtils.regularFont());
         mainPanel.add(txtCardName, gbc);
 
         // Bank
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Bank:"), gbc);
+        JLabel lblBank = new JLabel(I18n.get("masters.table.bank") + ":");
+        lblBank.setFont(UiUtils.regularFont());
+        mainPanel.add(lblBank, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtBank = new JTextField(20);
+        txtBank.setFont(UiUtils.regularFont());
         mainPanel.add(txtBank, gbc);
 
         // Last 4 Digits
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Last 4 Digits:"), gbc);
+        JLabel lblDigits = new JLabel(I18n.get("masters.table.lastDigits") + ":");
+        lblDigits.setFont(UiUtils.regularFont());
+        mainPanel.add(lblDigits, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtLastDigits = new JTextField(6);
+        txtLastDigits.setFont(UiUtils.regularFont());
         mainPanel.add(txtLastDigits, gbc);
 
         add(mainPanel, BorderLayout.CENTER);
 
         // Action Buttons: Cancel and Save
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        JButton btnCancel = UiUtils.createSecondaryButton("Cancel", NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnCancel = UiUtils.createSecondaryButton(I18n.get("btn.cancel"), NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnCancel.setFont(UiUtils.boldFont());
         btnCancel.addActionListener(e -> dispose());
 
-        JButton btnSave = UiUtils.createPrimaryButton("Save Card", NavIcons.check(13, Color.WHITE));
+        JButton btnSave = UiUtils.createPrimaryButton(I18n.get("btn.save"), NavIcons.check(13, Color.WHITE));
+        btnSave.setFont(UiUtils.boldFont());
         btnSave.addActionListener(e -> onSave());
 
         btnPanel.add(btnCancel);
         btnPanel.add(btnSave);
         add(btnPanel, BorderLayout.SOUTH);
+
 
         // Prepopulate fields when editing
         if (card != null) {

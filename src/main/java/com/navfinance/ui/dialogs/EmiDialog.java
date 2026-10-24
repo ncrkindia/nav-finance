@@ -1,6 +1,7 @@
 package com.navfinance.ui.dialogs;
 
 import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.I18n;
 import com.navfinance.model.Emi;
 import com.navfinance.service.FinanceService;
 import com.navfinance.ui.util.NavIcons;
@@ -57,7 +58,7 @@ public class EmiDialog extends JDialog {
      * @param emi existing EMI entity to edit, or {@code null} to create a new one
      */
     public EmiDialog(JFrame parent, Emi emi) {
-        super(parent, emi == null ? "Add EMI Master" : "Edit EMI Master", true);
+        super(parent, emi == null ? I18n.get("masters.btn.addEmi") : I18n.get("btn.edit") + " " + I18n.get("masters.table.name"), true);
         this.emi = emi;
 
         initComponents();
@@ -83,49 +84,64 @@ public class EmiDialog extends JDialog {
 
         // EMI Name (e.g. Home Loan EMI, Car Loan EMI, Laptop EMI)
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("EMI Name:*"), gbc);
+        JLabel lblName = new JLabel(I18n.get("masters.table.name") + ":*");
+        lblName.setFont(UiUtils.regularFont());
+        mainPanel.add(lblName, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtEmiName = new JTextField(20);
+        txtEmiName.setFont(UiUtils.regularFont());
         mainPanel.add(txtEmiName, gbc);
 
         // Bank / Lender
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Bank / Lender:"), gbc);
+        JLabel lblBank = new JLabel(I18n.get("masters.table.bank") + ":");
+        lblBank.setFont(UiUtils.regularFont());
+        mainPanel.add(lblBank, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtBank = new JTextField(20);
+        txtBank.setFont(UiUtils.regularFont());
         mainPanel.add(txtBank, gbc);
 
         // Monthly Amount
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Monthly Amount (" + AppConfig.getCurrencySymbol() + "):"), gbc);
+        JLabel lblAmt = new JLabel(I18n.get("masters.table.monthlyAmount") + " (" + AppConfig.getCurrencySymbol() + "):");
+        lblAmt.setFont(UiUtils.regularFont());
+        mainPanel.add(lblAmt, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtMonthlyAmount = new JTextField(20);
+        txtMonthlyAmount.setFont(UiUtils.regularFont());
         mainPanel.add(txtMonthlyAmount, gbc);
 
         // Notes / Tenure
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Notes:"), gbc);
+        JLabel lblNotes = new JLabel(I18n.get("masters.table.notes") + ":");
+        lblNotes.setFont(UiUtils.regularFont());
+        mainPanel.add(lblNotes, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtNotes = new JTextArea(3, 20);
+        txtNotes.setFont(UiUtils.regularFont());
         mainPanel.add(new JScrollPane(txtNotes), gbc);
 
         add(mainPanel, BorderLayout.CENTER);
 
         // Action Buttons: Cancel and Save
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        JButton btnCancel = UiUtils.createSecondaryButton("Cancel", NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnCancel = UiUtils.createSecondaryButton(I18n.get("btn.cancel"), NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnCancel.setFont(UiUtils.boldFont());
         btnCancel.addActionListener(e -> dispose());
 
-        JButton btnSave = UiUtils.createPrimaryButton("Save EMI", NavIcons.check(13, Color.WHITE));
+        JButton btnSave = UiUtils.createPrimaryButton(I18n.get("btn.save"), NavIcons.check(13, Color.WHITE));
+        btnSave.setFont(UiUtils.boldFont());
         btnSave.addActionListener(e -> onSave());
 
         btnPanel.add(btnCancel);
         btnPanel.add(btnSave);
         add(btnPanel, BorderLayout.SOUTH);
+
 
         // Prepopulate fields when editing
         if (emi != null) {

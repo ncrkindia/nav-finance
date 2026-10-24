@@ -113,6 +113,15 @@ public class KpiCard extends JPanel {
     }
 
     /**
+     * Updates the card metric title label.
+     *
+     * @param title new title text
+     */
+    public void setTitle(String title) {
+        lblTitle.setText(title != null ? title : "");
+    }
+
+    /**
      * Custom painting procedure rendering rounded borders and the vertical accent pill bar.
      *
      * @param g graphic context

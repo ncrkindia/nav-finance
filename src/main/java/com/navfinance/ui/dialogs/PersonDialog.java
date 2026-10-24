@@ -1,5 +1,6 @@
 package com.navfinance.ui.dialogs;
 
+import com.navfinance.i18n.I18n;
 import com.navfinance.model.Person;
 import com.navfinance.service.FinanceService;
 import com.navfinance.ui.util.NavIcons;
@@ -56,7 +57,7 @@ public class PersonDialog extends JDialog {
      * @param person existing person entity to edit, or {@code null} to add a new person
      */
     public PersonDialog(JFrame parent, Person person) {
-        super(parent, person == null ? "Add Person" : "Edit Person", true);
+        super(parent, person == null ? I18n.get("masters.btn.addPerson") : I18n.get("btn.edit") + " " + I18n.get("masters.table.name"), true);
         this.person = person;
 
         initComponents();
@@ -82,45 +83,59 @@ public class PersonDialog extends JDialog {
 
         // Name
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Full Name:*"), gbc);
+        JLabel lblName = new JLabel(I18n.get("masters.table.name") + ":*");
+        lblName.setFont(UiUtils.regularFont());
+        mainPanel.add(lblName, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtName = new JTextField(20);
+        txtName.setFont(UiUtils.regularFont());
         mainPanel.add(txtName, gbc);
 
         // Contact
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Contact / Phone:"), gbc);
+        JLabel lblContact = new JLabel(I18n.get("masters.table.contact") + ":");
+        lblContact.setFont(UiUtils.regularFont());
+        mainPanel.add(lblContact, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtContact = new JTextField(20);
+        txtContact.setFont(UiUtils.regularFont());
         mainPanel.add(txtContact, gbc);
 
         // Relation
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Relation:"), gbc);
+        JLabel lblRel = new JLabel(I18n.get("masters.table.relation") + ":");
+        lblRel.setFont(UiUtils.regularFont());
+        mainPanel.add(lblRel, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         cmbRelation = new JComboBox<>(new String[]{"Friend", "Relative", "Colleague", "Family", "Landlord", "Neighbor", "Business Associate", "Other"});
+        cmbRelation.setFont(UiUtils.regularFont());
         cmbRelation.setEditable(true);
         mainPanel.add(cmbRelation, gbc);
 
         // Notes
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Notes:"), gbc);
+        JLabel lblNotes = new JLabel(I18n.get("masters.table.notes") + ":");
+        lblNotes.setFont(UiUtils.regularFont());
+        mainPanel.add(lblNotes, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtNotes = new JTextArea(3, 20);
+        txtNotes.setFont(UiUtils.regularFont());
         mainPanel.add(new JScrollPane(txtNotes), gbc);
 
         add(mainPanel, BorderLayout.CENTER);
 
         // Buttons
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        JButton btnCancel = UiUtils.createSecondaryButton("Cancel", NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnCancel = UiUtils.createSecondaryButton(I18n.get("btn.cancel"), NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnCancel.setFont(UiUtils.boldFont());
         btnCancel.addActionListener(e -> dispose());
 
-        JButton btnSave = UiUtils.createPrimaryButton("Save Person", NavIcons.check(13, Color.WHITE));
+        JButton btnSave = UiUtils.createPrimaryButton(I18n.get("btn.save"), NavIcons.check(13, Color.WHITE));
+        btnSave.setFont(UiUtils.boldFont());
         btnSave.addActionListener(e -> onSave());
 
         btnPanel.add(btnCancel);
@@ -143,7 +158,7 @@ public class PersonDialog extends JDialog {
     private void onSave() {
         String name = txtName.getText().trim();
         if (name.isEmpty()) {
-            UiUtils.showError(this, "Please enter person's name.");
+            UiUtils.showError(this, I18n.get("dialog.validation.requiredName"));
             txtName.requestFocus();
             return;
         }
@@ -158,6 +173,7 @@ public class PersonDialog extends JDialog {
         saved = true;
         dispose();
     }
+
 
     /**
      * Indicates whether the person record was persisted.

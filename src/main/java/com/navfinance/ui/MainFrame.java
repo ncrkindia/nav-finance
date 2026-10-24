@@ -12,6 +12,9 @@ import com.navfinance.ui.panels.SettingsPanel;
 import com.navfinance.ui.panels.TransactionsPanel;
 import com.navfinance.ui.panels.UdharTrackerPanel;
 import com.navfinance.ui.panels.UserGuidePanel;
+import com.navfinance.i18n.AppLanguage;
+import com.navfinance.i18n.I18n;
+import com.navfinance.i18n.LanguageChangeListener;
 import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
 import com.navfinance.ui.util.ZoomManager;
@@ -19,6 +22,7 @@ import com.navfinance.ui.util.ZoomManager;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -63,7 +67,7 @@ import java.awt.event.KeyEvent;
  *   <li>{@code Ctrl + 0}: Reset Zoom to 100%</li>
  * </ul>
  */
-public class MainFrame extends JFrame {
+public class MainFrame extends JFrame implements LanguageChangeListener {
 
     /** Primary tabbed container hosting the application's functional modules. */
     private JTabbedPane mainTabs;
@@ -95,12 +99,22 @@ public class MainFrame extends JFrame {
     /** Panel displaying application metadata, author details, and architecture notes. */
     private AboutUsPanel aboutUsPanel;
 
+    private JLabel lblAppName;
+    private JLabel lblAppSub;
+    private JLabel lblZoom;
+    private JButton btnZoomReset;
+    private JButton btnQuickIncome;
+    private JButton btnQuickExpense;
+    private JButton btnRefreshAll;
+    private JComboBox<AppLanguage> cmbLanguage;
+    private boolean updatingLanguageCombo = false;
+
     /**
      * Constructs the main application window, initializing layout managers,
      * child panels, global key bindings, and centering the frame on screen.
      */
     public MainFrame() {
-        super(AppConfig.APP_NAME + " - " + AppConfig.APP_SUBTITLE);
+        super(I18n.get("app.name") + " - " + I18n.get("app.subtitle"));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(1100, 750));
         setPreferredSize(new Dimension(1280, 840));
@@ -108,6 +122,8 @@ public class MainFrame extends JFrame {
         loadAppIcon();
         initComponents();
         setupKeyBindings();
+        I18n.addListener(this);
+        onLanguageChanged(I18n.getCurrentLanguage());
         pack();
         setLocationRelativeTo(null);
     }
@@ -150,12 +166,12 @@ public class MainFrame extends JFrame {
 
         JPanel titleBlock = new JPanel(new BorderLayout());
         titleBlock.setOpaque(false);
-        JLabel lblAppName = new JLabel(AppConfig.APP_NAME);
-        lblAppName.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblAppName = new JLabel(I18n.get("app.name"));
+        lblAppName.setFont(UiUtils.titleFont());
         lblAppName.setForeground(new Color(15, 23, 42));
 
-        JLabel lblAppSub = new JLabel(AppConfig.APP_SUBTITLE + " | Local H2 Database Engine");
-        lblAppSub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblAppSub = new JLabel(I18n.get("app.subtitle"));
+        lblAppSub.setFont(UiUtils.subtitleFont());
         lblAppSub.setForeground(UiUtils.COLOR_TEXT_MUTED);
 
         titleBlock.add(lblAppName, BorderLayout.NORTH);
@@ -168,10 +184,31 @@ public class MainFrame extends JFrame {
         JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         headerActions.setOpaque(false);
 
+        // Language Selector Dropdown
+        JPanel langPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        langPanel.setOpaque(false);
+        JLabel lblLangIcon = new JLabel(NavIcons.language(16, UiUtils.COLOR_PRIMARY));
+        cmbLanguage = new JComboBox<>(AppLanguage.values());
+        cmbLanguage.setFont(UiUtils.FONT_REGULAR);
+        cmbLanguage.setSelectedItem(I18n.getCurrentLanguage());
+        cmbLanguage.setToolTipText("Switch Language / भाषा बदलें");
+        cmbLanguage.addActionListener(e -> {
+            if (updatingLanguageCombo) return;
+            AppLanguage selected = (AppLanguage) cmbLanguage.getSelectedItem();
+            if (selected != null && selected != I18n.getCurrentLanguage()) {
+                I18n.setLanguage(selected);
+            }
+        });
+        langPanel.add(lblLangIcon);
+        langPanel.add(cmbLanguage);
+        headerActions.add(langPanel);
+
+        headerActions.add(new JLabel("  |  "));
+
         // Zoom Controller Bar
         JPanel zoomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
         zoomBar.setOpaque(false);
-        JLabel lblZoom = new JLabel("Zoom:");
+        lblZoom = new JLabel("Zoom:");
         lblZoom.setFont(UiUtils.FONT_SUBTITLE);
         lblZoom.setForeground(UiUtils.COLOR_TEXT_MUTED);
         zoomBar.add(lblZoom);
@@ -180,7 +217,7 @@ public class MainFrame extends JFrame {
         btnZoomOut.setToolTipText("Zoom Out (Ctrl + Minus)");
         btnZoomOut.addActionListener(e -> ZoomManager.zoomOut(this));
 
-        JButton btnZoomReset = UiUtils.createSecondaryButton(ZoomManager.getZoomLabel(), NavIcons.zoomReset(13, UiUtils.COLOR_TEXT_MUTED));
+        btnZoomReset = UiUtils.createSecondaryButton(ZoomManager.getZoomLabel(), NavIcons.zoomReset(13, UiUtils.COLOR_TEXT_MUTED));
         btnZoomReset.setFont(UiUtils.FONT_BOLD);
         btnZoomReset.setToolTipText("Reset Zoom (Ctrl + 0)");
         btnZoomReset.addActionListener(e -> ZoomManager.resetZoom(this));
@@ -199,7 +236,7 @@ public class MainFrame extends JFrame {
         headerActions.add(new JLabel("  |  "));
 
         // Quick Global Entry Action Buttons
-        JButton btnQuickIncome = UiUtils.createSuccessButton("New Income", NavIcons.plus(13, Color.WHITE));
+        btnQuickIncome = UiUtils.createSuccessButton(I18n.get("action.recordIncome"), NavIcons.plus(13, Color.WHITE));
         btnQuickIncome.addActionListener(e -> {
             TransactionDialog d = new TransactionDialog(this, null, TransactionType.INCOME);
             d.setVisible(true);
@@ -208,7 +245,7 @@ public class MainFrame extends JFrame {
             }
         });
 
-        JButton btnQuickExpense = UiUtils.createDangerButton("New Expense", NavIcons.minus(13, Color.WHITE));
+        btnQuickExpense = UiUtils.createDangerButton(I18n.get("action.recordExpense"), NavIcons.minus(13, Color.WHITE));
         btnQuickExpense.addActionListener(e -> {
             TransactionDialog d = new TransactionDialog(this, null, TransactionType.EXPENSE);
             d.setVisible(true);
@@ -217,7 +254,7 @@ public class MainFrame extends JFrame {
             }
         });
 
-        JButton btnRefreshAll = UiUtils.createSecondaryButton("Refresh", NavIcons.refresh(13, UiUtils.COLOR_PRIMARY));
+        btnRefreshAll = UiUtils.createSecondaryButton(I18n.get("action.refresh"), NavIcons.refresh(13, UiUtils.COLOR_PRIMARY));
         btnRefreshAll.addActionListener(e -> refreshAllViews());
 
         headerActions.add(btnQuickIncome);
@@ -229,7 +266,7 @@ public class MainFrame extends JFrame {
 
         // MAIN CONTENT: Tabbed Navigation
         mainTabs = new JTabbedPane(JTabbedPane.TOP);
-        mainTabs.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        mainTabs.setFont(UiUtils.boldFont());
 
         dashboardPanel = new DashboardPanel();
         transactionsPanel = new TransactionsPanel();
@@ -241,15 +278,15 @@ public class MainFrame extends JFrame {
         aboutUsPanel = new AboutUsPanel();
         settingsPanel = new SettingsPanel(this::refreshAllViews);
 
-        mainTabs.addTab("Dashboard", NavIcons.dashboard(16, UiUtils.COLOR_PRIMARY), dashboardPanel);
-        mainTabs.addTab("Transactions", NavIcons.transactions(16, UiUtils.COLOR_PRIMARY), transactionsPanel);
-        mainTabs.addTab("Due & Recurring", NavIcons.duePayments(16, UiUtils.COLOR_AMBER), duePaymentsPanel);
-        mainTabs.addTab("Udhaar & Loans", NavIcons.udhar(16, UiUtils.COLOR_INCOME), udharPanel);
-        mainTabs.addTab("Masters", NavIcons.masters(16, UiUtils.COLOR_PRIMARY), mastersPanel);
-        mainTabs.addTab("Audit Trail", NavIcons.audit(16, UiUtils.COLOR_TEXT_MUTED), auditPanel);
-        mainTabs.addTab("User Guide", NavIcons.userGuide(16, UiUtils.COLOR_PRIMARY), userGuidePanel);
-        mainTabs.addTab("About Us", NavIcons.aboutUs(16, UiUtils.COLOR_PRIMARY), aboutUsPanel);
-        mainTabs.addTab("Settings & Database", NavIcons.settings(16, UiUtils.COLOR_TEXT_MUTED), settingsPanel);
+        mainTabs.addTab(I18n.get("tab.dashboard"), NavIcons.dashboard(16, UiUtils.COLOR_PRIMARY), dashboardPanel);
+        mainTabs.addTab(I18n.get("tab.transactions"), NavIcons.transactions(16, UiUtils.COLOR_PRIMARY), transactionsPanel);
+        mainTabs.addTab(I18n.get("tab.duePayments"), NavIcons.duePayments(16, UiUtils.COLOR_AMBER), duePaymentsPanel);
+        mainTabs.addTab(I18n.get("tab.udhar"), NavIcons.udhar(16, UiUtils.COLOR_INCOME), udharPanel);
+        mainTabs.addTab(I18n.get("tab.masters"), NavIcons.masters(16, UiUtils.COLOR_PRIMARY), mastersPanel);
+        mainTabs.addTab(I18n.get("tab.audit"), NavIcons.audit(16, UiUtils.COLOR_TEXT_MUTED), auditPanel);
+        mainTabs.addTab(I18n.get("tab.userGuide"), NavIcons.userGuide(16, UiUtils.COLOR_PRIMARY), userGuidePanel);
+        mainTabs.addTab(I18n.get("tab.aboutUs"), NavIcons.aboutUs(16, UiUtils.COLOR_PRIMARY), aboutUsPanel);
+        mainTabs.addTab(I18n.get("tab.settings"), NavIcons.settings(16, UiUtils.COLOR_TEXT_MUTED), settingsPanel);
 
         // Auto refresh tab data on tab switch
         mainTabs.addChangeListener(e -> {
@@ -339,5 +376,62 @@ public class MainFrame extends JFrame {
         udharPanel.refreshData();
         mastersPanel.refreshAll();
         auditPanel.refreshLogs();
+    }
+
+    /**
+     * Responds to dynamic language changes by updating frame titles, branding labels,
+     * quick action buttons, and all 9 tab titles.
+     *
+     * @param newLanguage the newly selected {@link AppLanguage}
+     */
+    @Override
+    public void onLanguageChanged(AppLanguage newLanguage) {
+        updatingLanguageCombo = true;
+        if (cmbLanguage != null) {
+            cmbLanguage.setSelectedItem(newLanguage);
+        }
+        updatingLanguageCombo = false;
+
+        setTitle(I18n.get("app.name") + " - " + I18n.get("app.subtitle"));
+        if (lblAppName != null) {
+            lblAppName.setText(I18n.get("app.name"));
+            lblAppName.setFont(UiUtils.titleFont());
+        }
+        if (lblAppSub != null) {
+            lblAppSub.setText(I18n.get("app.subtitle"));
+            lblAppSub.setFont(UiUtils.subtitleFont());
+        }
+        if (lblZoom != null) {
+            lblZoom.setText("Zoom:");
+            lblZoom.setFont(UiUtils.subtitleFont());
+        }
+        if (btnQuickIncome != null) {
+            btnQuickIncome.setText(I18n.get("action.recordIncome"));
+            btnQuickIncome.setFont(UiUtils.boldFont());
+        }
+        if (btnQuickExpense != null) {
+            btnQuickExpense.setText(I18n.get("action.recordExpense"));
+            btnQuickExpense.setFont(UiUtils.boldFont());
+        }
+        if (btnRefreshAll != null) {
+            btnRefreshAll.setText(I18n.get("action.refresh"));
+            btnRefreshAll.setFont(UiUtils.boldFont());
+        }
+
+        if (mainTabs != null && mainTabs.getTabCount() >= 9) {
+            mainTabs.setFont(UiUtils.boldFont());
+            mainTabs.setTitleAt(0, I18n.get("tab.dashboard"));
+            mainTabs.setTitleAt(1, I18n.get("tab.transactions"));
+            mainTabs.setTitleAt(2, I18n.get("tab.duePayments"));
+            mainTabs.setTitleAt(3, I18n.get("tab.udhar"));
+            mainTabs.setTitleAt(4, I18n.get("tab.masters"));
+            mainTabs.setTitleAt(5, I18n.get("tab.audit"));
+            mainTabs.setTitleAt(6, I18n.get("tab.userGuide"));
+            mainTabs.setTitleAt(7, I18n.get("tab.aboutUs"));
+            mainTabs.setTitleAt(8, I18n.get("tab.settings"));
+        }
+
+        revalidate();
+        repaint();
     }
 }

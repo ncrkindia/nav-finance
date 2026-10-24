@@ -1,6 +1,7 @@
 package com.navfinance.ui.dialogs;
 
 import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.I18n;
 import com.navfinance.model.Bill;
 import com.navfinance.model.CreditCard;
 import com.navfinance.model.Emi;
@@ -101,7 +102,9 @@ public class TransactionDialog extends JDialog {
      * @param defaultType initial transaction type to preselect if creating a new entry
      */
     public TransactionDialog(JFrame parent, Transaction transactionToEdit, TransactionType defaultType) {
-        super(parent, transactionToEdit == null ? "Add Transaction" : "Edit Transaction #" + transactionToEdit.getId(), true);
+        super(parent, transactionToEdit == null ?
+                (defaultType == TransactionType.INCOME ? I18n.get("dialog.income.addTitle") : I18n.get("dialog.expense.addTitle")) :
+                (transactionToEdit.getType() == TransactionType.INCOME ? I18n.get("dialog.income.editTitle") : I18n.get("dialog.expense.editTitle")) + " #" + transactionToEdit.getId(), true);
         this.existingTransaction = transactionToEdit;
 
         initComponents(defaultType != null ? defaultType : TransactionType.EXPENSE);
@@ -128,15 +131,17 @@ public class TransactionDialog extends JDialog {
 
         // 1. Type selection (Income vs Expense)
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Transaction Type:"), gbc);
+        JLabel lblType = new JLabel(I18n.get("transactions.table.type") + ":");
+        lblType.setFont(UiUtils.regularFont());
+        mainPanel.add(lblType, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        rbIncome = new JRadioButton("Income (In)");
-        rbExpense = new JRadioButton("Expense (Out)");
-        rbIncome.setFont(UiUtils.FONT_BOLD);
+        rbIncome = new JRadioButton(I18n.get("transactions.filter.income"));
+        rbExpense = new JRadioButton(I18n.get("transactions.filter.expense"));
+        rbIncome.setFont(UiUtils.boldFont());
         rbIncome.setForeground(UiUtils.COLOR_INCOME);
-        rbExpense.setFont(UiUtils.FONT_BOLD);
+        rbExpense.setFont(UiUtils.boldFont());
         rbExpense.setForeground(UiUtils.COLOR_EXPENSE);
 
         ButtonGroup bg = new ButtonGroup();
@@ -147,72 +152,89 @@ public class TransactionDialog extends JDialog {
         mainPanel.add(typePanel, gbc);
 
         // 2. Date & Expected checkbox (DatePicker + Manual entry)
-        lblDateTitle = new JLabel("Date (yyyy-MM-dd):");
+        lblDateTitle = new JLabel(I18n.get("transactions.table.date") + " (yyyy-MM-dd):");
+        lblDateTitle.setFont(UiUtils.regularFont());
         gbc.gridx = 0; gbc.gridy = row;
         mainPanel.add(lblDateTitle, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         JPanel datePanel = new JPanel(new BorderLayout(8, 0));
         txtDate = new DatePickerField(LocalDate.now(), 12);
-        chkExpected = new JCheckBox("Expected / Planned (Not Yet Realized)");
+        chkExpected = new JCheckBox(I18n.get("due.filter.upcoming") + " (Expected)");
+        chkExpected.setFont(UiUtils.regularFont());
         datePanel.add(txtDate, BorderLayout.WEST);
         datePanel.add(chkExpected, BorderLayout.CENTER);
         mainPanel.add(datePanel, gbc);
 
         // 3. Amount
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Amount (" + AppConfig.getCurrencySymbol() + "):"), gbc);
+        JLabel lblAmount = new JLabel(I18n.get("transactions.table.amount") + " (" + AppConfig.getCurrencySymbol() + "):");
+        lblAmount.setFont(UiUtils.regularFont());
+        mainPanel.add(lblAmount, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtAmount = new JTextField();
-        txtAmount.setFont(UiUtils.FONT_BOLD);
+        txtAmount.setFont(UiUtils.boldFont());
         mainPanel.add(txtAmount, gbc);
 
         // 4. Payment Via
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Payment Via:"), gbc);
+        JLabel lblVia = new JLabel(I18n.get("transactions.table.via") + ":");
+        lblVia.setFont(UiUtils.regularFont());
+        mainPanel.add(lblVia, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         cmbPaymentVia = new JComboBox<>();
+        cmbPaymentVia.setFont(UiUtils.regularFont());
         cmbPaymentVia.setEditable(true); // Allow custom editing
         populatePaymentModes();
         mainPanel.add(cmbPaymentVia, gbc);
 
         // 5. Category
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Category:"), gbc);
+        JLabel lblCat = new JLabel(I18n.get("transactions.table.category") + ":");
+        lblCat.setFont(UiUtils.regularFont());
+        mainPanel.add(lblCat, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         cmbCategory = new JComboBox<>();
+        cmbCategory.setFont(UiUtils.regularFont());
         cmbCategory.setEditable(true);
         mainPanel.add(cmbCategory, gbc);
 
         // 6. Sub Category
-        lblSubCategoryTitle = new JLabel("Sub-Category:");
+        lblSubCategoryTitle = new JLabel(I18n.get("transactions.table.subCategory") + ":");
+        lblSubCategoryTitle.setFont(UiUtils.regularFont());
         gbc.gridx = 0; gbc.gridy = row;
         mainPanel.add(lblSubCategoryTitle, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         cmbSubCategory = new JComboBox<>();
+        cmbSubCategory.setFont(UiUtils.regularFont());
         cmbSubCategory.setEditable(true);
         mainPanel.add(cmbSubCategory, gbc);
 
         // 7. Associated Person (Optional / Udhar / Loan)
-        lblPersonTitle = new JLabel("Associated Person:");
+        lblPersonTitle = new JLabel(I18n.get("transactions.table.person") + ":");
+        lblPersonTitle.setFont(UiUtils.regularFont());
         gbc.gridx = 0; gbc.gridy = row;
         mainPanel.add(lblPersonTitle, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         cmbPerson = new JComboBox<>();
+        cmbPerson.setFont(UiUtils.regularFont());
         populatePersons();
         mainPanel.add(cmbPerson, gbc);
 
         // 8. Notes
         gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(new JLabel("Notes / Remarks:"), gbc);
+        JLabel lblNotes = new JLabel(I18n.get("transactions.table.notes") + ":");
+        lblNotes.setFont(UiUtils.regularFont());
+        mainPanel.add(lblNotes, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
         txtNotes = new JTextArea(3, 24);
+        txtNotes.setFont(UiUtils.regularFont());
         txtNotes.setLineWrap(true);
         txtNotes.setWrapStyleWord(true);
         mainPanel.add(new JScrollPane(txtNotes), gbc);
@@ -224,15 +246,18 @@ public class TransactionDialog extends JDialog {
         btnPanel.setBackground(new Color(248, 250, 252));
         btnPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UiUtils.COLOR_BORDER));
 
-        JButton btnCancel = UiUtils.createSecondaryButton("Cancel", NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnCancel = UiUtils.createSecondaryButton(I18n.get("btn.cancel"), NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnCancel.setFont(UiUtils.boldFont());
         btnCancel.addActionListener(e -> dispose());
 
-        JButton btnSave = UiUtils.createPrimaryButton(existingTransaction == null ? "Save Entry" : "Update Entry", NavIcons.check(13, Color.WHITE));
+        JButton btnSave = UiUtils.createPrimaryButton(existingTransaction == null ? I18n.get("btn.save") : I18n.get("btn.edit"), NavIcons.check(13, Color.WHITE));
+        btnSave.setFont(UiUtils.boldFont());
         btnSave.addActionListener(e -> onSave());
 
         btnPanel.add(btnCancel);
         btnPanel.add(btnSave);
         add(btnPanel, BorderLayout.SOUTH);
+
 
         // Event listeners
         rbIncome.addActionListener(e -> onTypeChanged(TransactionType.INCOME));

@@ -13,6 +13,7 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.navfinance.config.AppConfig;
 import com.navfinance.database.DatabaseManager;
+import com.navfinance.i18n.I18n;
 import com.navfinance.model.FilterCriteria;
 import com.navfinance.model.Transaction;
 import com.navfinance.model.TransactionType;
@@ -105,7 +106,7 @@ public class ExportService {
      */
     public void exportToExcel(List<Transaction> transactions, FilterCriteria criteria, File file) throws Exception {
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet("Transactions Report");
+            Sheet sheet = workbook.createSheet(I18n.get("report.title"));
             sheet.setDisplayGridlines(true);
 
             // Title Style
@@ -166,12 +167,12 @@ public class ExportService {
 
             // Title Row
             Row rTitle = sheet.createRow(rowIdx++);
-            rTitle.createCell(0).setCellValue(AppConfig.APP_NAME + " - Financial Statement");
+            rTitle.createCell(0).setCellValue(AppConfig.APP_NAME + " - " + I18n.get("report.title"));
             rTitle.getCell(0).setCellStyle(titleStyle);
 
             // Subtitle Row
             Row rSub = sheet.createRow(rowIdx++);
-            rSub.createCell(0).setCellValue("Generated on: " + LocalDateTime.now().format(AppConfig.DATE_TIME_FORMATTER));
+            rSub.createCell(0).setCellValue(I18n.get("report.generatedOn", LocalDateTime.now().format(AppConfig.DATE_TIME_FORMATTER)));
             rSub.getCell(0).setCellStyle(subStyle);
 
             rowIdx++; // Empty spacer row
@@ -185,24 +186,35 @@ public class ExportService {
             }
 
             Row rSum1 = sheet.createRow(rowIdx++);
-            rSum1.createCell(0).setCellValue("Total Income (In):");
+            rSum1.createCell(0).setCellValue(I18n.get("dashboard.kpi.totalIncome") + ":");
             rSum1.createCell(1).setCellValue(totalIn);
             rSum1.getCell(1).setCellStyle(incomeStyle);
 
             Row rSum2 = sheet.createRow(rowIdx++);
-            rSum2.createCell(0).setCellValue("Total Expense (Out):");
+            rSum2.createCell(0).setCellValue(I18n.get("dashboard.kpi.totalExpense") + ":");
             rSum2.createCell(1).setCellValue(totalOut);
             rSum2.getCell(1).setCellStyle(expenseStyle);
 
             Row rSum3 = sheet.createRow(rowIdx++);
-            rSum3.createCell(0).setCellValue("Net Savings / Balance:");
+            rSum3.createCell(0).setCellValue(I18n.get("dashboard.kpi.netBalance") + ":");
             rSum3.createCell(1).setCellValue(totalIn - totalOut);
             rSum3.getCell(1).setCellStyle(totalStyle);
 
             rowIdx++; // Empty spacer row
 
             // Table Header Row
-            String[] headers = {"#", "Type", "Date", "Status", "Amount (" + AppConfig.getCurrencySymbol() + ")", "Via", "Category", "Sub-Category", "Person", "Notes"};
+            String[] headers = {
+                    "#",
+                    I18n.get("transactions.table.type"),
+                    I18n.get("transactions.table.date"),
+                    I18n.get("transactions.table.status"),
+                    I18n.get("transactions.table.amount") + " (" + AppConfig.getCurrencySymbol() + ")",
+                    I18n.get("transactions.table.via"),
+                    I18n.get("transactions.table.category"),
+                    I18n.get("transactions.table.subCategory"),
+                    I18n.get("transactions.table.person"),
+                    I18n.get("transactions.table.notes")
+            };
             Row hRow = sheet.createRow(rowIdx++);
             hRow.setHeightInPoints(24);
             for (int i = 0; i < headers.length; i++) {
@@ -222,7 +234,7 @@ public class ExportService {
                 cType.setCellStyle(tx.getType() == TransactionType.INCOME ? incomeStyle : expenseStyle);
 
                 row.createCell(2).setCellValue(tx.getTxDate() != null ? tx.getTxDate().format(AppConfig.DATE_FORMATTER) : "");
-                row.createCell(3).setCellValue(tx.isExpected() ? "Expected" : "Settled");
+                row.createCell(3).setCellValue((String) (tx.isExpected() ? I18n.get("due.filter.upcoming") : I18n.get("due.filter.settled")));
 
                 org.apache.poi.ss.usermodel.Cell cAmt = row.createCell(4);
                 cAmt.setCellValue(tx.getAmount());
@@ -271,11 +283,11 @@ public class ExportService {
         Font expenseFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, new Color(216, 59, 1));
 
         // Header Section
-        Paragraph title = new Paragraph(AppConfig.APP_NAME + " - Personal Finance Report", titleFont);
+        Paragraph title = new Paragraph(AppConfig.APP_NAME + " - " + I18n.get("report.title"), titleFont);
         title.setAlignment(Element.ALIGN_LEFT);
         document.add(title);
 
-        Paragraph subtitle = new Paragraph("Generated on: " + LocalDateTime.now().format(AppConfig.DATE_TIME_FORMATTER) +
+        Paragraph subtitle = new Paragraph(I18n.get("report.generatedOn", LocalDateTime.now().format(AppConfig.DATE_TIME_FORMATTER)) +
                 " | Target User Database: " + AppConfig.APP_DATA_DIR.getAbsolutePath(), subtitleFont);
         subtitle.setSpacingAfter(15);
         document.add(subtitle);
@@ -292,12 +304,12 @@ public class ExportService {
         summaryTable.setWidthPercentage(100);
         summaryTable.setSpacingAfter(15);
 
-        addSummaryCard(summaryTable, "Total Records", String.valueOf(transactions.size()), new Color(240, 243, 246), Color.BLACK);
-        addSummaryCard(summaryTable, "Total Income (In)", AppConfig.formatCurrency(totalIn), new Color(230, 245, 235), new Color(16, 124, 65));
-        addSummaryCard(summaryTable, "Total Expense (Out)", AppConfig.formatCurrency(totalOut), new Color(254, 237, 237), new Color(216, 59, 1));
+        addSummaryCard(summaryTable, I18n.get("report.totalRecords", transactions.size()), String.valueOf(transactions.size()), new Color(240, 243, 246), Color.BLACK);
+        addSummaryCard(summaryTable, I18n.get("dashboard.kpi.totalIncome"), AppConfig.formatCurrency(totalIn), new Color(230, 245, 235), new Color(16, 124, 65));
+        addSummaryCard(summaryTable, I18n.get("dashboard.kpi.totalExpense"), AppConfig.formatCurrency(totalOut), new Color(254, 237, 237), new Color(216, 59, 1));
         Color balBg = (totalIn >= totalOut) ? new Color(228, 242, 253) : new Color(255, 243, 205);
         Color balFg = (totalIn >= totalOut) ? new Color(15, 76, 129) : new Color(133, 100, 4);
-        addSummaryCard(summaryTable, "Net Balance", AppConfig.formatCurrency(totalIn - totalOut), balBg, balFg);
+        addSummaryCard(summaryTable, I18n.get("dashboard.kpi.netBalance"), AppConfig.formatCurrency(totalIn - totalOut), balBg, balFg);
         document.add(summaryTable);
 
         // Transactions Table
@@ -305,7 +317,17 @@ public class ExportService {
         table.setWidthPercentage(100);
         table.setWidths(new float[]{1.2f, 1.8f, 2.0f, 1.4f, 2.4f, 2.0f, 2.6f, 2.6f, 3.5f});
 
-        String[] headers = {"#", "Type", "Date", "Status", "Amount", "Via", "Category", "Sub-Category", "Notes"};
+        String[] headers = {
+                "#",
+                I18n.get("transactions.table.type"),
+                I18n.get("transactions.table.date"),
+                I18n.get("transactions.table.status"),
+                I18n.get("transactions.table.amount"),
+                I18n.get("transactions.table.via"),
+                I18n.get("transactions.table.category"),
+                I18n.get("transactions.table.subCategory"),
+                I18n.get("transactions.table.notes")
+        };
         for (String h : headers) {
             PdfPCell cell = new PdfPCell(new Phrase(h, headerFont));
             cell.setBackgroundColor(new Color(36, 53, 76));
@@ -329,13 +351,14 @@ public class ExportService {
             addCell(table, tx.getType().getDisplayName(), isIncome ? incomeFont : expenseFont, Element.ALIGN_CENTER, rowBg);
 
             addCell(table, tx.getTxDate() != null ? tx.getTxDate().format(AppConfig.DATE_FORMATTER) : "-", regularFont, Element.ALIGN_CENTER, rowBg);
-            addCell(table, tx.isExpected() ? "Expected" : "Settled", regularFont, Element.ALIGN_CENTER, rowBg);
+            addCell(table, tx.isExpected() ? I18n.get("due.filter.upcoming") : I18n.get("due.filter.settled"), regularFont, Element.ALIGN_CENTER, rowBg);
             addCell(table, AppConfig.formatCurrency(tx.getAmount()), isIncome ? incomeFont : expenseFont, Element.ALIGN_RIGHT, rowBg);
             addCell(table, tx.getPaymentVia() != null ? tx.getPaymentVia() : "-", regularFont, Element.ALIGN_CENTER, rowBg);
             addCell(table, tx.getCategory() != null ? tx.getCategory() : "-", regularFont, Element.ALIGN_LEFT, rowBg);
             addCell(table, tx.getSubCategory() != null ? tx.getSubCategory() : "-", regularFont, Element.ALIGN_LEFT, rowBg);
             addCell(table, tx.getNotes() != null ? tx.getNotes() : "", regularFont, Element.ALIGN_LEFT, rowBg);
         }
+
 
         document.add(table);
 

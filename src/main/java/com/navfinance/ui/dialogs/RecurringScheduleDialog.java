@@ -1,6 +1,7 @@
 package com.navfinance.ui.dialogs;
 
 import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.I18n;
 import com.navfinance.model.AmountType;
 import com.navfinance.model.Bill;
 import com.navfinance.model.CreditCard;
@@ -115,7 +116,7 @@ public class RecurringScheduleDialog extends JDialog {
      * @param schedule existing schedule to edit, or {@code null} to register a new rule
      */
     public RecurringScheduleDialog(JFrame parent, RecurringSchedule schedule) {
-        super(parent, schedule == null ? "Register Recurring Schedule" : "Edit Recurring Schedule", true);
+        super(parent, schedule == null ? I18n.get("dialog.recurring.addTitle") : I18n.get("dialog.recurring.editTitle"), true);
         this.existingSchedule = schedule;
 
         setPreferredSize(new Dimension(640, 680));
@@ -138,14 +139,14 @@ public class RecurringScheduleDialog extends JDialog {
         // 1. TOP HEADER
         JPanel header = new JPanel(new BorderLayout(0, 4));
         header.setOpaque(false);
-        JLabel lblTitle = new JLabel(existingSchedule == null ? "Register Monthly Recurring Rule" : "Edit Recurring Rule");
+        JLabel lblTitle = new JLabel(existingSchedule == null ? I18n.get("dialog.recurring.addTitle") : I18n.get("dialog.recurring.editTitle"));
         lblTitle.setIcon(existingSchedule == null ? NavIcons.calendar(20, UiUtils.COLOR_PRIMARY) : NavIcons.edit(20, UiUtils.COLOR_PRIMARY));
         lblTitle.setIconTextGap(8);
-        lblTitle.setFont(UiUtils.FONT_TITLE);
+        lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
 
         JLabel lblSub = new JLabel("<html>Schedule repeating payments (e.g. EMI of ₹20k on 5th from Jan 26 to Jan 27, or monthly electricity bill on 15th with variable amount).</html>");
-        lblSub.setFont(UiUtils.FONT_SUBTITLE);
+        lblSub.setFont(UiUtils.subtitleFont());
         lblSub.setForeground(UiUtils.COLOR_TEXT_MUTED);
 
         header.add(lblTitle, BorderLayout.NORTH);
@@ -356,10 +357,12 @@ public class RecurringScheduleDialog extends JDialog {
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         bottomBar.setOpaque(false);
 
-        JButton btnCancel = UiUtils.createSecondaryButton("Cancel", NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnCancel = UiUtils.createSecondaryButton(I18n.get("btn.cancel"), NavIcons.cross(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnCancel.setFont(UiUtils.boldFont());
         btnCancel.addActionListener(e -> dispose());
 
-        JButton btnSave = UiUtils.createPrimaryButton("Save Schedule", NavIcons.check(13, Color.WHITE));
+        JButton btnSave = UiUtils.createPrimaryButton(I18n.get("btn.save"), NavIcons.check(13, Color.WHITE));
+        btnSave.setFont(UiUtils.boldFont());
         btnSave.addActionListener(e -> onSave());
 
         bottomBar.add(btnCancel);

@@ -1000,4 +1000,25 @@ public final class NavIcons {
             g2.draw(p);
         });
     }
+
+    /**
+     * Creates a globe / language vector icon for UI language selection.
+     *
+     * @param size dimension in pixels
+     * @param color stroke color
+     * @return vector {@link Icon}
+     */
+    public static Icon language(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            g2.setStroke(new BasicStroke(Math.max(1.3f, s * 0.08f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            // Outer circle
+            g2.draw(new Ellipse2D.Float(s * 0.10f, s * 0.10f, s * 0.80f, s * 0.80f));
+            // Equator
+            g2.draw(new Line2D.Float(s * 0.10f, s * 0.50f, s * 0.90f, s * 0.50f));
+            // Vertical meridian ellipse
+            g2.draw(new Ellipse2D.Float(s * 0.30f, s * 0.10f, s * 0.40f, s * 0.80f));
+        });
+    }
 }

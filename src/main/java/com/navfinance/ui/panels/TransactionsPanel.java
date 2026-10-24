@@ -8,6 +8,9 @@ import com.navfinance.model.TransactionType;
 import com.navfinance.service.CsvImportService;
 import com.navfinance.service.ExportService;
 import com.navfinance.service.FinanceService;
+import com.navfinance.i18n.AppLanguage;
+import com.navfinance.i18n.I18n;
+import com.navfinance.i18n.LanguageChangeListener;
 import com.navfinance.ui.components.DatePickerField;
 import com.navfinance.ui.dialogs.CsvImportDialog;
 import com.navfinance.ui.dialogs.TransactionDialog;
@@ -49,18 +52,8 @@ import java.util.List;
 
 /**
  * Primary transactional ledger management panel for NavFinance.
- * <p>
- * This panel provides a comprehensive workspace for:
- * <ul>
- *   <li>Recording and managing Income and Expense records with full sub-categorization and counterparty tracking.</li>
- *   <li>Multi-dimensional filtering across types, categories, sub-categories, payment channels (Via),
- *       persons, amount ranges, search keywords, and dynamic date presets (Today, This Week, This Month, Quarter, Year).</li>
- *   <li>Multi-column sorting (by Date, Amount, Type, Category, Sub Category; Ascending/Descending).</li>
- *   <li>Exporting filtered datasets into PDF reports, Excel workbooks, or CSV spreadsheets.</li>
- *   <li>Importing and syncing external transactional records via CSV templates.</li>
- * </ul>
  */
-public class TransactionsPanel extends JPanel {
+public class TransactionsPanel extends JPanel implements LanguageChangeListener {
 
     /** Business service managing transaction CRUD operations and master catalog dependencies. */
     private final FinanceService financeService = FinanceService.getInstance();
@@ -133,6 +126,7 @@ public class TransactionsPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(14, 18, 14, 18));
 
         initComponents();
+        I18n.addListener(this);
         applyFilters();
     }
 
@@ -140,6 +134,8 @@ public class TransactionsPanel extends JPanel {
      * Initializes visual components, styling, action triggers, table column renderers, and event bindings.
      */
     private void initComponents() {
+        removeAll();
+
         // TOP SECTION: Action bar + Advanced Filter Card
         JPanel topContainer = new JPanel(new BorderLayout(0, 10));
         topContainer.setOpaque(false);
@@ -148,36 +144,36 @@ public class TransactionsPanel extends JPanel {
         JPanel actionHeader = new JPanel(new BorderLayout());
         actionHeader.setOpaque(false);
 
-        JLabel lblTitle = new JLabel("Transactions (Income & Expense)");
-        lblTitle.setFont(UiUtils.FONT_TITLE);
+        JLabel lblTitle = new JLabel(I18n.get("transactions.title"));
+        lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
         actionHeader.add(lblTitle, BorderLayout.WEST);
 
         JPanel btnGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnGroup.setOpaque(false);
 
-        JButton btnAddIncome = UiUtils.createSuccessButton("Add Income", NavIcons.plus(13, Color.WHITE));
+        JButton btnAddIncome = UiUtils.createSuccessButton(I18n.get("action.recordIncome"), NavIcons.plus(13, Color.WHITE));
         btnAddIncome.addActionListener(e -> openAddDialog(TransactionType.INCOME));
 
-        JButton btnAddExpense = UiUtils.createDangerButton("Add Expense", NavIcons.minus(13, Color.WHITE));
+        JButton btnAddExpense = UiUtils.createDangerButton(I18n.get("action.recordExpense"), NavIcons.minus(13, Color.WHITE));
         btnAddExpense.addActionListener(e -> openAddDialog(TransactionType.EXPENSE));
 
-        JButton btnEdit = UiUtils.createSecondaryButton("Edit", NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnEdit = UiUtils.createSecondaryButton(I18n.get("btn.edit"), NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnEdit.addActionListener(e -> onEditSelected());
 
-        JButton btnDelete = UiUtils.createSecondaryButton("Delete", NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        JButton btnDelete = UiUtils.createSecondaryButton(I18n.get("btn.delete"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
         btnDelete.addActionListener(e -> onDeleteSelected());
 
-        JButton btnImportCsv = UiUtils.createSecondaryButton("Import CSV", NavIcons.importIcon(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnImportCsv = UiUtils.createSecondaryButton(I18n.get("btn.import"), NavIcons.importIcon(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnImportCsv.addActionListener(e -> onOpenImportCsv());
 
         // Export Menu Button with Dropdown Popup
-        JButton btnExport = UiUtils.createPrimaryButton("Export / Templates", NavIcons.export(13, Color.WHITE));
+        JButton btnExport = UiUtils.createPrimaryButton(I18n.get("btn.export"), NavIcons.export(13, Color.WHITE));
         JPopupMenu exportMenu = new JPopupMenu();
-        JMenuItem itemPdf = new JMenuItem("Export Filtered to PDF (.pdf)", NavIcons.export(12, UiUtils.COLOR_PRIMARY));
-        JMenuItem itemExcel = new JMenuItem("Export Filtered to Excel (.xlsx)", NavIcons.export(12, UiUtils.COLOR_INCOME));
-        JMenuItem itemCsv = new JMenuItem("Export Filtered to CSV (.csv)", NavIcons.export(12, UiUtils.COLOR_AMBER));
-        JMenuItem itemTemplate = new JMenuItem("Download CSV Template (Import/Update/Delete)", NavIcons.importIcon(12, UiUtils.COLOR_PRIMARY));
+        JMenuItem itemPdf = new JMenuItem(I18n.get("transactions.export.pdf"), NavIcons.export(12, UiUtils.COLOR_PRIMARY));
+        JMenuItem itemExcel = new JMenuItem(I18n.get("transactions.export.excel"), NavIcons.export(12, UiUtils.COLOR_INCOME));
+        JMenuItem itemCsv = new JMenuItem(I18n.get("transactions.export.csv"), NavIcons.export(12, UiUtils.COLOR_AMBER));
+        JMenuItem itemTemplate = new JMenuItem(I18n.get("transactions.export.template"), NavIcons.importIcon(12, UiUtils.COLOR_PRIMARY));
 
         itemPdf.addActionListener(e -> exportCurrentView("PDF"));
         itemExcel.addActionListener(e -> exportCurrentView("EXCEL"));
@@ -215,17 +211,21 @@ public class TransactionsPanel extends JPanel {
         int row = 0;
 
         gbc.gridx = 0; gbc.gridy = row;
-        filterCard.add(new JLabel("Search:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.filter.search")), gbc);
         gbc.gridx = 1; gbc.gridy = row;
         txtSearch = new JTextField(12);
-        txtSearch.setToolTipText("Search notes, category, person, or mode");
+        txtSearch.setToolTipText(I18n.get("transactions.search.placeholder"));
         txtSearch.addActionListener(e -> applyFilters());
         filterCard.add(txtSearch, gbc);
 
         gbc.gridx = 2; gbc.gridy = row;
-        filterCard.add(new JLabel("Type:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.filter.type")), gbc);
         gbc.gridx = 3; gbc.gridy = row;
-        cmbTypeFilter = new JComboBox<>(new String[]{"All", "Income (In)", "Expense (Out)"});
+        cmbTypeFilter = new JComboBox<>(new String[]{
+                I18n.get("transactions.filter.all"),
+                I18n.get("transactions.filter.income"),
+                I18n.get("transactions.filter.expense")
+        });
         cmbTypeFilter.addActionListener(e -> {
             updateCategoryOptions();
             applyFilters();
@@ -233,7 +233,7 @@ public class TransactionsPanel extends JPanel {
         filterCard.add(cmbTypeFilter, gbc);
 
         gbc.gridx = 4; gbc.gridy = row;
-        filterCard.add(new JLabel("Category:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.filter.category")), gbc);
         gbc.gridx = 5; gbc.gridy = row;
         cmbCategoryFilter = new JComboBox<>();
         cmbCategoryFilter.addActionListener(e -> {
@@ -243,7 +243,7 @@ public class TransactionsPanel extends JPanel {
         filterCard.add(cmbCategoryFilter, gbc);
 
         gbc.gridx = 6; gbc.gridy = row;
-        filterCard.add(new JLabel("Sub-Category:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.filter.subCategory")), gbc);
         gbc.gridx = 7; gbc.gridy = row;
         cmbSubCategoryFilter = new JComboBox<>();
         cmbSubCategoryFilter.addActionListener(e -> applyFilters());
@@ -253,28 +253,36 @@ public class TransactionsPanel extends JPanel {
         row++;
 
         gbc.gridx = 0; gbc.gridy = row;
-        filterCard.add(new JLabel("Date Range:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.filter.datePreset")), gbc);
         gbc.gridx = 1; gbc.gridy = row;
-        cmbDatePreset = new JComboBox<>(new String[]{"All Time", "Today", "This Week", "This Month", "This Quarter", "This Year", "Custom"});
+        cmbDatePreset = new JComboBox<>(new String[]{
+                I18n.get("transactions.date.allTime"),
+                I18n.get("transactions.date.today"),
+                I18n.get("transactions.date.thisWeek"),
+                I18n.get("transactions.date.thisMonth"),
+                I18n.get("transactions.date.thisQuarter"),
+                I18n.get("transactions.date.thisYear"),
+                "Custom"
+        });
         cmbDatePreset.addActionListener(e -> onDatePresetChanged());
         filterCard.add(cmbDatePreset, gbc);
 
         gbc.gridx = 2; gbc.gridy = row;
-        filterCard.add(new JLabel("Via (Mode):"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.filter.via")), gbc);
         gbc.gridx = 3; gbc.gridy = row;
         cmbViaFilter = new JComboBox<>();
         cmbViaFilter.addActionListener(e -> applyFilters());
         filterCard.add(cmbViaFilter, gbc);
 
         gbc.gridx = 4; gbc.gridy = row;
-        filterCard.add(new JLabel("Person:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.filter.person")), gbc);
         gbc.gridx = 5; gbc.gridy = row;
         cmbPersonFilter = new JComboBox<>();
         cmbPersonFilter.addActionListener(e -> applyFilters());
         filterCard.add(cmbPersonFilter, gbc);
 
         gbc.gridx = 6; gbc.gridy = row;
-        filterCard.add(new JLabel("Sort By:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.sort.by")), gbc);
         gbc.gridx = 7; gbc.gridy = row;
         JPanel sortBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
         sortBox.setOpaque(false);
@@ -290,7 +298,7 @@ public class TransactionsPanel extends JPanel {
         row++;
 
         gbc.gridx = 0; gbc.gridy = row;
-        filterCard.add(new JLabel("From / To:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.filter.fromTo")), gbc);
         gbc.gridx = 1; gbc.gridy = row;
         JPanel dateInputs = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         dateInputs.setOpaque(false);
@@ -304,7 +312,7 @@ public class TransactionsPanel extends JPanel {
         filterCard.add(dateInputs, gbc);
 
         gbc.gridx = 2; gbc.gridy = row;
-        filterCard.add(new JLabel("Amount Min/Max:"), gbc);
+        filterCard.add(new JLabel(I18n.get("transactions.filter.amountRange")), gbc);
         gbc.gridx = 3; gbc.gridy = row;
         JPanel amtInputs = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
         amtInputs.setOpaque(false);
@@ -318,10 +326,10 @@ public class TransactionsPanel extends JPanel {
         gbc.gridx = 6; gbc.gridy = row; gbc.gridwidth = 2;
         JPanel btnFilterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         btnFilterPanel.setOpaque(false);
-        JButton btnApplyFilter = UiUtils.createPrimaryButton("Apply Filters", NavIcons.filter(13, Color.WHITE));
+        JButton btnApplyFilter = UiUtils.createPrimaryButton(I18n.get("transactions.filter.apply"), NavIcons.filter(13, Color.WHITE));
         btnApplyFilter.addActionListener(e -> applyFilters());
 
-        JButton btnResetFilter = UiUtils.createSecondaryButton("Reset All", NavIcons.refresh(13, UiUtils.COLOR_TEXT_PRIMARY));
+        JButton btnResetFilter = UiUtils.createSecondaryButton(I18n.get("transactions.filter.reset"), NavIcons.refresh(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnResetFilter.addActionListener(e -> resetFilters());
 
         btnFilterPanel.add(btnResetFilter);
@@ -332,7 +340,18 @@ public class TransactionsPanel extends JPanel {
         add(topContainer, BorderLayout.NORTH);
 
         // CENTER: Transactions Table configuration
-        String[] columns = {"ID", "Type", "Date", "Status", "Amount", "Via", "Category", "Sub-Category", "Person", "Notes"};
+        String[] columns = {
+                I18n.get("transactions.table.id"),
+                I18n.get("transactions.table.type"),
+                I18n.get("transactions.table.date"),
+                I18n.get("transactions.table.status"),
+                I18n.get("transactions.table.amount"),
+                I18n.get("transactions.table.via"),
+                I18n.get("transactions.table.category"),
+                I18n.get("transactions.table.subCategory"),
+                I18n.get("transactions.table.person"),
+                I18n.get("transactions.table.notes")
+        };
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -342,8 +361,8 @@ public class TransactionsPanel extends JPanel {
 
         tblTransactions = new JTable(tableModel);
         tblTransactions.setRowHeight(30);
-        tblTransactions.getTableHeader().setFont(UiUtils.FONT_BOLD);
-        tblTransactions.setFont(UiUtils.FONT_REGULAR);
+        tblTransactions.getTableHeader().setFont(UiUtils.boldFont());
+        tblTransactions.setFont(UiUtils.regularFont());
         tblTransactions.setShowGrid(false);
         tblTransactions.setIntercellSpacing(new Dimension(0, 0));
 
@@ -423,11 +442,11 @@ public class TransactionsPanel extends JPanel {
         ));
 
         lblSummaryTotal = new JLabel("Loading totals...");
-        lblSummaryTotal.setFont(UiUtils.FONT_BOLD);
+        lblSummaryTotal.setFont(UiUtils.boldFont());
         bottomBar.add(lblSummaryTotal, BorderLayout.WEST);
 
-        JLabel lblHelp = new JLabel("Double-click any row to edit or view audit logs.", NavIcons.userGuide(14, UiUtils.COLOR_TEXT_MUTED), JLabel.LEFT);
-        lblHelp.setFont(UiUtils.FONT_SUBTITLE);
+        JLabel lblHelp = new JLabel(I18n.get("transactions.hint.doubleClick"), NavIcons.userGuide(14, UiUtils.COLOR_TEXT_MUTED), JLabel.LEFT);
+        lblHelp.setFont(UiUtils.subtitleFont());
         lblHelp.setForeground(UiUtils.COLOR_TEXT_MUTED);
         bottomBar.add(lblHelp, BorderLayout.EAST);
 
@@ -443,14 +462,14 @@ public class TransactionsPanel extends JPanel {
     private void populateFilterDropdowns() {
         // Payment Via dropdown options
         cmbViaFilter.removeAllItems();
-        cmbViaFilter.addItem("All");
+        cmbViaFilter.addItem(I18n.get("transactions.filter.allGeneric"));
         for (String mode : financeService.getAllPaymentModes()) {
             cmbViaFilter.addItem(mode);
         }
 
         // Person counterparty dropdown options
         cmbPersonFilter.removeAllItems();
-        cmbPersonFilter.addItem("All Persons");
+        cmbPersonFilter.addItem(I18n.get("transactions.filter.allPersons"));
         for (Person p : financeService.getAllPersons()) {
             cmbPersonFilter.addItem(p);
         }
@@ -635,11 +654,11 @@ public class TransactionsPanel extends JPanel {
 
         // Update Summary Footer Display
         double net = totalIn - totalOut;
-        lblSummaryTotal.setText(String.format("Showing: %d records  |  Total In: %s  |  Total Out: %s  |  Net Balance: %s",
-                currentTransactions.size(),
-                AppConfig.formatCurrency(totalIn),
-                AppConfig.formatCurrency(totalOut),
-                AppConfig.formatCurrency(net)));
+        lblSummaryTotal.setText(String.format("%s  |  %s  |  %s  |  %s",
+                I18n.get("transactions.summary.records", currentTransactions.size()),
+                I18n.get("transactions.summary.totalIn", AppConfig.formatCurrency(totalIn)),
+                I18n.get("transactions.summary.totalOut", AppConfig.formatCurrency(totalOut)),
+                I18n.get("transactions.summary.balance", AppConfig.formatCurrency(net))));
     }
 
     /**
@@ -813,4 +832,16 @@ public class TransactionsPanel extends JPanel {
             }
         }
     }
+
+    /**
+     * Responds to language updates by rebuilding localized visual labels, columns, and filter texts.
+     *
+     * @param newLanguage the newly selected system language
+     */
+    @Override
+    public void onLanguageChanged(AppLanguage newLanguage) {
+        initComponents();
+        applyFilters();
+    }
 }
+
