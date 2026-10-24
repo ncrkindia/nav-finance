@@ -35,6 +35,8 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -125,8 +127,12 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
         setupKeyBindings();
         I18n.addListener(this);
         onLanguageChanged(I18n.getCurrentLanguage());
+        if (ZoomManager.getCurrentScale() != 1.0f) {
+            ZoomManager.applyZoom(this);
+        }
         pack();
-        setLocationRelativeTo(null);
+        restoreWindowBounds();
+        setupWindowBoundsPersistence();
     }
 
     /**
@@ -435,5 +441,105 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
         SwingUtilities.updateComponentTreeUI(this);
         revalidate();
         repaint();
+    }
+
+    /**
+     * Restores window bounds, position, and maximized state from persisted settings,
+     * defaulting to full screen at location (0, 0) on initial launch.
+     */
+    private void restoreWindowBounds() {
+        if (GraphicsEnvironment.isHeadless()) {
+            return;
+        }
+        Rectangle maxBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+
+        int savedWidth = AppConfig.getWindowWidth();
+        int savedHeight = AppConfig.getWindowHeight();
+        int savedX = AppConfig.getWindowX();
+        int savedY = AppConfig.getWindowY();
+        boolean savedMaximized = AppConfig.isWindowMaximized();
+
+        if (savedWidth <= 0 || savedHeight <= 0) {
+            // First run default: Location (0, 0) and full available desktop bounds
+            setBounds(0, 0, maxBounds.width, maxBounds.height);
+            setExtendedState(JFrame.MAXIMIZED_BOTH);
+        } else {
+            // Check if saved position is within any active display
+            Rectangle virtualBounds = new Rectangle();
+            for (java.awt.GraphicsDevice gd : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+                for (java.awt.GraphicsConfiguration gc : gd.getConfigurations()) {
+                    virtualBounds = virtualBounds.union(gc.getBounds());
+                }
+            }
+
+            int w = Math.max(1100, Math.min(savedWidth, virtualBounds.width));
+            int h = Math.max(750, Math.min(savedHeight, virtualBounds.height));
+            int x = savedX;
+            int y = savedY;
+
+            // If completely off-screen, fallback to (0, 0)
+            if (!virtualBounds.intersects(x, y, Math.min(w, 200), Math.min(h, 100))) {
+                x = 0;
+                y = 0;
+            }
+
+            setBounds(x, y, w, h);
+
+            if (savedMaximized) {
+                setExtendedState(JFrame.MAXIMIZED_BOTH);
+            }
+        }
+    }
+
+    /** Debounced timer to avoid disk-thrashing during active dragging/resizing. */
+    private final javax.swing.Timer boundsSaveTimer = new javax.swing.Timer(300, e -> persistCurrentWindowBounds());
+
+    /**
+     * Attaches component and window listeners to persist moved and resized positions.
+     */
+    private void setupWindowBoundsPersistence() {
+        boundsSaveTimer.setRepeats(false);
+
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                boundsSaveTimer.restart();
+            }
+
+            @Override
+            public void componentMoved(java.awt.event.ComponentEvent e) {
+                boundsSaveTimer.restart();
+            }
+        });
+
+        addWindowStateListener(e -> boundsSaveTimer.restart());
+
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                persistCurrentWindowBounds();
+            }
+        });
+    }
+
+    /**
+     * Persists current window coordinates, dimensions, and maximized state to settings.
+     */
+    private void persistCurrentWindowBounds() {
+        boolean isMaximized = (getExtendedState() & JFrame.MAXIMIZED_BOTH) != 0;
+        int x = getX();
+        int y = getY();
+        int w = getWidth();
+        int h = getHeight();
+
+        if (!isMaximized) {
+            AppConfig.saveWindowBounds(x, y, w, h, false);
+        } else {
+            int prevW = AppConfig.getWindowWidth() > 0 ? AppConfig.getWindowWidth() : w;
+            int prevH = AppConfig.getWindowHeight() > 0 ? AppConfig.getWindowHeight() : h;
+            int prevX = AppConfig.getWindowX();
+            int prevY = AppConfig.getWindowY();
+            AppConfig.saveWindowBounds(prevX, prevY, prevW, prevH, true);
+        }
     }
 }

@@ -1,6 +1,8 @@
 package com.navfinance.ui.util;
 
 import com.formdev.flatlaf.FlatLaf;
+import com.navfinance.config.AppConfig;
+import com.navfinance.i18n.I18n;
 
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
@@ -15,7 +17,7 @@ import java.util.List;
  * <p>
  * Controls application-wide typography scaling across tables, menus, dialogs, buttons, and input
  * fields, notifying registered UI listeners and refreshing top-level window component trees
- * upon every scale alteration.
+ * upon every scale alteration. Zoom level is persisted across application restarts.
  * </p>
  */
 public final class ZoomManager {
@@ -23,20 +25,33 @@ public final class ZoomManager {
     /** Base typography font size in points at 100% baseline zoom. */
     private static final float BASE_FONT_SIZE = 12.0f;
 
-    /** Current pointer index in the {@link #ZOOM_SCALES} array (defaults to 2 for 100%). */
-    private static int zoomIndex = 2; // Default 100%
-
     /** Array of supported zoom scale multipliers ranging from 80% to 175%. */
     private static final float[] ZOOM_SCALES = {0.80f, 0.90f, 1.00f, 1.15f, 1.30f, 1.50f, 1.75f};
 
     /** Display percentage labels corresponding to each supported zoom factor index. */
     private static final String[] ZOOM_LABELS = {"80%", "90%", "100%", "115%", "130%", "150%", "175%"};
 
+    /** Current pointer index in the {@link #ZOOM_SCALES} array (restored from AppConfig). */
+    private static int zoomIndex = initZoomIndex();
+
     /** Registered listener callbacks invoked whenever the zoom factor changes. */
     private static final List<Runnable> zoomListeners = new ArrayList<>();
 
     /** Private constructor preventing instantiation of utility class. */
     private ZoomManager() {}
+
+    /**
+     * Initializes the zoom index from user configuration, clamping to valid range.
+     *
+     * @return valid zoom index
+     */
+    private static int initZoomIndex() {
+        int idx = AppConfig.getZoomIndex();
+        if (idx < 0 || idx >= ZOOM_SCALES.length) {
+            idx = 2; // Default 100%
+        }
+        return idx;
+    }
 
     /**
      * Retrieves the current decimal zoom scale factor (e.g., 1.00f for 100%, 1.15f for 115%).
@@ -54,6 +69,15 @@ public final class ZoomManager {
      */
     public static String getZoomLabel() {
         return ZOOM_LABELS[zoomIndex];
+    }
+
+    /**
+     * Returns the total count of supported zoom scale stops.
+     *
+     * @return number of zoom steps
+     */
+    public static int getScaleCount() {
+        return ZOOM_SCALES.length;
     }
 
     /**
@@ -75,36 +99,39 @@ public final class ZoomManager {
     }
 
     /**
-     * Steps up to the next magnification level and applies font scaling across all open frames.
+     * Steps up to the next magnification level, persists setting, and applies font scaling.
      *
      * @param mainFrame the primary application frame
      */
     public static void zoomIn(JFrame mainFrame) {
         if (canZoomIn()) {
             zoomIndex++;
+            AppConfig.setZoomIndex(zoomIndex);
             applyZoom(mainFrame);
         }
     }
 
     /**
-     * Steps down to the next smaller magnification level and refreshes component trees.
+     * Steps down to the next smaller magnification level, persists setting, and refreshes component trees.
      *
      * @param mainFrame the primary application frame
      */
     public static void zoomOut(JFrame mainFrame) {
         if (canZoomOut()) {
             zoomIndex--;
+            AppConfig.setZoomIndex(zoomIndex);
             applyZoom(mainFrame);
         }
     }
 
     /**
-     * Resets the application zoom level to the default 100% baseline.
+     * Resets the application zoom level to the default 100% baseline and persists setting.
      *
      * @param mainFrame the primary application frame
      */
     public static void resetZoom(JFrame mainFrame) {
         zoomIndex = 2; // 100%
+        AppConfig.setZoomIndex(zoomIndex);
         applyZoom(mainFrame);
     }
 
@@ -123,12 +150,14 @@ public final class ZoomManager {
      *
      * @param mainFrame root application window frame
      */
-    private static void applyZoom(JFrame mainFrame) {
+    public static void applyZoom(JFrame mainFrame) {
         float scale = getCurrentScale();
         int newFontSize = Math.round(BASE_FONT_SIZE * scale);
+        String fontFamily = I18n.getFontFamily();
 
-        Font defaultFont = new Font("Segoe UI", Font.PLAIN, newFontSize);
-        Font boldFont = new Font("Segoe UI", Font.BOLD, newFontSize);
+        Font defaultFont = new Font(fontFamily, Font.PLAIN, newFontSize);
+        Font boldFont = new Font(fontFamily, Font.BOLD, newFontSize);
+        Font titleFont = new Font(fontFamily, Font.BOLD, Math.round(18.0f * scale));
 
         // Update global Swing UIManager font keys
         UIManager.put("defaultFont", defaultFont);
@@ -139,6 +168,13 @@ public final class ZoomManager {
         UIManager.put("TextField.font", defaultFont);
         UIManager.put("ComboBox.font", defaultFont);
         UIManager.put("TabbedPane.font", boldFont);
+        UIManager.put("TitlePane.font", titleFont);
+        UIManager.put("TitlePane.titleFont", titleFont);
+        UIManager.put("RootPane.titlePane.font", titleFont);
+        UIManager.put("InternalFrame.titleFont", titleFont);
+
+        // Update centralized UiUtils static font caches
+        UiUtils.refreshFonts();
 
         // Propagate UI font updates to all currently realized windows and dialogs
         for (Window window : Window.getWindows()) {

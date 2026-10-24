@@ -64,6 +64,24 @@ public final class AppConfig {
     /** Configurable active language code (default: "en"). */
     private static String language = "en";
 
+    /** Configurable active zoom index pointer (default: 2 for 100%). */
+    private static int zoomIndex = 2;
+
+    /** Persisted window X coordinate (default: 0). */
+    private static int windowX = 0;
+
+    /** Persisted window Y coordinate (default: 0). */
+    private static int windowY = 0;
+
+    /** Persisted window width (-1 indicates uninitialized default full size). */
+    private static int windowWidth = -1;
+
+    /** Persisted window height (-1 indicates uninitialized default full size). */
+    private static int windowHeight = -1;
+
+    /** Persisted window maximized state (default: true for full size). */
+    private static boolean windowMaximized = true;
+
     /** Settings file in user data directory. */
     private static final File SETTINGS_FILE = new File(APP_DATA_DIR, "settings.properties");
 
@@ -87,7 +105,43 @@ public final class AppConfig {
             if (lang != null && !lang.trim().isEmpty()) {
                 language = lang.trim();
             }
+            String zIdx = props.getProperty("zoomIndex");
+            if (zIdx != null && !zIdx.trim().isEmpty()) {
+                try {
+                    int idx = Integer.parseInt(zIdx.trim());
+                    if (idx >= 0 && idx <= 6) {
+                        zoomIndex = idx;
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+            String wx = props.getProperty("windowX");
+            String wy = props.getProperty("windowY");
+            String ww = props.getProperty("windowWidth");
+            String wh = props.getProperty("windowHeight");
+            String wm = props.getProperty("windowMaximized");
+            if (wx != null && !wx.trim().isEmpty()) {
+                try { windowX = Integer.parseInt(wx.trim()); } catch (NumberFormatException ignored) {}
+            }
+            if (wy != null && !wy.trim().isEmpty()) {
+                try { windowY = Integer.parseInt(wy.trim()); } catch (NumberFormatException ignored) {}
+            }
+            if (ww != null && !ww.trim().isEmpty()) {
+                try { windowWidth = Integer.parseInt(ww.trim()); } catch (NumberFormatException ignored) {}
+            }
+            if (wh != null && !wh.trim().isEmpty()) {
+                try { windowHeight = Integer.parseInt(wh.trim()); } catch (NumberFormatException ignored) {}
+            }
+            if (wm != null && !wm.trim().isEmpty()) {
+                windowMaximized = Boolean.parseBoolean(wm.trim());
+            }
         } catch (Exception ignored) {}
+    }
+
+    /**
+     * Reloads persisted settings from disk.
+     */
+    public static synchronized void reloadSettings() {
+        loadSettings();
     }
 
     /**
@@ -101,10 +155,52 @@ public final class AppConfig {
             java.util.Properties props = new java.util.Properties();
             props.setProperty("currencySymbol", currencySymbol);
             props.setProperty("language", language);
+            props.setProperty("zoomIndex", String.valueOf(zoomIndex));
+            props.setProperty("windowX", String.valueOf(windowX));
+            props.setProperty("windowY", String.valueOf(windowY));
+            props.setProperty("windowWidth", String.valueOf(windowWidth));
+            props.setProperty("windowHeight", String.valueOf(windowHeight));
+            props.setProperty("windowMaximized", String.valueOf(windowMaximized));
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(SETTINGS_FILE)) {
                 props.store(fos, "Nav Finance User Settings");
             }
         } catch (Exception ignored) {}
+    }
+
+    /**
+     * Gets the persisted zoom scale index.
+     *
+     * @return active zoom index (0 to 6)
+     */
+    public static int getZoomIndex() {
+        return zoomIndex;
+    }
+
+    /**
+     * Sets the active zoom scale index and persists to disk.
+     *
+     * @param idx target zoom index (0 to 6)
+     */
+    public static void setZoomIndex(int idx) {
+        if (idx >= 0 && idx <= 6) {
+            zoomIndex = idx;
+            saveSettings();
+        }
+    }
+
+    public static int getWindowX() { return windowX; }
+    public static int getWindowY() { return windowY; }
+    public static int getWindowWidth() { return windowWidth; }
+    public static int getWindowHeight() { return windowHeight; }
+    public static boolean isWindowMaximized() { return windowMaximized; }
+
+    public static void saveWindowBounds(int x, int y, int width, int height, boolean maximized) {
+        windowX = x;
+        windowY = y;
+        windowWidth = width;
+        windowHeight = height;
+        windowMaximized = maximized;
+        saveSettings();
     }
 
     /**

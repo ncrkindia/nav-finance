@@ -274,9 +274,15 @@ public final class I18n {
      * Configures Swing / FlatLaf global font mappings for standard UI widgets and TitlePanes.
      */
     public static void applyGlobalFontDefaults() {
-        Font defaultFont = getRegularFont();
-        Font boldFont = getBoldFont();
-        Font titleFont = getTitleFont();
+        float scale = com.navfinance.ui.util.ZoomManager.getCurrentScale();
+        int regularSize = Math.round(12.0f * scale);
+        int boldSize = Math.round(12.0f * scale);
+        int titleSize = Math.round(18.0f * scale);
+
+        String fontFamily = getFontFamily();
+        Font defaultFont = new Font(fontFamily, Font.PLAIN, regularSize);
+        Font boldFont = new Font(fontFamily, Font.BOLD, boldSize);
+        Font titleFont = new Font(fontFamily, Font.BOLD, titleSize);
 
         UIManager.put("defaultFont", defaultFont);
         UIManager.put("Label.font", defaultFont);
