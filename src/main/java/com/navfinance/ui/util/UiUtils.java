@@ -3,12 +3,18 @@ package com.navfinance.ui.util;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JOptionPane;
+import javax.swing.KeyStroke;
 import javax.swing.border.Border;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Toolkit;
+import java.awt.event.KeyEvent;
 
 /**
  * Common User Interface utility toolkit providing centralized visual styles,
@@ -321,5 +327,60 @@ public final class UiUtils {
     public static boolean confirm(Component parent, String message) {
         int result = JOptionPane.showConfirmDialog(parent, message, "Confirm Action", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         return result == JOptionPane.YES_OPTION;
+    }
+
+    // =========================================================================
+    // Dialog Ergonomics & Spatial Screen Helpers
+    // =========================================================================
+
+    /**
+     * Enhances a modal dialog with desktop keyboard ergonomics:
+     * <ul>
+     *   <li>Sets the {@code defaultButton} so pressing Enter submits the dialog.</li>
+     *   <li>Registers the Escape key to trigger the {@code cancelButton} (or close/dispose).</li>
+     * </ul>
+     *
+     * @param dialog Target modal dialog
+     * @param defaultButton Primary action button triggered on Enter
+     * @param cancelButton Dismiss/Cancel button triggered on Escape
+     */
+    public static void configureDialog(JDialog dialog, JButton defaultButton, JButton cancelButton) {
+        if (dialog == null) return;
+        if (defaultButton != null) {
+            dialog.getRootPane().setDefaultButton(defaultButton);
+        }
+        if (cancelButton != null) {
+            dialog.getRootPane().registerKeyboardAction(
+                    e -> cancelButton.doClick(),
+                    KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                    JComponent.WHEN_IN_FOCUSED_WINDOW
+            );
+        } else {
+            dialog.getRootPane().registerKeyboardAction(
+                    e -> dialog.dispose(),
+                    KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                    JComponent.WHEN_IN_FOCUSED_WINDOW
+            );
+        }
+    }
+
+    /**
+     * Prevents dialog clipping on compact displays (e.g. 768p laptop displays or high Zoom scales).
+     * Clamps the dialog's packed dimensions to a maximum percentage of the viewable screen space.
+     *
+     * @param dialog Target modal dialog
+     */
+    public static void clampDialogToScreen(JDialog dialog) {
+        if (dialog == null) return;
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        int maxW = (int) (screen.width * 0.92);
+        int maxH = (int) (screen.height * 0.88);
+
+        int targetW = Math.min(dialog.getWidth(), maxW);
+        int targetH = Math.min(dialog.getHeight(), maxH);
+
+        if (targetW != dialog.getWidth() || targetH != dialog.getHeight()) {
+            dialog.setSize(targetW, targetH);
+        }
     }
 }

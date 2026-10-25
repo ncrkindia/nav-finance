@@ -69,12 +69,10 @@ public class TransactionLinkDialog extends JDialog {
 
         String txIdStr = targetTx.getId() != null ? "#" + targetTx.getId() : "New Draft";
         setTitle(String.format("Link %s [%s]", isGive ? "Give Transaction" : "Return Received Transaction", txIdStr));
-        setSize(850, 560);
-        setLocationRelativeTo(owner);
-        setLayout(new BorderLayout());
-
         initComponents();
         loadCandidates();
+        UiUtils.clampDialogToScreen(this);
+        setLocationRelativeTo(owner);
     }
 
     private void initComponents() {
@@ -247,6 +245,8 @@ public class TransactionLinkDialog extends JDialog {
         btnPanel.add(btnCancel);
         btnPanel.add(btnSave);
         bottomBar.add(btnPanel, BorderLayout.EAST);
+
+        UiUtils.configureDialog(this, btnSave, btnCancel);
 
         add(bottomBar, BorderLayout.SOUTH);
     }

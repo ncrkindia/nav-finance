@@ -63,8 +63,8 @@ public class BillDialog extends JDialog {
 
         initComponents();
         pack();
+        UiUtils.clampDialogToScreen(this);
         setLocationRelativeTo(parent);
-        setResizable(false);
     }
 
     /**
@@ -141,6 +141,8 @@ public class BillDialog extends JDialog {
         btnPanel.add(btnCancel);
         btnPanel.add(btnSave);
         add(btnPanel, BorderLayout.SOUTH);
+
+        UiUtils.configureDialog(this, btnSave, btnCancel);
 
 
         // Pre-populate fields when in edit mode

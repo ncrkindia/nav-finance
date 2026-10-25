@@ -25,6 +25,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
@@ -125,6 +126,7 @@ public class RecurringScheduleDialog extends JDialog {
         initComponents();
         populateData();
         pack();
+        UiUtils.clampDialogToScreen(this);
         setLocationRelativeTo(parent);
     }
 
@@ -351,7 +353,10 @@ public class RecurringScheduleDialog extends JDialog {
         chkActive.setOpaque(false);
         form.add(chkActive, gbc);
 
-        root.add(form, BorderLayout.CENTER);
+        JScrollPane spForm = new JScrollPane(form);
+        spForm.setBorder(null);
+        spForm.getVerticalScrollBar().setUnitIncrement(16);
+        root.add(spForm, BorderLayout.CENTER);
 
         // 3. BOTTOM BUTTONS
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -368,6 +373,8 @@ public class RecurringScheduleDialog extends JDialog {
         bottomBar.add(btnCancel);
         bottomBar.add(btnSave);
         root.add(bottomBar, BorderLayout.SOUTH);
+
+        UiUtils.configureDialog(this, btnSave, btnCancel);
 
         add(root, BorderLayout.CENTER);
 

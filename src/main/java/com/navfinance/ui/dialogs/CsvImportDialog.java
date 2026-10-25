@@ -70,6 +70,7 @@ public class CsvImportDialog extends JDialog {
 
         initComponents();
         pack();
+        UiUtils.clampDialogToScreen(this);
         setLocationRelativeTo(parent);
     }
 
@@ -197,6 +198,8 @@ public class CsvImportDialog extends JDialog {
         bottomBar.add(btnCancel);
         bottomBar.add(btnExecute);
         root.add(bottomBar, BorderLayout.SOUTH);
+
+        UiUtils.configureDialog(this, btnExecute, btnCancel);
 
         add(root, BorderLayout.CENTER);
     }

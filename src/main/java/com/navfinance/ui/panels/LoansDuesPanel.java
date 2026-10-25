@@ -238,14 +238,20 @@ public class LoansDuesPanel extends JPanel implements LanguageChangeListener {
         List<FinanceService.PersonLoanSummary> summaries = financeService.getPersonLoanSummaries();
         tableModel.setRowCount(0);
 
-        double sumLent = 0;
-        double sumBorrowed = 0;
+        double totalGiven = 0;
+        double totalReturned = 0;
+        double totalTaken = 0;
+        double totalRepaid = 0;
+        double netAll = 0;
 
         for (FinanceService.PersonLoanSummary s : summaries) {
             Person p = s.getPerson();
             double net = s.getNetBalance();
-            sumLent += s.getTotalGiven();
-            sumBorrowed += s.getTotalTaken();
+            totalGiven += s.getTotalGiven();
+            totalReturned += s.getTotalReturned();
+            totalTaken += s.getTotalTaken();
+            totalRepaid += s.getTotalRepaid();
+            netAll += net;
 
             String status;
             String netStr;
@@ -274,12 +280,27 @@ public class LoansDuesPanel extends JPanel implements LanguageChangeListener {
             });
         }
 
-        kpiLent.setValue(AppConfig.formatCurrency(sumLent));
-        kpiBorrowed.setValue(AppConfig.formatCurrency(sumBorrowed));
+        double pendingOwedToYou = Math.max(0, totalGiven - totalReturned);
+        double pendingYouOwe = Math.max(0, totalTaken - totalRepaid);
 
-        double netAll = sumLent - sumBorrowed;
+        kpiLent.setValue(AppConfig.formatCurrency(totalGiven));
+        kpiLent.setSubtitle(String.format("Returned: %s | Pending: %s",
+                AppConfig.formatCurrencyPlain(totalReturned),
+                AppConfig.formatCurrencyPlain(pendingOwedToYou)));
+
+        kpiBorrowed.setValue(AppConfig.formatCurrency(totalTaken));
+        kpiBorrowed.setSubtitle(String.format("Repaid: %s | Pending: %s",
+                AppConfig.formatCurrencyPlain(totalRepaid),
+                AppConfig.formatCurrencyPlain(pendingYouOwe)));
+
         kpiNet.setValue(AppConfig.formatCurrency(netAll));
-        kpiNet.setSubtitle(netAll >= 0 ? I18n.get("loans.kpi.netOutstanding") : I18n.get("loans.kpi.totalRepaid"));
+        if (netAll > 0) {
+            kpiNet.setSubtitle(I18n.get("loans.status.simple.owesYou") + " (" + AppConfig.formatCurrency(netAll) + ")");
+        } else if (netAll < 0) {
+            kpiNet.setSubtitle(I18n.get("loans.status.simple.youOwe") + " (" + AppConfig.formatCurrency(Math.abs(netAll)) + ")");
+        } else {
+            kpiNet.setSubtitle(I18n.get("loans.status.simple.settled"));
+        }
     }
 
     /**
@@ -310,6 +331,14 @@ public class LoansDuesPanel extends JPanel implements LanguageChangeListener {
         } else {
             sample.setType(TransactionType.INCOME);
             sample.setCategory("Loan");
+        }
+
+        int selectedRow = tblLoans.getSelectedRow();
+        if (selectedRow >= 0) {
+            Object idObj = tblLoans.getValueAt(selectedRow, 0);
+            if (idObj instanceof Long pid) {
+                sample.setPersonId(pid);
+            }
         }
 
         TransactionDialog dialog = new TransactionDialog(frame, sample, sample.getType());

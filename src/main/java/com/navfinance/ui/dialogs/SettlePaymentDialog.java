@@ -79,6 +79,7 @@ public class SettlePaymentDialog extends JDialog {
         setMinimumSize(new Dimension(480, 440));
         initComponents();
         pack();
+        UiUtils.clampDialogToScreen(this);
         setLocationRelativeTo(parent);
     }
 
@@ -210,6 +211,8 @@ public class SettlePaymentDialog extends JDialog {
         bottomBar.add(btnCancel);
         bottomBar.add(btnConfirm);
         root.add(bottomBar, BorderLayout.SOUTH);
+
+        UiUtils.configureDialog(this, btnConfirm, btnCancel);
 
         add(root, BorderLayout.CENTER);
     }

@@ -148,12 +148,23 @@ public class AnalyticsService {
         // Trend
         summary.setTrendPoints(trendPoints);
 
-        // Loans & Dues
-        double totalLent = transactionDao.getTotalLentAmount();
-        double totalBorrowed = transactionDao.getTotalBorrowedAmount();
-        summary.setTotalLent(totalLent);
-        summary.setTotalBorrowed(totalBorrowed);
-        summary.setNetLoanBalance(totalLent - totalBorrowed);
+        // Loans & Dues (Net of returns and repayments across counterparties)
+        List<FinanceService.PersonLoanSummary> loanSummaries = FinanceService.getInstance().getPersonLoanSummaries();
+        double totalGiven = 0;
+        double totalReturned = 0;
+        double totalTaken = 0;
+        double totalRepaid = 0;
+        for (FinanceService.PersonLoanSummary pls : loanSummaries) {
+            totalGiven += pls.getTotalGiven();
+            totalReturned += pls.getTotalReturned();
+            totalTaken += pls.getTotalTaken();
+            totalRepaid += pls.getTotalRepaid();
+        }
+        double outstandingOwedToYou = Math.max(0, totalGiven - totalReturned);
+        double outstandingYouOwe = Math.max(0, totalTaken - totalRepaid);
+        summary.setTotalLent(outstandingOwedToYou);
+        summary.setTotalBorrowed(outstandingYouOwe);
+        summary.setNetLoanBalance(outstandingOwedToYou - outstandingYouOwe);
 
 
         // Recent 10 transactions

@@ -126,8 +126,8 @@ public class TransactionDialog extends JDialog {
 
         initComponents(defaultType != null ? defaultType : TransactionType.EXPENSE);
         pack();
+        UiUtils.clampDialogToScreen(this);
         setLocationRelativeTo(parent);
-        setResizable(false);
     }
 
     private void initComponents(TransactionType defaultType) {
@@ -344,7 +344,10 @@ public class TransactionDialog extends JDialog {
         txtNotes.setWrapStyleWord(true);
         mainPanel.add(new JScrollPane(txtNotes), gbc);
 
-        add(mainPanel, BorderLayout.CENTER);
+        JScrollPane scrollPane = new JScrollPane(mainPanel);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        add(scrollPane, BorderLayout.CENTER);
 
         // 12. Bottom Action Buttons
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
@@ -362,6 +365,8 @@ public class TransactionDialog extends JDialog {
         btnPanel.add(btnCancel);
         btnPanel.add(btnSave);
         add(btnPanel, BorderLayout.SOUTH);
+
+        UiUtils.configureDialog(this, btnSave, btnCancel);
 
         // Wire event listeners
         rbIncome.addActionListener(e -> {
