@@ -2,14 +2,17 @@ package com.navfinance.ui.dialogs;
 
 import com.navfinance.config.AppConfig;
 import com.navfinance.i18n.I18n;
+import com.navfinance.model.AmountType;
 import com.navfinance.model.Bill;
 import com.navfinance.model.CreditCard;
 import com.navfinance.model.Emi;
 import com.navfinance.model.Person;
+import com.navfinance.model.RecurringSchedule;
 import com.navfinance.model.Transaction;
 import com.navfinance.model.TransactionLink;
 import com.navfinance.model.TransactionType;
 import com.navfinance.service.FinanceService;
+import com.navfinance.service.RecurringService;
 import com.navfinance.ui.components.DatePickerField;
 import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
@@ -28,8 +31,10 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -40,76 +45,79 @@ import java.util.List;
 /**
  * Primary modal dialog for adding and editing financial income and expense ledger entries.
  * <p>
- * Provides interactive category-to-subcategory cascading, foreign key resolution for
- * persons, bills, credit cards, and EMIs, hybrid date picking (calendar + manual ISO entry),
- * editable payment channels with automatic memory, and planned/expected flags.
+ * Supports distinct transaction natures:
+ * <ul>
+ *   <li>One-Time Expense (Realized Done vs Planned Expected)</li>
+ *   <li>One-Time Received / Income (Realized Done vs Planned Expected)</li>
+ *   <li>EMI Payment (Fixed monthly installments linked to an EMI master; optionally managed in upcoming/due schedules)</li>
+ *   <li>Credit Card Bill (Variable monthly statements linked to a Credit Card master; managed in upcoming/due schedules)</li>
+ *   <li>Utility / Other Bills (Outright expense payments - never considered balance expected back like given money)</li>
+ *   <li>Personal Loan / Counterparty transfers (Eligible for Give &lt;-&gt; Return settlement linking)</li>
+ * </ul>
  * </p>
+ *
+ * @author Nav Finance Team
+ * @version 2.0.0
  */
 public class TransactionDialog extends JDialog {
 
-    /** Service coordinator for finance ledger mutations and master entities. */
+    public enum TransactionNature {
+        ONE_TIME_EXPENSE("💸 One-Time Expense (Done / Expected)"),
+        ONE_TIME_INCOME("💰 One-Time Received / Income"),
+        EMI_PAYMENT("🏦 EMI Payment (Monthly Installment)"),
+        CREDIT_CARD_BILL("💳 Credit Card Bill (Variable Monthly)"),
+        UTILITY_BILL("🧾 Utility / Other Bill (Electricity, Wi-Fi, etc.)"),
+        PERSONAL_LOAN("🤝 Personal Loan / Transfer (Lent / Borrowed / Return)");
+
+        private final String label;
+        TransactionNature(String label) { this.label = label; }
+        @Override public String toString() { return label; }
+    }
+
     private final FinanceService financeService = FinanceService.getInstance();
-
-    /** The existing transaction being modified, or {@code null} if recording a new transaction. */
+    private final RecurringService recurringService = RecurringService.getInstance();
     private final Transaction existingTransaction;
-
-    /** Flag indicating whether the transaction entry was successfully saved. */
     private boolean saved = false;
 
-    // UI Fields
-    /** Radio button selecting income transaction flow. */
+    // Visual Controls
+    private JComboBox<TransactionNature> cmbNature;
     private JRadioButton rbIncome;
-
-    /** Radio button selecting expense transaction flow. */
     private JRadioButton rbExpense;
+    private JPanel pnlTypeSelector;
 
-    /** Composite date picker supporting calendar clicks and manual text entry. */
+    // Dynamic Master Container
+    private JLabel lblMasterTitle;
+    private JPanel pnlMasterCard;
+    private CardLayout masterCardLayout;
+    private JComboBox<Person> cmbPerson;
+    private JComboBox<Emi> cmbEmi;
+    private JComboBox<CreditCard> cmbCreditCard;
+    private JComboBox<Bill> cmbBill;
+    private JLabel lblMasterHint;
+
+    // Recurring / Due Sync Checkbox
+    private JCheckBox chkManageRecurring;
+
+    // Standard Fields
     private DatePickerField txtDate;
-
-    /** Checkbox designating planned/expected unrealized amounts. */
     private JCheckBox chkExpected;
-
-    /** Text input field for the financial transaction amount. */
     private JTextField txtAmount;
-
-    /** Editable dropdown for selecting or typing payment channels (UPI, Cash, etc.). */
+    private JLabel lblAmountPrompt;
     private JComboBox<String> cmbPaymentVia;
-
-    /** Dropdown for selecting primary financial category. */
     private JComboBox<String> cmbCategory;
-
-    /** Editable dropdown for selecting or typing sub-category specifics. */
     private JComboBox<String> cmbSubCategory;
 
-    /** Dropdown for attributing loan transactions to a specific contact. */
-    private JComboBox<Person> cmbPerson;
-
-    /** Panel and components for linking Give/Return counterpart transactions. */
+    // Linking Section (Personal loans only)
     private JPanel pnlLinking;
     private JLabel lblLinkingTitle;
     private JLabel lblLinkingSummary;
     private JButton btnManageLinks;
     private List<TransactionLink> pendingLinks = new ArrayList<>();
 
-    /** Text area for transaction memo or notes. */
     private JTextArea txtNotes;
-
-    /** Dynamic label adjusting date title between actual and expected/planned. */
     private JLabel lblDateTitle;
-
-    /** Label for the sub-category selector. */
     private JLabel lblSubCategoryTitle;
 
-    /** Label for the optional associated person selector. */
-    private JLabel lblPersonTitle;
-
-    /**
-     * Constructs a transaction entry dialog.
-     *
-     * @param parent owner window frame
-     * @param transactionToEdit transaction entity to edit, or {@code null} for a new entry
-     * @param defaultType initial transaction type to preselect if creating a new entry
-     */
     public TransactionDialog(JFrame parent, Transaction transactionToEdit, TransactionType defaultType) {
         super(parent, transactionToEdit == null ?
                 (defaultType == TransactionType.INCOME ? I18n.get("dialog.income.addTitle") : I18n.get("dialog.expense.addTitle")) :
@@ -122,30 +130,37 @@ public class TransactionDialog extends JDialog {
         setResizable(false);
     }
 
-    /**
-     * Initializes visual form components, GridBag constraints, radio buttons, and action buttons.
-     *
-     * @param defaultType initial transaction type
-     */
     private void initComponents(TransactionType defaultType) {
         setLayout(new BorderLayout());
         JPanel mainPanel = new JPanel(new GridBagLayout());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.insets = new Insets(5, 6, 5, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
         int row = 0;
 
-        // 1. Type selection (Income vs Expense)
+        // 1. Transaction Nature Selector (Prominent at top)
+        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0.3;
+        JLabel lblNature = new JLabel("Transaction Nature:*");
+        lblNature.setFont(UiUtils.boldFont());
+        mainPanel.add(lblNature, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++; gbc.weightx = 0.7;
+        cmbNature = new JComboBox<>(TransactionNature.values());
+        cmbNature.setFont(UiUtils.boldFont());
+        cmbNature.addActionListener(e -> onNatureChanged());
+        mainPanel.add(cmbNature, gbc);
+
+        // 2. Type selection (Income vs Expense)
         gbc.gridx = 0; gbc.gridy = row;
         JLabel lblType = new JLabel(I18n.get("transactions.table.type") + ":");
         lblType.setFont(UiUtils.regularFont());
         mainPanel.add(lblType, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
-        JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        pnlTypeSelector = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         rbIncome = new JRadioButton(I18n.get("transactions.filter.income"));
         rbExpense = new JRadioButton(I18n.get("transactions.filter.expense"));
         rbIncome.setFont(UiUtils.boldFont());
@@ -156,12 +171,78 @@ public class TransactionDialog extends JDialog {
         ButtonGroup bg = new ButtonGroup();
         bg.add(rbIncome);
         bg.add(rbExpense);
-        typePanel.add(rbIncome);
-        typePanel.add(rbExpense);
-        mainPanel.add(typePanel, gbc);
+        pnlTypeSelector.add(rbIncome);
+        pnlTypeSelector.add(rbExpense);
+        mainPanel.add(pnlTypeSelector, gbc);
 
-        // 2. Date & Expected checkbox (DatePicker + Manual entry)
-        lblDateTitle = new JLabel(I18n.get("transactions.table.date") + " (yyyy-MM-dd):");
+        // 3. Dynamic Master Association Card
+        lblMasterTitle = new JLabel("Associated Master:");
+        lblMasterTitle.setFont(UiUtils.boldFont());
+        gbc.gridx = 0; gbc.gridy = row;
+        mainPanel.add(lblMasterTitle, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        masterCardLayout = new CardLayout();
+        pnlMasterCard = new JPanel(masterCardLayout);
+        pnlMasterCard.setOpaque(false);
+
+        // Master 1: Person
+        cmbPerson = new JComboBox<>();
+        cmbPerson.setFont(UiUtils.regularFont());
+        populatePersons();
+        cmbPerson.addActionListener(e -> updateLinkingVisibility());
+        pnlMasterCard.add(cmbPerson, "PERSON");
+
+        // Master 2: EMI
+        cmbEmi = new JComboBox<>();
+        cmbEmi.setFont(UiUtils.regularFont());
+        populateEmis();
+        cmbEmi.addActionListener(e -> onEmiSelected());
+        pnlMasterCard.add(cmbEmi, "EMI");
+
+        // Master 3: Credit Card
+        cmbCreditCard = new JComboBox<>();
+        cmbCreditCard.setFont(UiUtils.regularFont());
+        populateCards();
+        cmbCreditCard.addActionListener(e -> onCreditCardSelected());
+        pnlMasterCard.add(cmbCreditCard, "CARD");
+
+        // Master 4: Bill
+        cmbBill = new JComboBox<>();
+        cmbBill.setFont(UiUtils.regularFont());
+        populateBills();
+        cmbBill.addActionListener(e -> onBillSelected());
+        pnlMasterCard.add(cmbBill, "BILL");
+
+        // Empty card for simple one-off without master
+        JPanel pnlEmpty = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        pnlEmpty.setOpaque(false);
+        JLabel lblNone = new JLabel("(No specific master entity required)");
+        lblNone.setFont(UiUtils.regularFont());
+        lblNone.setForeground(UiUtils.COLOR_TEXT_MUTED);
+        pnlEmpty.add(lblNone);
+        pnlMasterCard.add(pnlEmpty, "NONE");
+
+        JPanel pnlMasterWrapper = new JPanel(new BorderLayout(0, 3));
+        pnlMasterWrapper.setOpaque(false);
+        pnlMasterWrapper.add(pnlMasterCard, BorderLayout.CENTER);
+
+        lblMasterHint = new JLabel();
+        lblMasterHint.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        lblMasterHint.setForeground(UiUtils.COLOR_TEXT_MUTED);
+        pnlMasterWrapper.add(lblMasterHint, BorderLayout.SOUTH);
+
+        mainPanel.add(pnlMasterWrapper, gbc);
+
+        // 4. Recurring / Upcoming Schedule Management Checkbox
+        gbc.gridx = 1; gbc.gridy = row++;
+        chkManageRecurring = new JCheckBox("📅 Also manage in Due / Upcoming payments schedule");
+        chkManageRecurring.setFont(UiUtils.FONT_REGULAR);
+        chkManageRecurring.setForeground(new Color(15, 118, 110)); // Teal
+        mainPanel.add(chkManageRecurring, gbc);
+
+        // 5. Date & Expected (Done vs Expected Unrealized)
+        lblDateTitle = new JLabel(I18n.get("transactions.table.date") + ":");
         lblDateTitle.setFont(UiUtils.regularFont());
         gbc.gridx = 0; gbc.gridy = row;
         mainPanel.add(lblDateTitle, gbc);
@@ -169,24 +250,31 @@ public class TransactionDialog extends JDialog {
         gbc.gridx = 1; gbc.gridy = row++;
         JPanel datePanel = new JPanel(new BorderLayout(8, 0));
         txtDate = new DatePickerField(LocalDate.now(), 12);
-        chkExpected = new JCheckBox(I18n.get("due.filter.upcoming") + " (Expected)");
+        chkExpected = new JCheckBox("Upcoming / Expected (Not Settled Yet)");
         chkExpected.setFont(UiUtils.regularFont());
         datePanel.add(txtDate, BorderLayout.WEST);
         datePanel.add(chkExpected, BorderLayout.CENTER);
         mainPanel.add(datePanel, gbc);
 
-        // 3. Amount
+        // 6. Amount
         gbc.gridx = 0; gbc.gridy = row;
-        JLabel lblAmount = new JLabel(I18n.get("transactions.table.amount") + " (" + AppConfig.getCurrencySymbol() + "):");
-        lblAmount.setFont(UiUtils.regularFont());
+        JLabel lblAmount = new JLabel(I18n.get("transactions.table.amount") + " (" + AppConfig.getCurrencySymbol() + "):*");
+        lblAmount.setFont(UiUtils.boldFont());
         mainPanel.add(lblAmount, gbc);
 
         gbc.gridx = 1; gbc.gridy = row++;
+        JPanel pnlAmountGroup = new JPanel(new BorderLayout(6, 0));
         txtAmount = new JTextField();
         txtAmount.setFont(UiUtils.boldFont());
-        mainPanel.add(txtAmount, gbc);
+        lblAmountPrompt = new JLabel("");
+        lblAmountPrompt.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        lblAmountPrompt.setForeground(UiUtils.COLOR_TEXT_MUTED);
 
-        // 4. Payment Via
+        pnlAmountGroup.add(txtAmount, BorderLayout.CENTER);
+        pnlAmountGroup.add(lblAmountPrompt, BorderLayout.EAST);
+        mainPanel.add(pnlAmountGroup, gbc);
+
+        // 7. Payment Via
         gbc.gridx = 0; gbc.gridy = row;
         JLabel lblVia = new JLabel(I18n.get("transactions.table.via") + ":");
         lblVia.setFont(UiUtils.regularFont());
@@ -195,11 +283,11 @@ public class TransactionDialog extends JDialog {
         gbc.gridx = 1; gbc.gridy = row++;
         cmbPaymentVia = new JComboBox<>();
         cmbPaymentVia.setFont(UiUtils.regularFont());
-        cmbPaymentVia.setEditable(true); // Allow custom editing
+        cmbPaymentVia.setEditable(true);
         populatePaymentModes();
         mainPanel.add(cmbPaymentVia, gbc);
 
-        // 5. Category
+        // 8. Category
         gbc.gridx = 0; gbc.gridy = row;
         JLabel lblCat = new JLabel(I18n.get("transactions.table.category") + ":");
         lblCat.setFont(UiUtils.regularFont());
@@ -211,7 +299,7 @@ public class TransactionDialog extends JDialog {
         cmbCategory.setEditable(true);
         mainPanel.add(cmbCategory, gbc);
 
-        // 6. Sub Category
+        // 9. Sub Category
         lblSubCategoryTitle = new JLabel(I18n.get("transactions.table.subCategory") + ":");
         lblSubCategoryTitle.setFont(UiUtils.regularFont());
         gbc.gridx = 0; gbc.gridy = row;
@@ -223,19 +311,7 @@ public class TransactionDialog extends JDialog {
         cmbSubCategory.setEditable(true);
         mainPanel.add(cmbSubCategory, gbc);
 
-        // 7. Associated Person (Optional / Counterparty / Loan)
-        lblPersonTitle = new JLabel(I18n.get("transactions.table.person") + ":");
-        lblPersonTitle.setFont(UiUtils.regularFont());
-        gbc.gridx = 0; gbc.gridy = row;
-        mainPanel.add(lblPersonTitle, gbc);
-
-        gbc.gridx = 1; gbc.gridy = row++;
-        cmbPerson = new JComboBox<>();
-        cmbPerson.setFont(UiUtils.regularFont());
-        populatePersons();
-        mainPanel.add(cmbPerson, gbc);
-
-        // 8. Linking Section (Give <-> Return received counterpart linking)
+        // 10. Give <-> Return settlement linking (personal loans only)
         lblLinkingTitle = new JLabel("Linked Settlement:");
         lblLinkingTitle.setFont(UiUtils.regularFont());
         gbc.gridx = 0; gbc.gridy = row;
@@ -255,7 +331,7 @@ public class TransactionDialog extends JDialog {
         pnlLinking.add(btnManageLinks, BorderLayout.EAST);
         mainPanel.add(pnlLinking, gbc);
 
-        // 9. Notes
+        // 11. Notes
         gbc.gridx = 0; gbc.gridy = row;
         JLabel lblNotes = new JLabel(I18n.get("transactions.table.notes") + ":");
         lblNotes.setFont(UiUtils.regularFont());
@@ -270,7 +346,7 @@ public class TransactionDialog extends JDialog {
 
         add(mainPanel, BorderLayout.CENTER);
 
-        // 10. Bottom Action Buttons
+        // 12. Bottom Action Buttons
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
         btnPanel.setBackground(new Color(248, 250, 252));
         btnPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UiUtils.COLOR_BORDER));
@@ -287,7 +363,7 @@ public class TransactionDialog extends JDialog {
         btnPanel.add(btnSave);
         add(btnPanel, BorderLayout.SOUTH);
 
-        // Event listeners
+        // Wire event listeners
         rbIncome.addActionListener(e -> {
             onTypeChanged(TransactionType.INCOME);
             updateLinkingVisibility();
@@ -300,90 +376,273 @@ public class TransactionDialog extends JDialog {
             onCategoryChanged();
             updateLinkingVisibility();
         });
-        cmbPerson.addActionListener(e -> updateLinkingVisibility());
 
-        // Prepopulate if editing
+        // Initialize state
         if (existingTransaction != null) {
-            if (existingTransaction.getType() == TransactionType.INCOME) {
-                rbIncome.setSelected(true);
-                onTypeChanged(TransactionType.INCOME);
-            } else {
-                rbExpense.setSelected(true);
-                onTypeChanged(TransactionType.EXPENSE);
-            }
-
-            if (existingTransaction.getTxDate() != null) {
-                txtDate.setDate(existingTransaction.getTxDate());
-            }
-            chkExpected.setSelected(existingTransaction.isExpected());
-            txtAmount.setText(String.valueOf(existingTransaction.getAmount()));
-            cmbPaymentVia.setSelectedItem(existingTransaction.getPaymentVia());
-            cmbCategory.setSelectedItem(existingTransaction.getCategory());
-            cmbSubCategory.setSelectedItem(existingTransaction.getSubCategory());
-            txtNotes.setText(existingTransaction.getNotes() != null ? existingTransaction.getNotes() : "");
-
-            if (existingTransaction.getPersonId() != null) {
-                for (int i = 0; i < cmbPerson.getItemCount(); i++) {
-                    Person p = cmbPerson.getItemAt(i);
-                    if (p != null && p.getId() != null && p.getId().equals(existingTransaction.getPersonId())) {
-                        cmbPerson.setSelectedIndex(i);
-                        break;
-                    }
-                }
-            }
+            initFromExistingTransaction();
         } else {
             if (defaultType == TransactionType.INCOME) {
-                rbIncome.setSelected(true);
-                onTypeChanged(TransactionType.INCOME);
+                cmbNature.setSelectedItem(TransactionNature.ONE_TIME_INCOME);
             } else {
-                rbExpense.setSelected(true);
-                onTypeChanged(TransactionType.EXPENSE);
+                cmbNature.setSelectedItem(TransactionNature.ONE_TIME_EXPENSE);
             }
+            onNatureChanged();
+        }
+    }
+
+    private void initFromExistingTransaction() {
+        if (existingTransaction.getEmiId() != null) {
+            cmbNature.setSelectedItem(TransactionNature.EMI_PAYMENT);
+            selectEmiById(existingTransaction.getEmiId());
+        } else if (existingTransaction.getCreditCardId() != null) {
+            cmbNature.setSelectedItem(TransactionNature.CREDIT_CARD_BILL);
+            selectCreditCardById(existingTransaction.getCreditCardId());
+        } else if (existingTransaction.getBillId() != null) {
+            cmbNature.setSelectedItem(TransactionNature.UTILITY_BILL);
+            selectBillById(existingTransaction.getBillId());
+        } else if (existingTransaction.getPersonId() != null) {
+            cmbNature.setSelectedItem(TransactionNature.PERSONAL_LOAN);
+            selectPersonById(existingTransaction.getPersonId());
+        } else if (existingTransaction.getType() == TransactionType.INCOME) {
+            cmbNature.setSelectedItem(TransactionNature.ONE_TIME_INCOME);
+        } else {
+            cmbNature.setSelectedItem(TransactionNature.ONE_TIME_EXPENSE);
         }
 
-        if (existingTransaction != null && existingTransaction.getId() != null) {
+        onNatureChanged();
+
+        if (existingTransaction.getType() == TransactionType.INCOME) {
+            rbIncome.setSelected(true);
+            onTypeChanged(TransactionType.INCOME);
+        } else {
+            rbExpense.setSelected(true);
+            onTypeChanged(TransactionType.EXPENSE);
+        }
+
+        if (existingTransaction.getTxDate() != null) {
+            txtDate.setDate(existingTransaction.getTxDate());
+        }
+        chkExpected.setSelected(existingTransaction.isExpected());
+        txtAmount.setText(String.valueOf(existingTransaction.getAmount()));
+        cmbPaymentVia.setSelectedItem(existingTransaction.getPaymentVia());
+        cmbCategory.setSelectedItem(existingTransaction.getCategory());
+        cmbSubCategory.setSelectedItem(existingTransaction.getSubCategory());
+        txtNotes.setText(existingTransaction.getNotes() != null ? existingTransaction.getNotes() : "");
+
+        if (existingTransaction.getId() != null) {
             pendingLinks = financeService.getTransactionLinks(existingTransaction.getId());
         }
         updateLinkingVisibility();
     }
 
-    /**
-     * Populates payment modes dropdown from the repository.
-     */
+    private void onNatureChanged() {
+        TransactionNature nature = (TransactionNature) cmbNature.getSelectedItem();
+        if (nature == null) nature = TransactionNature.ONE_TIME_EXPENSE;
+
+        switch (nature) {
+            case ONE_TIME_EXPENSE -> {
+                rbExpense.setSelected(true);
+                rbExpense.setEnabled(true);
+                rbIncome.setEnabled(false);
+                pnlTypeSelector.setVisible(false);
+                lblMasterTitle.setText("Associated Person:");
+                masterCardLayout.show(pnlMasterCard, "PERSON");
+                lblMasterHint.setText("Optional counterparty or personal reference");
+                chkManageRecurring.setVisible(false);
+                chkExpected.setText("Planned / Due (Not Paid Yet)");
+                lblAmountPrompt.setText("");
+                onTypeChanged(TransactionType.EXPENSE);
+            }
+            case ONE_TIME_INCOME -> {
+                rbIncome.setSelected(true);
+                rbIncome.setEnabled(true);
+                rbExpense.setEnabled(false);
+                pnlTypeSelector.setVisible(false);
+                lblMasterTitle.setText("Associated Person:");
+                masterCardLayout.show(pnlMasterCard, "PERSON");
+                lblMasterHint.setText("Optional counterparty or source reference");
+                chkManageRecurring.setVisible(false);
+                chkExpected.setText("Expected (Not Received Yet)");
+                lblAmountPrompt.setText("");
+                onTypeChanged(TransactionType.INCOME);
+            }
+            case EMI_PAYMENT -> {
+                rbExpense.setSelected(true);
+                rbExpense.setEnabled(false);
+                rbIncome.setEnabled(false);
+                pnlTypeSelector.setVisible(false);
+                lblMasterTitle.setText("Associated EMI Master:*");
+                masterCardLayout.show(pnlMasterCard, "EMI");
+                chkManageRecurring.setVisible(true);
+                chkManageRecurring.setSelected(true);
+                chkExpected.setText("Upcoming Due (Not Paid Yet)");
+                lblAmountPrompt.setText("Monthly installment");
+                onTypeChanged(TransactionType.EXPENSE);
+                cmbCategory.setSelectedItem("EMI Payment");
+                onEmiSelected();
+            }
+            case CREDIT_CARD_BILL -> {
+                rbExpense.setSelected(true);
+                rbExpense.setEnabled(false);
+                rbIncome.setEnabled(false);
+                pnlTypeSelector.setVisible(false);
+                lblMasterTitle.setText("Associated Credit Card:*");
+                masterCardLayout.show(pnlMasterCard, "CARD");
+                chkManageRecurring.setVisible(true);
+                chkManageRecurring.setSelected(true);
+                chkExpected.setText("Upcoming Statement (Not Paid Yet)");
+                lblAmountPrompt.setText("Statement bill varies monthly");
+                onTypeChanged(TransactionType.EXPENSE);
+                cmbCategory.setSelectedItem("Credit Card");
+                onCreditCardSelected();
+            }
+            case UTILITY_BILL -> {
+                rbExpense.setSelected(true);
+                rbExpense.setEnabled(false);
+                rbIncome.setEnabled(false);
+                pnlTypeSelector.setVisible(false);
+                lblMasterTitle.setText("Associated Bill Master:*");
+                masterCardLayout.show(pnlMasterCard, "BILL");
+                chkManageRecurring.setVisible(true);
+                chkManageRecurring.setSelected(true);
+                chkExpected.setText("Upcoming Bill (Not Paid Yet)");
+                lblAmountPrompt.setText("");
+                onTypeChanged(TransactionType.EXPENSE);
+                cmbCategory.setSelectedItem("Bill");
+                onBillSelected();
+            }
+            case PERSONAL_LOAN -> {
+                rbIncome.setEnabled(true);
+                rbExpense.setEnabled(true);
+                pnlTypeSelector.setVisible(true);
+                lblMasterTitle.setText("Associated Person / Contact:*");
+                masterCardLayout.show(pnlMasterCard, "PERSON");
+                lblMasterHint.setText("Peer loan or counterparty balance (Settlement trackable)");
+                chkManageRecurring.setVisible(false);
+                lblAmountPrompt.setText("");
+                onTypeChanged(rbIncome.isSelected() ? TransactionType.INCOME : TransactionType.EXPENSE);
+            }
+        }
+        updateLinkingVisibility();
+    }
+
+    private void onEmiSelected() {
+        Emi emi = (Emi) cmbEmi.getSelectedItem();
+        if (emi != null) {
+            double amt = emi.getMonthlyAmount() != null ? emi.getMonthlyAmount() : 0.0;
+            if (txtAmount.getText().trim().isEmpty() || "0.0".equals(txtAmount.getText().trim())) {
+                txtAmount.setText(String.valueOf(amt));
+            }
+            cmbSubCategory.setSelectedItem(emi.getEmiName());
+            if (txtNotes.getText().trim().isEmpty()) {
+                txtNotes.setText("Monthly EMI for " + emi.getEmiName());
+            }
+            lblMasterHint.setText("Outright payment: " + AppConfig.formatCurrency(amt) + "/mo | Bank: " + (emi.getBankLender() != null ? emi.getBankLender() : "-"));
+        }
+    }
+
+    private void onCreditCardSelected() {
+        CreditCard card = (CreditCard) cmbCreditCard.getSelectedItem();
+        if (card != null) {
+            cmbSubCategory.setSelectedItem(card.getCardName());
+            if (txtNotes.getText().trim().isEmpty()) {
+                txtNotes.setText("Credit Card Bill for " + card.getCardName());
+            }
+            lblMasterHint.setText("Bank: " + (card.getBank() != null ? card.getBank() : "-") + " | Billing cycle variable statement payment");
+        }
+    }
+
+    private void onBillSelected() {
+        Bill bill = (Bill) cmbBill.getSelectedItem();
+        if (bill != null) {
+            if (bill.getDefaultAmount() > 0 && (txtAmount.getText().trim().isEmpty() || "0.0".equals(txtAmount.getText().trim()))) {
+                txtAmount.setText(String.valueOf(bill.getDefaultAmount()));
+            }
+            cmbSubCategory.setSelectedItem(bill.getBillName());
+            if (txtNotes.getText().trim().isEmpty()) {
+                txtNotes.setText("Bill payment for " + bill.getBillName());
+            }
+            lblMasterHint.setText("Outright expense: " + bill.getBillName() + " (Not expected back like loan money)");
+        }
+    }
+
     private void populatePaymentModes() {
         cmbPaymentVia.removeAllItems();
         List<String> modes = financeService.getAllPaymentModes();
-        for (String m : modes) {
-            cmbPaymentVia.addItem(m);
-        }
-        if (cmbPaymentVia.getItemCount() > 0) {
-            cmbPaymentVia.setSelectedIndex(0);
-        }
+        for (String m : modes) cmbPaymentVia.addItem(m);
+        if (cmbPaymentVia.getItemCount() > 0) cmbPaymentVia.setSelectedIndex(0);
     }
 
-    /**
-     * Populates contacts dropdown with person directory entities.
-     */
     private void populatePersons() {
         cmbPerson.removeAllItems();
-        cmbPerson.addItem(null); // Option for None
-        List<Person> persons = financeService.getAllPersons();
-        for (Person p : persons) {
-            cmbPerson.addItem(p);
+        cmbPerson.addItem(null);
+        for (Person p : financeService.getAllPersons()) cmbPerson.addItem(p);
+    }
+
+    private void populateEmis() {
+        cmbEmi.removeAllItems();
+        for (Emi e : financeService.getAllEmis()) cmbEmi.addItem(e);
+    }
+
+    private void populateCards() {
+        cmbCreditCard.removeAllItems();
+        for (CreditCard c : financeService.getAllCreditCards()) cmbCreditCard.addItem(c);
+    }
+
+    private void populateBills() {
+        cmbBill.removeAllItems();
+        for (Bill b : financeService.getAllBills()) cmbBill.addItem(b);
+    }
+
+    private void selectPersonById(Long id) {
+        if (id == null) return;
+        for (int i = 0; i < cmbPerson.getItemCount(); i++) {
+            Person p = cmbPerson.getItemAt(i);
+            if (p != null && id.equals(p.getId())) {
+                cmbPerson.setSelectedIndex(i);
+                break;
+            }
         }
     }
 
-    /**
-     * Reconfigures category options and labels upon toggling between Income and Expense.
-     *
-     * @param type active transaction type
-     */
+    private void selectEmiById(Long id) {
+        if (id == null) return;
+        for (int i = 0; i < cmbEmi.getItemCount(); i++) {
+            Emi e = cmbEmi.getItemAt(i);
+            if (e != null && id.equals(e.getId())) {
+                cmbEmi.setSelectedIndex(i);
+                break;
+            }
+        }
+    }
+
+    private void selectCreditCardById(Long id) {
+        if (id == null) return;
+        for (int i = 0; i < cmbCreditCard.getItemCount(); i++) {
+            CreditCard c = cmbCreditCard.getItemAt(i);
+            if (c != null && id.equals(c.getId())) {
+                cmbCreditCard.setSelectedIndex(i);
+                break;
+            }
+        }
+    }
+
+    private void selectBillById(Long id) {
+        if (id == null) return;
+        for (int i = 0; i < cmbBill.getItemCount(); i++) {
+            Bill b = cmbBill.getItemAt(i);
+            if (b != null && id.equals(b.getId())) {
+                cmbBill.setSelectedIndex(i);
+                break;
+            }
+        }
+    }
+
     private void onTypeChanged(TransactionType type) {
         cmbCategory.removeAllItems();
         if (type == TransactionType.INCOME) {
             lblDateTitle.setText("Date / Expected Date:");
             chkExpected.setText("Expected (Not Received Yet)");
-            // Income Categories requested: Salary, Relative, Return, Loan, Udhaar
             cmbCategory.addItem("Salary");
             cmbCategory.addItem("Relative");
             cmbCategory.addItem("Return");
@@ -393,11 +652,10 @@ public class TransactionDialog extends JDialog {
         } else {
             lblDateTitle.setText("Date / Planned Date:");
             chkExpected.setText("Planned / Due (Not Paid Yet)");
-            // Expense Categories: EMI Payment, Credit Card, Loan Given, Bill, Special Expense, etc.
             cmbCategory.addItem("EMI Payment");
             cmbCategory.addItem("Credit Card");
-            cmbCategory.addItem("Loan Given");
             cmbCategory.addItem("Bill");
+            cmbCategory.addItem("Loan Given");
             cmbCategory.addItem("Special Expense");
             cmbCategory.addItem("Groceries & Food");
             cmbCategory.addItem("Shopping");
@@ -408,10 +666,6 @@ public class TransactionDialog extends JDialog {
         onCategoryChanged();
     }
 
-    /**
-     * Dynamically filters and populates sub-category options based on the chosen category
-     * by querying configured master entities (Bills, Cards, EMIs, Persons).
-     */
     private void onCategoryChanged() {
         Object catObj = cmbCategory.getSelectedItem();
         String cat = catObj != null ? catObj.toString().trim() : "";
@@ -419,32 +673,16 @@ public class TransactionDialog extends JDialog {
 
         if (rbExpense.isSelected()) {
             if ("Bill".equalsIgnoreCase(cat)) {
-                // Populate from Bills master (e.g. Airtel Bill, Electricity Khardoni, Noida)
-                List<Bill> bills = financeService.getAllBills();
-                for (Bill b : bills) {
-                    cmbSubCategory.addItem(b.getBillName());
-                }
+                for (Bill b : financeService.getAllBills()) cmbSubCategory.addItem(b.getBillName());
                 cmbSubCategory.addItem("Other Bill");
             } else if ("Credit Card".equalsIgnoreCase(cat)) {
-                // Populate from Credit Cards master
-                List<CreditCard> cards = financeService.getAllCreditCards();
-                for (CreditCard c : cards) {
-                    cmbSubCategory.addItem(c.toString());
-                }
+                for (CreditCard c : financeService.getAllCreditCards()) cmbSubCategory.addItem(c.getCardName());
                 cmbSubCategory.addItem("Other Card");
             } else if ("EMI Payment".equalsIgnoreCase(cat)) {
-                // Populate from EMIs master
-                List<Emi> emis = financeService.getAllEmis();
-                for (Emi e : emis) {
-                    cmbSubCategory.addItem(e.getEmiName());
-                }
+                for (Emi e : financeService.getAllEmis()) cmbSubCategory.addItem(e.getEmiName());
                 cmbSubCategory.addItem("Other Loan EMI");
             } else if ("Loan Given".equalsIgnoreCase(cat)) {
-                // Populate with Persons
-                List<Person> persons = financeService.getAllPersons();
-                for (Person p : persons) {
-                    cmbSubCategory.addItem(p.getName());
-                }
+                for (Person p : financeService.getAllPersons()) cmbSubCategory.addItem(p.getName());
             } else if ("Special Expense".equalsIgnoreCase(cat)) {
                 cmbSubCategory.addItem("Family Gathering / Dinner");
                 cmbSubCategory.addItem("Vacation / Trip");
@@ -453,16 +691,12 @@ public class TransactionDialog extends JDialog {
                 cmbSubCategory.addItem("Home Renovation");
             }
         } else {
-            // Income
             if ("Salary".equalsIgnoreCase(cat)) {
                 cmbSubCategory.addItem("Primary Employer");
                 cmbSubCategory.addItem("Bonus / Incentive");
                 cmbSubCategory.addItem("Arrears / Reimbursement");
             } else if ("Relative".equalsIgnoreCase(cat) || "Return".equalsIgnoreCase(cat)) {
-                List<Person> persons = financeService.getAllPersons();
-                for (Person p : persons) {
-                    cmbSubCategory.addItem(p.getName());
-                }
+                for (Person p : financeService.getAllPersons()) cmbSubCategory.addItem(p.getName());
                 cmbSubCategory.addItem("Other Person");
             } else if ("Loan".equalsIgnoreCase(cat)) {
                 cmbSubCategory.addItem("Personal Loan Disbursal");
@@ -472,10 +706,6 @@ public class TransactionDialog extends JDialog {
         }
     }
 
-    /**
-     * Validates input parameters, resolves foreign key mappings for masters, persists
-     * the transaction, and closes the dialog.
-     */
     private void onSave() {
         String strAmount = txtAmount.getText().trim();
         if (strAmount.isEmpty()) {
@@ -503,63 +733,54 @@ public class TransactionDialog extends JDialog {
             return;
         }
 
+        TransactionNature nature = (TransactionNature) cmbNature.getSelectedItem();
+        if (nature == null) nature = TransactionNature.ONE_TIME_EXPENSE;
+
         TransactionType type = rbIncome.isSelected() ? TransactionType.INCOME : TransactionType.EXPENSE;
         String category = cmbCategory.getSelectedItem() != null ? cmbCategory.getSelectedItem().toString().trim() : "";
         String subCategory = cmbSubCategory.getSelectedItem() != null ? cmbSubCategory.getSelectedItem().toString().trim() : "";
         String paymentVia = cmbPaymentVia.getSelectedItem() != null ? cmbPaymentVia.getSelectedItem().toString().trim() : "Cash";
-
         if (paymentVia.isEmpty()) paymentVia = "Cash";
 
-        // Remember new custom payment mode if not already present
         financeService.addPaymentMode(paymentVia);
 
-        Person selectedPerson = (Person) cmbPerson.getSelectedItem();
-        Long personId = selectedPerson != null ? selectedPerson.getId() : null;
-
-        // Auto-match person if subCategory matches a person's name
-        if (personId == null && !subCategory.isEmpty()) {
-            List<Person> persons = financeService.getAllPersons();
-            for (Person p : persons) {
-                if (p.getName().equalsIgnoreCase(subCategory)) {
-                    personId = p.getId();
-                    break;
-                }
-            }
-        }
-
-        // Match Bill ID if category is Bill
+        Long personId = null;
         Long billId = null;
-        if (type == TransactionType.EXPENSE && "Bill".equalsIgnoreCase(category)) {
-            List<Bill> bills = financeService.getAllBills();
-            for (Bill b : bills) {
-                if (b.getBillName().equalsIgnoreCase(subCategory)) {
-                    billId = b.getId();
-                    break;
-                }
-            }
-        }
-
-        // Match EMI ID if category is EMI Payment
         Long emiId = null;
-        if (type == TransactionType.EXPENSE && "EMI Payment".equalsIgnoreCase(category)) {
-            List<Emi> emis = financeService.getAllEmis();
-            for (Emi e : emis) {
-                if (e.getEmiName().equalsIgnoreCase(subCategory)) {
+        Long creditCardId = null;
+
+        switch (nature) {
+            case EMI_PAYMENT -> {
+                Emi e = (Emi) cmbEmi.getSelectedItem();
+                if (e != null) {
                     emiId = e.getId();
-                    break;
+                    if (subCategory.isEmpty()) subCategory = e.getEmiName();
                 }
             }
-        }
-
-        // Match Credit Card ID
-        Long creditCardId = null;
-        if (type == TransactionType.EXPENSE && "Credit Card".equalsIgnoreCase(category)) {
-            List<CreditCard> cards = financeService.getAllCreditCards();
-            for (CreditCard c : cards) {
-                if (subCategory.contains(c.getCardName())) {
+            case CREDIT_CARD_BILL -> {
+                CreditCard c = (CreditCard) cmbCreditCard.getSelectedItem();
+                if (c != null) {
                     creditCardId = c.getId();
-                    break;
+                    if (subCategory.isEmpty()) subCategory = c.getCardName();
                 }
+            }
+            case UTILITY_BILL -> {
+                Bill b = (Bill) cmbBill.getSelectedItem();
+                if (b != null) {
+                    billId = b.getId();
+                    if (subCategory.isEmpty()) subCategory = b.getBillName();
+                }
+            }
+            case PERSONAL_LOAN -> {
+                Person p = (Person) cmbPerson.getSelectedItem();
+                if (p != null) {
+                    personId = p.getId();
+                    if (subCategory.isEmpty()) subCategory = p.getName();
+                }
+            }
+            case ONE_TIME_EXPENSE, ONE_TIME_INCOME -> {
+                Person p = (Person) cmbPerson.getSelectedItem();
+                if (p != null) personId = p.getId();
             }
         }
 
@@ -579,14 +800,55 @@ public class TransactionDialog extends JDialog {
 
         financeService.saveTransactionWithLinks(tx, pendingLinks, existingTransaction);
 
+        // Optionally manage recurring/upcoming schedule
+        if (chkManageRecurring.isVisible() && chkManageRecurring.isSelected()) {
+            manageRecurringSchedule(tx, nature);
+        }
+
         saved = true;
         dispose();
     }
 
-    /**
-     * Determines whether linking is relevant and updates visibility of the linking section.
-     */
+    private void manageRecurringSchedule(Transaction tx, TransactionNature nature) {
+        try {
+            String schedName = (tx.getSubCategory() != null && !tx.getSubCategory().isBlank()) ?
+                    tx.getSubCategory() : (tx.getCategory() + " Schedule");
+
+            // Check if existing schedule with this name exists
+            boolean exists = false;
+            for (RecurringSchedule s : recurringService.getAllSchedules()) {
+                if (s.getName() != null && s.getName().equalsIgnoreCase(schedName)) {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists) {
+                RecurringSchedule s = new RecurringSchedule();
+                s.setName(schedName);
+                s.setType(TransactionType.EXPENSE);
+                s.setCategory(tx.getCategory());
+                s.setSubCategory(tx.getSubCategory());
+                s.setDayOfMonth(tx.getTxDate() != null ? tx.getTxDate().getDayOfMonth() : 5);
+                s.setDefaultAmount(tx.getAmount());
+                s.setAmountType(nature == TransactionNature.CREDIT_CARD_BILL ? AmountType.VARIABLE : AmountType.FIXED);
+                s.setStartDate(tx.getTxDate() != null ? tx.getTxDate().withDayOfMonth(1) : LocalDate.now().withDayOfMonth(1));
+                s.setPaymentVia(tx.getPaymentVia());
+                s.setActive(true);
+                s.setNotes("Auto-registered from " + nature);
+
+                recurringService.saveSchedule(s);
+                recurringService.generateDueForSchedule(s, 2);
+            }
+        } catch (Exception ex) {
+            System.err.println("Could not auto-register recurring schedule: " + ex.getMessage());
+        }
+    }
+
     private void updateLinkingVisibility() {
+        TransactionNature nature = (TransactionNature) cmbNature.getSelectedItem();
+        boolean isPersonalLoan = nature == TransactionNature.PERSONAL_LOAN;
+
         String cat = cmbCategory.getSelectedItem() != null ? cmbCategory.getSelectedItem().toString().trim() : "";
         boolean isIncome = rbIncome.isSelected();
         boolean isExpense = rbExpense.isSelected();
@@ -594,7 +856,7 @@ public class TransactionDialog extends JDialog {
         boolean isReturn = isIncome && ("Return".equalsIgnoreCase(cat) || cmbPerson.getSelectedIndex() > 0);
         boolean isGive = isExpense && ("Loan Given".equalsIgnoreCase(cat) || cmbPerson.getSelectedIndex() > 0);
 
-        boolean eligible = isReturn || isGive;
+        boolean eligible = isPersonalLoan && (isReturn || isGive);
         lblLinkingTitle.setVisible(eligible);
         pnlLinking.setVisible(eligible);
 
@@ -604,9 +866,6 @@ public class TransactionDialog extends JDialog {
         }
     }
 
-    /**
-     * Refreshes the label displaying linked amount, transaction count, and settlement status.
-     */
     private void updateLinkingSummary() {
         if (pendingLinks == null || pendingLinks.isEmpty()) {
             lblLinkingSummary.setText("Unlinked (0 counterparts linked)");
@@ -616,9 +875,7 @@ public class TransactionDialog extends JDialog {
         }
 
         double totalLinked = 0.0;
-        for (TransactionLink l : pendingLinks) {
-            totalLinked += l.getAmount();
-        }
+        for (TransactionLink l : pendingLinks) totalLinked += l.getAmount();
 
         double targetAmount = 0.0;
         try {
@@ -638,9 +895,6 @@ public class TransactionDialog extends JDialog {
         }
     }
 
-    /**
-     * Opens the modal counterpart linking dialog to pick transactions and assign allocated amounts.
-     */
     private void onOpenLinkingDialog() {
         String strAmount = txtAmount.getText().trim();
         double amount;
@@ -675,11 +929,6 @@ public class TransactionDialog extends JDialog {
         }
     }
 
-    /**
-     * Indicates whether the transaction was saved or updated.
-     *
-     * @return {@code true} if saved successfully, {@code false} otherwise
-     */
     public boolean isSaved() {
         return saved;
     }

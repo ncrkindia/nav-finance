@@ -367,6 +367,41 @@ public class RecurringService {
             }
             tx.setNotes(noteCombined);
 
+            // Auto-link matching master entity (EMI, Credit Card, or Bill)
+            String pTitle = payment.getTitle() != null ? payment.getTitle().toLowerCase().trim() : "";
+            String pSubCat = payment.getSubCategory() != null ? payment.getSubCategory().toLowerCase().trim() : "";
+            for (com.navfinance.model.Emi emi : financeService.getAllEmis()) {
+                if (emi.getEmiName() != null && !emi.getEmiName().isBlank()) {
+                    String eName = emi.getEmiName().toLowerCase().trim();
+                    if (pTitle.contains(eName) || (!pSubCat.isEmpty() && pSubCat.contains(eName))) {
+                        tx.setEmiId(emi.getId());
+                        break;
+                    }
+                }
+            }
+            if (tx.getEmiId() == null) {
+                for (com.navfinance.model.CreditCard cc : financeService.getAllCreditCards()) {
+                    if (cc.getCardName() != null && !cc.getCardName().isBlank()) {
+                        String cName = cc.getCardName().toLowerCase().trim();
+                        if (pTitle.contains(cName) || (!pSubCat.isEmpty() && pSubCat.contains(cName))) {
+                            tx.setCreditCardId(cc.getId());
+                            break;
+                        }
+                    }
+                }
+            }
+            if (tx.getEmiId() == null && tx.getCreditCardId() == null) {
+                for (com.navfinance.model.Bill bill : financeService.getAllBills()) {
+                    if (bill.getBillName() != null && !bill.getBillName().isBlank()) {
+                        String bName = bill.getBillName().toLowerCase().trim();
+                        if (pTitle.contains(bName) || (!pSubCat.isEmpty() && pSubCat.contains(bName))) {
+                            tx.setBillId(bill.getId());
+                            break;
+                        }
+                    }
+                }
+            }
+
             // Persist the transaction via FinanceService
             Transaction savedTx = financeService.createTransaction(tx);
             if (savedTx != null) {

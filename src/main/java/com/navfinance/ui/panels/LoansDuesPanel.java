@@ -106,9 +106,22 @@ public class LoansDuesPanel extends JPanel implements LanguageChangeListener {
         btnBorrowMoney.setFont(UiUtils.boldFont());
         btnBorrowMoney.addActionListener(e -> onRecordLoan(false));
 
+        JButton btnTrack = UiUtils.createPrimaryButton("Track History & Graph 📊", NavIcons.dashboard(13, Color.WHITE));
+        btnTrack.setFont(UiUtils.boldFont());
+        btnTrack.addActionListener(e -> {
+            int row = tblLoans.getSelectedRow();
+            if (row < 0) {
+                UiUtils.showError(this, "Select a person from the ledger to track.");
+                return;
+            }
+            Long personId = (Long) tblLoans.getValueAt(row, 0);
+            com.navfinance.ui.MainFrame.getInstance().switchToEntityTracker("PERSON", personId, null, "MONTHS");
+        });
+
         btnGroup.add(btnAddPerson);
         btnGroup.add(btnLendMoney);
         btnGroup.add(btnBorrowMoney);
+        btnGroup.add(btnTrack);
 
         // Responsive header prevents collision between title and buttons
         com.navfinance.ui.components.ResponsiveBarPanel responsiveHeader =

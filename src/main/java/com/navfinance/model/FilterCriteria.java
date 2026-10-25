@@ -32,6 +32,24 @@ public class FilterCriteria {
     /** Denormalized person name for display and report metadata. */
     private String personName;
 
+    /** Unique bill ID filter, or {@code null}. */
+    private Long billId;
+
+    /** Denormalized bill name for display and report metadata. */
+    private String billName;
+
+    /** Unique EMI ID filter, or {@code null}. */
+    private Long emiId;
+
+    /** Denormalized EMI name for display and report metadata. */
+    private String emiName;
+
+    /** Unique credit card ID filter, or {@code null}. */
+    private Long creditCardId;
+
+    /** Denormalized credit card name for display and report metadata. */
+    private String cardName;
+
     /** Display name of active date preset (e.g., "This Month", "Today", "All Time"). */
     private String datePresetName;
 
@@ -304,6 +322,54 @@ public class FilterCriteria {
         this.personName = personName;
     }
 
+    public Long getBillId() {
+        return billId;
+    }
+
+    public void setBillId(Long billId) {
+        this.billId = billId;
+    }
+
+    public String getBillName() {
+        return billName;
+    }
+
+    public void setBillName(String billName) {
+        this.billName = billName;
+    }
+
+    public Long getEmiId() {
+        return emiId;
+    }
+
+    public void setEmiId(Long emiId) {
+        this.emiId = emiId;
+    }
+
+    public String getEmiName() {
+        return emiName;
+    }
+
+    public void setEmiName(String emiName) {
+        this.emiName = emiName;
+    }
+
+    public Long getCreditCardId() {
+        return creditCardId;
+    }
+
+    public void setCreditCardId(Long creditCardId) {
+        this.creditCardId = creditCardId;
+    }
+
+    public String getCardName() {
+        return cardName;
+    }
+
+    public void setCardName(String cardName) {
+        this.cardName = cardName;
+    }
+
     /**
      * Gets the display name of the active date preset.
      *
@@ -353,6 +419,12 @@ public class FilterCriteria {
                 || (paymentVia != null && !paymentVia.isBlank())
                 || personId != null
                 || (personName != null && !personName.isBlank())
+                || billId != null
+                || (billName != null && !billName.isBlank())
+                || emiId != null
+                || (emiName != null && !emiName.isBlank())
+                || creditCardId != null
+                || (cardName != null && !cardName.isBlank())
                 || startDate != null
                 || endDate != null
                 || minAmount != null
@@ -383,6 +455,21 @@ public class FilterCriteria {
             filters.add(new String[]{"Associated Person", personName});
         } else if (personId != null) {
             filters.add(new String[]{"Person ID", String.valueOf(personId)});
+        }
+        if (billName != null && !billName.isBlank()) {
+            filters.add(new String[]{"Associated Bill", billName});
+        } else if (billId != null) {
+            filters.add(new String[]{"Bill ID", String.valueOf(billId)});
+        }
+        if (emiName != null && !emiName.isBlank()) {
+            filters.add(new String[]{"Associated EMI", emiName});
+        } else if (emiId != null) {
+            filters.add(new String[]{"EMI ID", String.valueOf(emiId)});
+        }
+        if (cardName != null && !cardName.isBlank()) {
+            filters.add(new String[]{"Associated Card", cardName});
+        } else if (creditCardId != null) {
+            filters.add(new String[]{"Card ID", String.valueOf(creditCardId)});
         }
         if (paymentVia != null && !paymentVia.isBlank()) {
             filters.add(new String[]{"Payment Via", paymentVia});

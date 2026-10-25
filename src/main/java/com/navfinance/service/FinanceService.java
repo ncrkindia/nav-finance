@@ -13,6 +13,7 @@ import com.navfinance.model.AuditLog;
 import com.navfinance.model.Bill;
 import com.navfinance.model.CreditCard;
 import com.navfinance.model.Emi;
+import com.navfinance.model.EntityTrackerSummary;
 import com.navfinance.model.FilterCriteria;
 import com.navfinance.model.Person;
 import com.navfinance.model.Transaction;
@@ -20,6 +21,7 @@ import com.navfinance.model.TransactionLink;
 import com.navfinance.model.TransactionSettlementInfo;
 import com.navfinance.model.TransactionType;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -487,6 +489,10 @@ public class FinanceService {
         List<Transaction> transactions = transactionDao.findByCriteria(criteria);
 
         for (Transaction tx : transactions) {
+            // Outright bills, EMIs, and credit cards are NEVER peer-to-peer loan balances
+            if (tx.getBillId() != null || tx.getEmiId() != null || tx.getCreditCardId() != null) {
+                continue;
+            }
             if (tx.getPersonId() != null && map.containsKey(tx.getPersonId())) {
                 PersonLoanSummary summary = map.get(tx.getPersonId());
                 String cat = tx.getCategory() != null ? tx.getCategory().toLowerCase() : "";
@@ -516,13 +522,16 @@ public class FinanceService {
 
     /**
      * Determines whether a transaction is considered a "Give" candidate (e.g. Loan Given, Lent, or Expense to a Person).
+     * Outright bills, EMIs, and credit card payments are excluded and never treated as Give candidates.
      *
      * @param tx Target transaction
      * @return {@code true} if this transaction qualifies as a Give transaction
      */
     public boolean isGiveTransaction(Transaction tx) {
         if (tx == null || tx.getType() != TransactionType.EXPENSE) return false;
+        if (tx.getBillId() != null || tx.getEmiId() != null || tx.getCreditCardId() != null) return false;
         String cat = tx.getCategory() != null ? tx.getCategory().toLowerCase() : "";
+        if (cat.contains("bill") || cat.contains("emi") || cat.contains("credit card") || cat.contains("utility")) return false;
         return cat.contains("loan given") || cat.contains("lent") || tx.getPersonId() != null;
     }
 
@@ -534,6 +543,7 @@ public class FinanceService {
      */
     public boolean isReturnTransaction(Transaction tx) {
         if (tx == null || tx.getType() != TransactionType.INCOME) return false;
+        if (tx.getBillId() != null || tx.getEmiId() != null || tx.getCreditCardId() != null) return false;
         String cat = tx.getCategory() != null ? tx.getCategory().toLowerCase() : "";
         return cat.contains("return") || cat.contains("returned") || tx.getPersonId() != null;
     }
@@ -711,5 +721,21 @@ public class FinanceService {
         }
 
         return saved;
+    }
+
+    /**
+     * Delegates entity tracking analytics computation to {@link AnalyticsService}.
+     *
+     * @param entityType Master entity type: "PERSON", "BILL", "EMI", "CREDIT_CARD", or "CATEGORY"
+     * @param entityId Primary key ID of entity (or null if category)
+     * @param categoryName Category string name
+     * @param timeGranularity Time bucket: "DAYS", "WEEK", "MONTHS", "QUARTER", or "YEARS"
+     * @param startDate Optional start date limit
+     * @param endDate Optional end date limit
+     * @return Fully populated {@link EntityTrackerSummary}
+     */
+    public EntityTrackerSummary getEntityTrackerSummary(String entityType, Long entityId, String categoryName,
+                                                        String timeGranularity, LocalDate startDate, LocalDate endDate) {
+        return AnalyticsService.getInstance().getEntityTrackerSummary(entityType, entityId, categoryName, timeGranularity, startDate, endDate);
     }
 }

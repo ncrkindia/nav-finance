@@ -183,9 +183,21 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
             }
         });
 
+        JButton btnTrack = UiUtils.createPrimaryButton("Track & Graph 📊", NavIcons.dashboard(13, Color.WHITE));
+        btnTrack.addActionListener(e -> {
+            int row = tblPersons.getSelectedRow();
+            if (row < 0) {
+                UiUtils.showError(this, "Select a person to track.");
+                return;
+            }
+            Long id = (Long) tblPersons.getValueAt(row, 0);
+            com.navfinance.ui.MainFrame.getInstance().switchToEntityTracker("PERSON", id, null, "MONTHS");
+        });
+
         topBar.add(btnAdd);
         topBar.add(btnEdit);
         topBar.add(btnDelete);
+        topBar.add(btnTrack);
         panel.add(topBar, BorderLayout.NORTH);
 
         String[] cols = {
@@ -266,9 +278,21 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
             }
         });
 
+        JButton btnTrack = UiUtils.createPrimaryButton("Track & Graph 📊", NavIcons.dashboard(13, Color.WHITE));
+        btnTrack.addActionListener(e -> {
+            int row = tblBills.getSelectedRow();
+            if (row < 0) {
+                UiUtils.showError(this, "Select a bill to track.");
+                return;
+            }
+            Long id = (Long) tblBills.getValueAt(row, 0);
+            com.navfinance.ui.MainFrame.getInstance().switchToEntityTracker("BILL", id, null, "MONTHS");
+        });
+
         topBar.add(btnAdd);
         topBar.add(btnEdit);
         topBar.add(btnDelete);
+        topBar.add(btnTrack);
         panel.add(topBar, BorderLayout.NORTH);
 
         String[] cols = {
@@ -349,9 +373,21 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
             }
         });
 
+        JButton btnTrack = UiUtils.createPrimaryButton("Track & Graph 📊", NavIcons.dashboard(13, Color.WHITE));
+        btnTrack.addActionListener(e -> {
+            int row = tblEmis.getSelectedRow();
+            if (row < 0) {
+                UiUtils.showError(this, "Select an EMI to track.");
+                return;
+            }
+            Long id = (Long) tblEmis.getValueAt(row, 0);
+            com.navfinance.ui.MainFrame.getInstance().switchToEntityTracker("EMI", id, null, "MONTHS");
+        });
+
         topBar.add(btnAdd);
         topBar.add(btnEdit);
         topBar.add(btnDelete);
+        topBar.add(btnTrack);
         panel.add(topBar, BorderLayout.NORTH);
 
         String[] cols = {
@@ -432,9 +468,21 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
             }
         });
 
+        JButton btnTrack = UiUtils.createPrimaryButton("Track & Graph 📊", NavIcons.dashboard(13, Color.WHITE));
+        btnTrack.addActionListener(e -> {
+            int row = tblCards.getSelectedRow();
+            if (row < 0) {
+                UiUtils.showError(this, "Select a card to track.");
+                return;
+            }
+            Long id = (Long) tblCards.getValueAt(row, 0);
+            com.navfinance.ui.MainFrame.getInstance().switchToEntityTracker("CREDIT_CARD", id, null, "MONTHS");
+        });
+
         topBar.add(btnAdd);
         topBar.add(btnEdit);
         topBar.add(btnDelete);
+        topBar.add(btnTrack);
         panel.add(topBar, BorderLayout.NORTH);
 
         String[] cols = {

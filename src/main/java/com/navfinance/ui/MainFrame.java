@@ -72,6 +72,8 @@ import java.awt.event.KeyEvent;
  */
 public class MainFrame extends JFrame implements LanguageChangeListener {
 
+    private static MainFrame instance;
+
     /** Primary tabbed container hosting the application's functional modules. */
     private JTabbedPane mainTabs;
 
@@ -120,6 +122,7 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
      */
     public MainFrame() {
         super(I18n.get("app.name") + " - " + I18n.get("app.subtitle"));
+        instance = this;
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(1100, 750));
         setPreferredSize(new Dimension(1280, 840));
@@ -568,6 +571,33 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
             int prevX = AppConfig.getWindowX();
             int prevY = AppConfig.getWindowY();
             AppConfig.saveWindowBounds(prevX, prevY, prevW, prevH, true);
+        }
+    }
+
+    /**
+     * Returns the active singleton instance of {@link MainFrame}.
+     *
+     * @return active frame instance
+     */
+    public static MainFrame getInstance() {
+        return instance;
+    }
+
+    /**
+     * Directly routes navigation to the Entity Tracker tab in TransactionsPanel,
+     * pre-selecting the entity type, specific entity, and time granularity.
+     *
+     * @param entityType "PERSON", "BILL", "EMI", "CREDIT_CARD", or "CATEGORY"
+     * @param entityId Primary key ID of entity (or null if category)
+     * @param categoryName Category string name
+     * @param granularity Time bucket: "DAYS", "WEEK", "MONTHS", "QUARTER", or "YEARS"
+     */
+    public void switchToEntityTracker(String entityType, Long entityId, String categoryName, String granularity) {
+        if (mainTabs != null) {
+            mainTabs.setSelectedIndex(1);
+            if (transactionsPanel != null) {
+                transactionsPanel.openEntityTracker(entityType, entityId, categoryName, granularity);
+            }
         }
     }
 }

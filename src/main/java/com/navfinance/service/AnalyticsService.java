@@ -169,4 +169,259 @@ public class AnalyticsService {
 
         return summary;
     }
+
+    /**
+     * Computes multi-horizon entity tracking analytics and temporal trend curves for a specified
+     * Person, Bill, EMI, Credit Card, or Category across Days, Week, Months, Quarter, or Years.
+     *
+     * @param entityType "PERSON", "BILL", "EMI", "CREDIT_CARD", or "CATEGORY"
+     * @param entityId Primary key ID of the master entity (or null if category)
+     * @param categoryName Category name string (used when entityType is "CATEGORY")
+     * @param timeGranularity "DAYS", "WEEK", "MONTHS", "QUARTER", or "YEARS"
+     * @param startDate Optional inclusive start date limit
+     * @param endDate Optional inclusive end date limit
+     * @return Fully populated {@link com.navfinance.model.EntityTrackerSummary}
+     */
+    public com.navfinance.model.EntityTrackerSummary getEntityTrackerSummary(String entityType, Long entityId,
+                                                                             String categoryName, String timeGranularity,
+                                                                             LocalDate startDate, LocalDate endDate) {
+        com.navfinance.model.EntityTrackerSummary summary = new com.navfinance.model.EntityTrackerSummary();
+        summary.setEntityType(entityType != null ? entityType.toUpperCase() : "CATEGORY");
+        summary.setEntityId(entityId);
+        summary.setTimeGranularity(timeGranularity != null ? timeGranularity.toUpperCase() : "MONTHS");
+
+        FilterCriteria criteria = new FilterCriteria();
+        criteria.setSortBy("tx_date");
+        criteria.setSortAscending(true);
+
+        if (startDate != null) criteria.setStartDate(startDate);
+        if (endDate != null) criteria.setEndDate(endDate);
+
+        String entityName = null;
+        if ("PERSON".equalsIgnoreCase(entityType)) {
+            criteria.setPersonId(entityId);
+            com.navfinance.model.Person p = new com.navfinance.dao.PersonDao().findById(entityId);
+            if (p != null) entityName = p.getName();
+        } else if ("BILL".equalsIgnoreCase(entityType)) {
+            criteria.setBillId(entityId);
+            com.navfinance.model.Bill b = new com.navfinance.dao.BillDao().findById(entityId);
+            if (b != null) entityName = b.getBillName();
+        } else if ("EMI".equalsIgnoreCase(entityType)) {
+            criteria.setEmiId(entityId);
+            com.navfinance.model.Emi e = new com.navfinance.dao.EmiDao().findById(entityId);
+            if (e != null) entityName = e.getEmiName();
+        } else if ("CREDIT_CARD".equalsIgnoreCase(entityType)) {
+            criteria.setCreditCardId(entityId);
+            com.navfinance.model.CreditCard c = new com.navfinance.dao.CreditCardDao().findById(entityId);
+            if (c != null) entityName = c.getCardName();
+        } else if ("CATEGORY".equalsIgnoreCase(entityType)) {
+            criteria.setCategory(categoryName);
+            entityName = (categoryName != null && !categoryName.isBlank()) ? categoryName : "All Categories";
+        }
+
+        List<Transaction> txList = transactionDao.findByCriteria(criteria);
+        summary.setTransactions(txList);
+        summary.setTotalCount(txList.size());
+
+        if (entityName == null && !txList.isEmpty()) {
+            Transaction first = txList.get(0);
+            if ("PERSON".equalsIgnoreCase(entityType)) entityName = first.getPersonName();
+            else if ("BILL".equalsIgnoreCase(entityType)) entityName = first.getBillName();
+            else if ("EMI".equalsIgnoreCase(entityType)) entityName = first.getEmiName();
+            else if ("CREDIT_CARD".equalsIgnoreCase(entityType)) entityName = first.getCardName();
+        }
+        if (entityName == null) {
+            entityName = entityType + (entityId != null ? " #" + entityId : "");
+        }
+        summary.setEntityName(entityName);
+
+        if (txList.isEmpty()) {
+            return summary;
+        }
+
+        double totalIn = 0.0;
+        double totalOut = 0.0;
+        LocalDate earliest = null;
+        LocalDate latest = null;
+
+        for (Transaction tx : txList) {
+            if (tx.getType() == TransactionType.INCOME) {
+                totalIn += tx.getAmount();
+            } else if (tx.getType() == TransactionType.EXPENSE) {
+                totalOut += tx.getAmount();
+            }
+            LocalDate d = tx.getTxDate() != null ? tx.getTxDate() : LocalDate.now();
+            if (earliest == null || d.isBefore(earliest)) earliest = d;
+            if (latest == null || d.isAfter(latest)) latest = d;
+        }
+
+        summary.setTotalInflow(totalIn);
+        summary.setTotalOutflow(totalOut);
+        summary.setNetBalance(totalIn - totalOut);
+        summary.setEarliestDate(earliest);
+        summary.setLatestDate(latest);
+
+        // Build time-bucketed trend points
+        List<DashboardSummary.TrendPoint> points = buildTrendPoints(txList, summary.getTimeGranularity(), earliest, latest, startDate, endDate);
+        summary.setTrendPoints(points);
+
+        if (!points.isEmpty()) {
+            double totalVolume = totalIn + totalOut;
+            summary.setAveragePerBucket(totalVolume / points.size());
+        }
+
+        return summary;
+    }
+
+    /**
+     * Overloaded helper to aggregate transactions into trend points with auto-discovered date bounds.
+     */
+    public List<DashboardSummary.TrendPoint> buildTrendPoints(List<Transaction> txList, String granularity) {
+        LocalDate earliest = null;
+        LocalDate latest = null;
+        for (Transaction tx : txList) {
+            LocalDate d = tx.getTxDate() != null ? tx.getTxDate() : LocalDate.now();
+            if (earliest == null || d.isBefore(earliest)) earliest = d;
+            if (latest == null || d.isAfter(latest)) latest = d;
+        }
+        return buildTrendPoints(txList, granularity, earliest, latest, null, null);
+    }
+
+    /**
+     * Aggregates transactions into discrete chronological time buckets based on requested granularity.
+     */
+    public List<DashboardSummary.TrendPoint> buildTrendPoints(List<Transaction> txList, String granularity,
+                                                              LocalDate earliest, LocalDate latest,
+                                                              LocalDate filterStart, LocalDate filterEnd) {
+        List<DashboardSummary.TrendPoint> points = new ArrayList<>();
+        LocalDate start = filterStart != null ? filterStart : earliest;
+        LocalDate end = filterEnd != null ? filterEnd : latest;
+        if (start == null) start = LocalDate.now().minusMonths(6);
+        if (end == null) end = LocalDate.now();
+        if (start.isAfter(end)) {
+            LocalDate tmp = start;
+            start = end;
+            end = tmp;
+        }
+
+        DateTimeFormatter dayFmt = DateTimeFormatter.ofPattern("dd MMM");
+        DateTimeFormatter monthFmt = DateTimeFormatter.ofPattern("MMM yy");
+
+        if ("DAYS".equalsIgnoreCase(granularity)) {
+            long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(start, end);
+            if (daysBetween <= 45) {
+                // Continuous day-by-day sequence
+                for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+                    double in = 0.0;
+                    double out = 0.0;
+                    for (Transaction tx : txList) {
+                        if (d.equals(tx.getTxDate())) {
+                            if (tx.getType() == TransactionType.INCOME) in += tx.getAmount();
+                            else if (tx.getType() == TransactionType.EXPENSE) out += tx.getAmount();
+                        }
+                    }
+                    points.add(new DashboardSummary.TrendPoint(d.format(dayFmt), in, out));
+                }
+            } else {
+                // Group by active transaction dates to prevent overcrowding
+                java.util.Map<LocalDate, double[]> map = new java.util.TreeMap<>();
+                for (Transaction tx : txList) {
+                    LocalDate d = tx.getTxDate() != null ? tx.getTxDate() : LocalDate.now();
+                    double[] vals = map.computeIfAbsent(d, k -> new double[2]);
+                    if (tx.getType() == TransactionType.INCOME) vals[0] += tx.getAmount();
+                    else if (tx.getType() == TransactionType.EXPENSE) vals[1] += tx.getAmount();
+                }
+                for (java.util.Map.Entry<LocalDate, double[]> entry : map.entrySet()) {
+                    points.add(new DashboardSummary.TrendPoint(entry.getKey().format(dayFmt), entry.getValue()[0], entry.getValue()[1]));
+                }
+            }
+
+        } else if ("WEEK".equalsIgnoreCase(granularity)) {
+            LocalDate wStart = start.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            LocalDate wLimit = end.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+            while (!wStart.isAfter(wLimit)) {
+                LocalDate wEnd = wStart.plusDays(6);
+                double in = 0.0;
+                double out = 0.0;
+                for (Transaction tx : txList) {
+                    LocalDate d = tx.getTxDate() != null ? tx.getTxDate() : LocalDate.now();
+                    if (!d.isBefore(wStart) && !d.isAfter(wEnd)) {
+                        if (tx.getType() == TransactionType.INCOME) in += tx.getAmount();
+                        else if (tx.getType() == TransactionType.EXPENSE) out += tx.getAmount();
+                    }
+                }
+                points.add(new DashboardSummary.TrendPoint("Wk " + wStart.format(dayFmt), in, out));
+                wStart = wStart.plusWeeks(1);
+            }
+
+        } else if ("QUARTER".equalsIgnoreCase(granularity)) {
+            int startQ = (start.getMonthValue() - 1) / 3 + 1;
+            int startYear = start.getYear();
+            int endQ = (end.getMonthValue() - 1) / 3 + 1;
+            int endYear = end.getYear();
+
+            int currQ = startQ;
+            int currYear = startYear;
+            while (currYear < endYear || (currYear == endYear && currQ <= endQ)) {
+                LocalDate qStart = LocalDate.of(currYear, (currQ - 1) * 3 + 1, 1);
+                LocalDate qEnd = qStart.plusMonths(3).minusDays(1);
+
+                double in = 0.0;
+                double out = 0.0;
+                for (Transaction tx : txList) {
+                    LocalDate d = tx.getTxDate() != null ? tx.getTxDate() : LocalDate.now();
+                    if (!d.isBefore(qStart) && !d.isAfter(qEnd)) {
+                        if (tx.getType() == TransactionType.INCOME) in += tx.getAmount();
+                        else if (tx.getType() == TransactionType.EXPENSE) out += tx.getAmount();
+                    }
+                }
+                points.add(new DashboardSummary.TrendPoint("Q" + currQ + "'" + String.valueOf(currYear).substring(2), in, out));
+
+                currQ++;
+                if (currQ > 4) {
+                    currQ = 1;
+                    currYear++;
+                }
+            }
+
+        } else if ("YEARS".equalsIgnoreCase(granularity)) {
+            for (int y = start.getYear(); y <= end.getYear(); y++) {
+                LocalDate yStart = LocalDate.of(y, 1, 1);
+                LocalDate yEnd = LocalDate.of(y, 12, 31);
+                double in = 0.0;
+                double out = 0.0;
+                for (Transaction tx : txList) {
+                    LocalDate d = tx.getTxDate() != null ? tx.getTxDate() : LocalDate.now();
+                    if (!d.isBefore(yStart) && !d.isAfter(yEnd)) {
+                        if (tx.getType() == TransactionType.INCOME) in += tx.getAmount();
+                        else if (tx.getType() == TransactionType.EXPENSE) out += tx.getAmount();
+                    }
+                }
+                points.add(new DashboardSummary.TrendPoint(String.valueOf(y), in, out));
+            }
+
+        } else {
+            // Default: MONTHS
+            java.time.YearMonth ymStart = java.time.YearMonth.from(start);
+            java.time.YearMonth ymEnd = java.time.YearMonth.from(end);
+            java.time.YearMonth curr = ymStart;
+            while (!curr.isAfter(ymEnd)) {
+                LocalDate mStart = curr.atDay(1);
+                LocalDate mEnd = curr.atEndOfMonth();
+                double in = 0.0;
+                double out = 0.0;
+                for (Transaction tx : txList) {
+                    LocalDate d = tx.getTxDate() != null ? tx.getTxDate() : LocalDate.now();
+                    if (!d.isBefore(mStart) && !d.isAfter(mEnd)) {
+                        if (tx.getType() == TransactionType.INCOME) in += tx.getAmount();
+                        else if (tx.getType() == TransactionType.EXPENSE) out += tx.getAmount();
+                    }
+                }
+                points.add(new DashboardSummary.TrendPoint(curr.format(monthFmt), in, out));
+                curr = curr.plusMonths(1);
+            }
+        }
+
+        return points;
+    }
 }

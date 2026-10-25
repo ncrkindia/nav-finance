@@ -33,7 +33,7 @@ public class TrendChartPanel extends JPanel {
     private List<DashboardSummary.TrendPoint> points = new ArrayList<>();
 
     /** Headline title displayed at the top-left of the chart. */
-    private final String title;
+    private String title;
 
     /**
      * Constructs a {@link TrendChartPanel} with the specified headline label.
@@ -41,10 +41,29 @@ public class TrendChartPanel extends JPanel {
      * @param title headline label
      */
     public TrendChartPanel(String title) {
-        this.title = title;
+        this.title = title != null ? title : "";
         setBackground(Color.WHITE);
         setPreferredSize(new Dimension(540, 300));
         ZoomManager.addZoomListener(this::repaint);
+    }
+
+    /**
+     * Updates the headline title of the chart and triggers a repaint.
+     *
+     * @param title new headline title
+     */
+    public void setTitle(String title) {
+        this.title = title != null ? title : "";
+        repaint();
+    }
+
+    /**
+     * Gets the headline title.
+     *
+     * @return current title
+     */
+    public String getTitle() {
+        return title;
     }
 
     /**

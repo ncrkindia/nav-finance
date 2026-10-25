@@ -182,6 +182,7 @@ public class TransactionLinkDao {
             LEFT JOIN persons p ON t.person_id = p.id
             WHERE t.type = 'EXPENSE'
               AND (t.category = 'Loan Given' OR t.category = 'Lent' OR t.person_id IS NOT NULL)
+              AND t.bill_id IS NULL AND t.emi_id IS NULL AND t.credit_card_id IS NULL
               AND (? IS NULL OR t.person_id = ?)
               AND (? IS NULL OR t.id <> ?)
             ORDER BY t.tx_date DESC, t.id DESC
@@ -207,6 +208,7 @@ public class TransactionLinkDao {
             LEFT JOIN persons p ON t.person_id = p.id
             WHERE t.type = 'INCOME'
               AND (t.category = 'Return' OR t.category = 'Returned' OR t.person_id IS NOT NULL)
+              AND t.bill_id IS NULL AND t.emi_id IS NULL AND t.credit_card_id IS NULL
               AND (? IS NULL OR t.person_id = ?)
               AND (? IS NULL OR t.id <> ?)
             ORDER BY t.tx_date DESC, t.id DESC

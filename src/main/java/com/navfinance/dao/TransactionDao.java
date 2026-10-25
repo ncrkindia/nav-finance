@@ -236,6 +236,18 @@ public class TransactionDao {
                 sql.append(" AND t.person_id = ?");
                 params.add(criteria.getPersonId());
             }
+            if (criteria.getBillId() != null) {
+                sql.append(" AND t.bill_id = ?");
+                params.add(criteria.getBillId());
+            }
+            if (criteria.getEmiId() != null) {
+                sql.append(" AND t.emi_id = ?");
+                params.add(criteria.getEmiId());
+            }
+            if (criteria.getCreditCardId() != null) {
+                sql.append(" AND t.credit_card_id = ?");
+                params.add(criteria.getCreditCardId());
+            }
             if (criteria.getStartDate() != null) {
                 sql.append(" AND t.tx_date >= ?");
                 params.add(Date.valueOf(criteria.getStartDate()));
