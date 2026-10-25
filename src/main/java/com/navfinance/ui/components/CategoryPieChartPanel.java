@@ -193,9 +193,12 @@ public class CategoryPieChartPanel extends JPanel {
         }
         if (total <= 0) return;
 
-        // Sort categories descending by amount
+        // Sort categories descending by amount, with alphabetical tie-breaker for deterministic layout
         List<Map.Entry<String, Double>> sorted = new ArrayList<>(data.entrySet());
-        sorted.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+        sorted.sort((a, b) -> {
+            int cmp = Double.compare(b.getValue(), a.getValue());
+            return cmp != 0 ? cmp : a.getKey().compareToIgnoreCase(b.getKey());
+        });
 
         int maxIndividual = 8;
         int colorIdx = 0;

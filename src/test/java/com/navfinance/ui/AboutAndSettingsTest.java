@@ -1,8 +1,10 @@
 package com.navfinance.ui;
 
+import com.navfinance.config.AppConfig;
 import com.navfinance.ui.dialogs.TransactionDialog;
 import com.navfinance.ui.panels.AboutUsPanel;
 import com.navfinance.ui.panels.SettingsPanel;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,12 @@ public class AboutAndSettingsTest {
     @BeforeAll
     static void initHeadless() {
         System.setProperty("java.awt.headless", "true");
+        AppConfig.setTestMode(true);
+    }
+
+    @AfterAll
+    static void tearDown() {
+        AppConfig.setTestMode(false);
     }
 
     @Test

@@ -88,6 +88,9 @@ public final class AppConfig {
     private static com.navfinance.database.DatabaseConfig activeDatabaseConfig =
             com.navfinance.database.DatabaseConfig.createDefaultH2(DB_PATH);
 
+    /** Flag indicating whether the application is running under test execution to protect user database. */
+    private static boolean testMode = false;
+
     /** Settings file in user data directory. */
     private static final File SETTINGS_FILE = new File(APP_DATA_DIR, "settings.properties");
 
@@ -180,6 +183,9 @@ public final class AppConfig {
      * Persists current settings to settings.properties.
      */
     public static synchronized void saveSettings() {
+        if (testMode) {
+            return; // Never write to disk or mutate user files during automated test execution
+        }
         try {
             if (!APP_DATA_DIR.exists()) {
                 APP_DATA_DIR.mkdirs();
@@ -209,6 +215,35 @@ public final class AppConfig {
                 props.store(fos, "Nav Finance User Settings");
             }
         } catch (Exception ignored) {}
+    }
+
+    /**
+     * Indicates whether test execution mode is currently active.
+     *
+     * @return {@code true} if running in isolated test mode
+     */
+    public static synchronized boolean isTestMode() {
+        return testMode;
+    }
+
+    /**
+     * Toggles isolated test execution mode.
+     * When enabled, diverts all database connections to an ephemeral in-memory H2 database
+     * and suppresses writes to the user's settings file, preventing tests from polluting
+     * or altering production data.
+     *
+     * @param enabled {@code true} to enable test isolation, {@code false} to revert to user settings
+     */
+    public static synchronized void setTestMode(boolean enabled) {
+        testMode = enabled;
+        if (enabled) {
+            com.navfinance.database.DatabaseConfig testConfig = new com.navfinance.database.DatabaseConfig();
+            testConfig.setType(com.navfinance.database.DatabaseType.H2);
+            testConfig.setCustomJdbcUrl("jdbc:h2:mem:navfinance_test;DB_CLOSE_DELAY=-1;MODE=REGULAR");
+            activeDatabaseConfig = testConfig;
+        } else {
+            reloadSettings();
+        }
     }
 
     /**

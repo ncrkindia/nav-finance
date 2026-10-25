@@ -183,10 +183,10 @@ public class DatabaseConfig {
      * @return live JDBC URL string
      */
     public String getEffectiveJdbcUrl() {
-        if (type == DatabaseType.CUSTOM) {
-            return customJdbcUrl != null ? customJdbcUrl.trim() : "";
+        if (customJdbcUrl != null && !customJdbcUrl.isBlank()) {
+            return customJdbcUrl.trim();
         }
-        return type.buildJdbcUrl(host, port, databaseName, localPath);
+        return type != null ? type.buildJdbcUrl(host, port, databaseName, localPath) : "";
     }
 
     /**

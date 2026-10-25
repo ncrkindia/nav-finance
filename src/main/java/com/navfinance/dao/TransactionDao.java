@@ -384,7 +384,7 @@ public class TransactionDao {
             params.add(Date.valueOf(end));
         }
 
-        sql.append(" GROUP BY category ORDER BY total DESC");
+        sql.append(" GROUP BY category ORDER BY total DESC, category ASC");
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql.toString())) {

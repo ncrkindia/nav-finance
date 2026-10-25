@@ -24,6 +24,7 @@ import com.navfinance.model.TransactionType;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -479,7 +480,7 @@ public class FinanceService {
      */
     public List<PersonLoanSummary> getPersonLoanSummaries() {
         List<Person> persons = getAllPersons();
-        Map<Long, PersonLoanSummary> map = new HashMap<>();
+        Map<Long, PersonLoanSummary> map = new LinkedHashMap<>();
         for (Person p : persons) {
             map.put(p.getId(), new PersonLoanSummary(p));
         }

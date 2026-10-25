@@ -5,6 +5,8 @@ import com.navfinance.model.DashboardSummary;
 import com.navfinance.model.Person;
 import com.navfinance.model.Transaction;
 import com.navfinance.model.TransactionType;
+import com.navfinance.config.AppConfig;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -21,9 +23,15 @@ public class EntityTrackerTest {
 
     @BeforeAll
     static void setUp() {
-        DatabaseManager.getInstance();
+        AppConfig.setTestMode(true);
+        DatabaseManager.getInstance().initDatabase();
         financeService = FinanceService.getInstance();
         analyticsService = AnalyticsService.getInstance();
+    }
+
+    @AfterAll
+    static void tearDown() {
+        AppConfig.setTestMode(false);
     }
 
     @Test
