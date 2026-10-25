@@ -385,6 +385,35 @@ public class FinanceService {
         }
     }
 
+    /**
+     * Updates/renames a payment mode and cascades the change to transactions.
+     *
+     * @param oldName Existing payment mode name
+     * @param newName New payment mode name
+     * @return {@code true} if updated successfully
+     */
+    public boolean updatePaymentMode(String oldName, String newName) {
+        if (paymentModeDao.updateMode(oldName, newName)) {
+            auditDao.log("PAYMENT_MODE", null, "UPDATE", "Renamed payment mode from '" + oldName + "' to '" + newName + "'");
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Deletes a payment mode.
+     *
+     * @param mode Payment mode name to delete
+     * @return {@code true} if deleted successfully
+     */
+    public boolean deletePaymentMode(String mode) {
+        if (paymentModeDao.deleteMode(mode)) {
+            auditDao.log("PAYMENT_MODE", null, "DELETE", "Deleted payment mode: " + mode);
+            return true;
+        }
+        return false;
+    }
+
     // --- Audit Logs ---
 
     /**

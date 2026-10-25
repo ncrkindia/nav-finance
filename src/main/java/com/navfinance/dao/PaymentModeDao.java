@@ -57,5 +57,62 @@ public class PaymentModeDao {
             return false;
         }
     }
+
+    /**
+     * Updates/renames an existing payment mode and cascades the rename to all transactions using it.
+     *
+     * @param oldName Current name of the payment mode
+     * @param newName New name for the payment mode
+     * @return {@code true} if updated successfully
+     */
+    public boolean updateMode(String oldName, String newName) {
+        if (oldName == null || newName == null || newName.trim().isEmpty()) return false;
+        String trimmedOld = oldName.trim();
+        String trimmedNew = newName.trim();
+        String sql = "UPDATE payment_modes SET mode_name = ? WHERE mode_name = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement psMode = conn.prepareStatement(sql);
+                 PreparedStatement psTx = conn.prepareStatement("UPDATE transactions SET payment_via = ? WHERE payment_via = ?")) {
+                psMode.setString(1, trimmedNew);
+                psMode.setString(2, trimmedOld);
+                int updated = psMode.executeUpdate();
+
+                psTx.setString(1, trimmedNew);
+                psTx.setString(2, trimmedOld);
+                psTx.executeUpdate();
+
+                conn.commit();
+                return updated > 0;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            System.err.println("Failed to update payment mode: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Deletes a payment mode from the database.
+     *
+     * @param modeName Name of the payment mode to remove
+     * @return {@code true} if deleted successfully
+     */
+    public boolean deleteMode(String modeName) {
+        if (modeName == null || modeName.trim().isEmpty()) return false;
+        String sql = "DELETE FROM payment_modes WHERE mode_name = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, modeName.trim());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Failed to delete payment mode: " + e.getMessage());
+            return false;
+        }
+    }
 }
 
