@@ -2,6 +2,8 @@ package com.navfinance.config;
 
 import java.io.File;
 import java.text.DecimalFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
@@ -341,6 +343,26 @@ public final class AppConfig {
     public static String formatCurrency(double amount) {
         DecimalFormat df = new DecimalFormat("#,##,##0.00");
         return currencySymbol + " " + df.format(amount);
+    }
+
+    /**
+     * Formats a date using the standard application date formatter (dd-MMM-yyyy).
+     *
+     * @param date Date to format
+     * @return Formatted date string, or empty string if null
+     */
+    public static String formatDate(LocalDate date) {
+        return date != null ? date.format(DATE_FORMATTER) : "";
+    }
+
+    /**
+     * Formats a date-time using standard application timestamp formatter (dd-MMM-yyyy hh:mm a).
+     *
+     * @param dateTime DateTime to format
+     * @return Formatted timestamp string, or empty string if null
+     */
+    public static String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATE_TIME_FORMATTER) : "";
     }
 
     /**

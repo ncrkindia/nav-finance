@@ -164,9 +164,16 @@ public class TransactionDao {
     public Transaction findById(Long id) {
         if (id == null) return null;
         String sql = """
-            SELECT t.*, p.name AS person_name
+            SELECT t.*,
+                   p.name AS person_name,
+                   b.bill_name AS bill_name,
+                   e.emi_name AS emi_name,
+                   c.card_name AS card_name
             FROM transactions t
             LEFT JOIN persons p ON t.person_id = p.id
+            LEFT JOIN bills b ON t.bill_id = b.id
+            LEFT JOIN emis e ON t.emi_id = e.id
+            LEFT JOIN credit_cards c ON t.credit_card_id = c.id
             WHERE t.id = ?
         """;
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -193,9 +200,16 @@ public class TransactionDao {
     public List<Transaction> findByCriteria(FilterCriteria criteria) {
         List<Transaction> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder("""
-            SELECT t.*, p.name AS person_name
+            SELECT t.*,
+                   p.name AS person_name,
+                   b.bill_name AS bill_name,
+                   e.emi_name AS emi_name,
+                   c.card_name AS card_name
             FROM transactions t
             LEFT JOIN persons p ON t.person_id = p.id
+            LEFT JOIN bills b ON t.bill_id = b.id
+            LEFT JOIN emis e ON t.emi_id = e.id
+            LEFT JOIN credit_cards c ON t.credit_card_id = c.id
             WHERE 1=1
         """);
 
@@ -244,7 +258,10 @@ public class TransactionDao {
             }
             if (criteria.getSearchKeyword() != null && !criteria.getSearchKeyword().trim().isEmpty()) {
                 String kw = "%" + criteria.getSearchKeyword().trim().toLowerCase() + "%";
-                sql.append(" AND (LOWER(t.notes) LIKE ? OR LOWER(t.category) LIKE ? OR LOWER(t.sub_category) LIKE ? OR LOWER(t.payment_via) LIKE ? OR LOWER(p.name) LIKE ?)");
+                sql.append(" AND (LOWER(t.notes) LIKE ? OR LOWER(t.category) LIKE ? OR LOWER(t.sub_category) LIKE ? OR LOWER(t.payment_via) LIKE ? OR LOWER(p.name) LIKE ? OR LOWER(b.bill_name) LIKE ? OR LOWER(e.emi_name) LIKE ? OR LOWER(c.card_name) LIKE ?)");
+                params.add(kw);
+                params.add(kw);
+                params.add(kw);
                 params.add(kw);
                 params.add(kw);
                 params.add(kw);
@@ -494,6 +511,18 @@ public class TransactionDao {
 
         try {
             tx.setPersonName(rs.getString("person_name"));
+        } catch (SQLException ignored) {}
+
+        try {
+            tx.setBillName(rs.getString("bill_name"));
+        } catch (SQLException ignored) {}
+
+        try {
+            tx.setEmiName(rs.getString("emi_name"));
+        } catch (SQLException ignored) {}
+
+        try {
+            tx.setCardName(rs.getString("card_name"));
         } catch (SQLException ignored) {}
 
         tx.setNotes(rs.getString("notes"));

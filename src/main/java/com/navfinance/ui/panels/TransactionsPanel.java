@@ -68,6 +68,9 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
     /** Filtered snapshot list of transactions currently loaded in the active view. */
     private List<Transaction> currentTransactions = new ArrayList<>();
 
+    /** Active filter criteria used to load the current view and export reports. */
+    private FilterCriteria currentCriteria;
+
     // Filter controls
     /** Dropdown filter selector for transaction flow (Income, Expense, All). */
     private JComboBox<String> cmbTypeFilter;
@@ -646,46 +649,44 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
      * such as Today, This Week, This Month, This Quarter, or This Year.
      */
     private void onDatePresetChanged() {
-        String preset = (String) cmbDatePreset.getSelectedItem();
+        int idx = cmbDatePreset != null ? cmbDatePreset.getSelectedIndex() : -1;
         LocalDate now = LocalDate.now();
 
-        if (preset != null) {
-            switch (preset) {
-                case "All Time" -> {
-                    txtStartDate.setDate(null);
-                    txtEndDate.setDate(null);
-                }
-                case "Today" -> {
-                    txtStartDate.setDate(now);
-                    txtEndDate.setDate(now);
-                }
-                case "This Week" -> {
-                    LocalDate start = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-                    LocalDate end = now.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
-                    txtStartDate.setDate(start);
-                    txtEndDate.setDate(end);
-                }
-                case "This Month" -> {
-                    LocalDate start = now.withDayOfMonth(1);
-                    LocalDate end = now.with(TemporalAdjusters.lastDayOfMonth());
-                    txtStartDate.setDate(start);
-                    txtEndDate.setDate(end);
-                }
-                case "This Quarter" -> {
-                    int q = (now.getMonthValue() - 1) / 3 + 1;
-                    LocalDate start = LocalDate.of(now.getYear(), (q - 1) * 3 + 1, 1);
-                    LocalDate end = start.plusMonths(3).minusDays(1);
-                    txtStartDate.setDate(start);
-                    txtEndDate.setDate(end);
-                }
-                case "This Year" -> {
-                    LocalDate start = LocalDate.of(now.getYear(), 1, 1);
-                    LocalDate end = LocalDate.of(now.getYear(), 12, 31);
-                    txtStartDate.setDate(start);
-                    txtEndDate.setDate(end);
-                }
-                default -> {}
+        switch (idx) {
+            case 0 -> { // All Time
+                txtStartDate.setDate(null);
+                txtEndDate.setDate(null);
             }
+            case 1 -> { // Today
+                txtStartDate.setDate(now);
+                txtEndDate.setDate(now);
+            }
+            case 2 -> { // This Week
+                LocalDate start = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+                LocalDate end = now.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+                txtStartDate.setDate(start);
+                txtEndDate.setDate(end);
+            }
+            case 3 -> { // This Month
+                LocalDate start = now.withDayOfMonth(1);
+                LocalDate end = now.with(TemporalAdjusters.lastDayOfMonth());
+                txtStartDate.setDate(start);
+                txtEndDate.setDate(end);
+            }
+            case 4 -> { // This Quarter
+                int q = (now.getMonthValue() - 1) / 3 + 1;
+                LocalDate start = LocalDate.of(now.getYear(), (q - 1) * 3 + 1, 1);
+                LocalDate end = start.plusMonths(3).minusDays(1);
+                txtStartDate.setDate(start);
+                txtEndDate.setDate(end);
+            }
+            case 5 -> { // This Year
+                LocalDate start = LocalDate.of(now.getYear(), 1, 1);
+                LocalDate end = LocalDate.of(now.getYear(), 12, 31);
+                txtStartDate.setDate(start);
+                txtEndDate.setDate(end);
+            }
+            default -> {}
         }
         applyFilters();
     }
@@ -716,6 +717,12 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         Object personObj = cmbPersonFilter.getSelectedItem();
         if (personObj instanceof Person p) {
             criteria.setPersonId(p.getId());
+            criteria.setPersonName(p.getName());
+        }
+
+        // Active Date Preset
+        if (cmbDatePreset != null && cmbDatePreset.getSelectedIndex() >= 0) {
+            criteria.setDatePresetName((String) cmbDatePreset.getSelectedItem());
         }
 
         // Custom Date Range
@@ -754,6 +761,9 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
 
         String sortDir = (String) cmbSortDir.getSelectedItem();
         criteria.setSortAscending(sortDir != null && sortDir.contains("Asc"));
+
+        // Store active criteria snapshot for report export
+        this.currentCriteria = criteria;
 
         // Execute query against database
         List<Transaction> fetched = financeService.filterTransactions(criteria);
@@ -800,7 +810,7 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
                     tx.getPaymentVia() != null ? tx.getPaymentVia() : "-",
                     tx.getCategory() != null ? tx.getCategory() : "-",
                     tx.getSubCategory() != null ? tx.getSubCategory() : "-",
-                    tx.getPersonName() != null ? tx.getPersonName() : "-",
+                    tx.getAssociatedMasterDisplay(),
                     tx.getNotes() != null ? tx.getNotes() : ""
             });
         }
@@ -972,21 +982,21 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
                         if (!target.getName().toLowerCase().endsWith(".pdf")) {
                             target = new File(target.getAbsolutePath() + ".pdf");
                         }
-                        exportService.exportToPdf(currentTransactions, null, target);
+                        exportService.exportToPdf(currentTransactions, currentCriteria, target);
                         UiUtils.showSuccess(this, "Exported successfully to PDF:\n" + target.getAbsolutePath());
                     }
                     case "EXCEL" -> {
                         if (!target.getName().toLowerCase().endsWith(".xlsx")) {
                             target = new File(target.getAbsolutePath() + ".xlsx");
                         }
-                        exportService.exportToExcel(currentTransactions, null, target);
+                        exportService.exportToExcel(currentTransactions, currentCriteria, target);
                         UiUtils.showSuccess(this, "Exported successfully to Excel:\n" + target.getAbsolutePath());
                     }
                     default -> {
                         if (!target.getName().toLowerCase().endsWith(".csv")) {
                             target = new File(target.getAbsolutePath() + ".csv");
                         }
-                        exportService.exportToCsv(currentTransactions, target);
+                        exportService.exportToCsv(currentTransactions, currentCriteria, target);
                         UiUtils.showSuccess(this, "Exported successfully to CSV:\n" + target.getAbsolutePath());
                     }
                 }

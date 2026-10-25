@@ -28,6 +28,9 @@ public class Transaction {
     private Long emiId;
     private Long creditCardId;
     private String personName;
+    private String billName;
+    private String emiName;
+    private String cardName;
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -137,6 +140,69 @@ public class Transaction {
     public String getPersonName() { return personName; }
     /** @param personName Denormalized person name */
     public void setPersonName(String personName) { this.personName = personName; }
+
+    /** @return Denormalized bill name */
+    public String getBillName() { return billName; }
+    /** @param billName Denormalized bill name */
+    public void setBillName(String billName) { this.billName = billName; }
+
+    /** @return Denormalized EMI name */
+    public String getEmiName() { return emiName; }
+    /** @param emiName Denormalized EMI name */
+    public void setEmiName(String emiName) { this.emiName = emiName; }
+
+    /** @return Denormalized credit card name */
+    public String getCardName() { return cardName; }
+    /** @param cardName Denormalized credit card name */
+    public void setCardName(String cardName) { this.cardName = cardName; }
+
+    /**
+     * Returns the type of associated master entity ("Person", "Bill", "EMI", "Card", or "-").
+     *
+     * @return master category type
+     */
+    public String getAssociatedMasterType() {
+        if (personName != null && !personName.isBlank()) return "Person";
+        if (billName != null && !billName.isBlank()) return "Bill";
+        if (emiName != null && !emiName.isBlank()) return "EMI";
+        if (cardName != null && !cardName.isBlank()) return "Card";
+        return "-";
+    }
+
+    /**
+     * Returns the clean name of the associated master entity without prefix.
+     *
+     * @return clean master name
+     */
+    public String getAssociatedMasterName() {
+        if (personName != null && !personName.isBlank()) return personName.trim();
+        if (billName != null && !billName.isBlank()) return billName.trim();
+        if (emiName != null && !emiName.isBlank()) return emiName.trim();
+        if (cardName != null && !cardName.isBlank()) return cardName.trim();
+        return "-";
+    }
+
+    /**
+     * Returns a formatted descriptive label for display in tables and reports.
+     * Examples: "Ramesh Sharma", "Bill: Electricity", "EMI: Car Loan", "Card: HDFC Regalia".
+     *
+     * @return formatted master entity string, or "-" if unlinked
+     */
+    public String getAssociatedMasterDisplay() {
+        if (personName != null && !personName.isBlank()) {
+            return personName.trim();
+        }
+        if (billName != null && !billName.isBlank()) {
+            return "Bill: " + billName.trim();
+        }
+        if (emiName != null && !emiName.isBlank()) {
+            return "EMI: " + emiName.trim();
+        }
+        if (cardName != null && !cardName.isBlank()) {
+            return "Card: " + cardName.trim();
+        }
+        return "-";
+    }
 
     /** @return Transaction notes */
     public String getNotes() { return notes; }

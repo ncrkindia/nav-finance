@@ -1,6 +1,9 @@
 package com.navfinance.model;
 
+import com.navfinance.config.AppConfig;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Encapsulates search and filtering criteria for ledger transactions and audit logs.
@@ -25,6 +28,12 @@ public class FilterCriteria {
 
     /** Unique person ID for loan and dues tracking, or {@code null}. */
     private Long personId;
+
+    /** Denormalized person name for display and report metadata. */
+    private String personName;
+
+    /** Display name of active date preset (e.g., "This Month", "Today", "All Time"). */
+    private String datePresetName;
 
     /** Earliest transaction date boundary (inclusive). */
     private LocalDate startDate;
@@ -270,6 +279,126 @@ public class FilterCriteria {
      */
     public void setSortBy(String sortBy) {
         this.sortBy = sortBy;
+    }
+
+    /**
+     * Checks if ascending sort order is active.
+     *
+     * @return {@code true} if ascending, {@code false} if descending
+     */
+    /**
+     * Gets the linked person name filter.
+     *
+     * @return person name or {@code null}
+     */
+    public String getPersonName() {
+        return personName;
+    }
+
+    /**
+     * Sets the linked person name filter.
+     *
+     * @param personName person name or {@code null}
+     */
+    public void setPersonName(String personName) {
+        this.personName = personName;
+    }
+
+    /**
+     * Gets the display name of the active date preset.
+     *
+     * @return preset name or {@code null}
+     */
+    public String getDatePresetName() {
+        return datePresetName;
+    }
+
+    /**
+     * Sets the display name of the active date preset.
+     *
+     * @param datePresetName preset name or {@code null}
+     */
+    public void setDatePresetName(String datePresetName) {
+        this.datePresetName = datePresetName;
+    }
+
+    /**
+     * Returns a human-friendly representation of the date filter.
+     * E.g. "01-Oct-2026 to 25-Oct-2026 (This Month)" or "All Time".
+     *
+     * @return formatted date range string
+     */
+    public String getFormattedDateRange() {
+        if (startDate == null && endDate == null) {
+            return (datePresetName != null && !datePresetName.isBlank()) ? datePresetName : "All Time";
+        }
+        String startStr = startDate != null ? AppConfig.formatDate(startDate) : "Beginning";
+        String endStr = endDate != null ? AppConfig.formatDate(endDate) : "Present";
+        String range = startStr + " to " + endStr;
+        if (datePresetName != null && !datePresetName.isBlank() && !datePresetName.equalsIgnoreCase("Custom Range")) {
+            range += " (" + datePresetName + ")";
+        }
+        return range;
+    }
+
+    /**
+     * Checks if any filtering criteria beyond default is applied.
+     *
+     * @return {@code true} if any filter condition is active
+     */
+    public boolean hasActiveFilters() {
+        return type != null
+                || (category != null && !category.isBlank())
+                || (subCategory != null && !subCategory.isBlank())
+                || (paymentVia != null && !paymentVia.isBlank())
+                || personId != null
+                || (personName != null && !personName.isBlank())
+                || startDate != null
+                || endDate != null
+                || minAmount != null
+                || maxAmount != null
+                || expected != null
+                || (searchKeyword != null && !searchKeyword.isBlank());
+    }
+
+    /**
+     * Returns a list of label-value pairs representing active filter conditions for report exports.
+     *
+     * @return list of [FilterLabel, FilterValue] arrays
+     */
+    public List<String[]> getFilterSummary() {
+        List<String[]> filters = new ArrayList<>();
+        filters.add(new String[]{"Date Range", getFormattedDateRange()});
+
+        if (type != null) {
+            filters.add(new String[]{"Type", type.name()});
+        }
+        if (category != null && !category.isBlank()) {
+            filters.add(new String[]{"Category", category});
+        }
+        if (subCategory != null && !subCategory.isBlank()) {
+            filters.add(new String[]{"Sub-Category", subCategory});
+        }
+        if (personName != null && !personName.isBlank()) {
+            filters.add(new String[]{"Associated Person", personName});
+        } else if (personId != null) {
+            filters.add(new String[]{"Person ID", String.valueOf(personId)});
+        }
+        if (paymentVia != null && !paymentVia.isBlank()) {
+            filters.add(new String[]{"Payment Via", paymentVia});
+        }
+        if (minAmount != null || maxAmount != null) {
+            String min = minAmount != null ? AppConfig.formatCurrency(minAmount) : AppConfig.formatCurrency(0);
+            String max = maxAmount != null ? AppConfig.formatCurrency(maxAmount) : "Any";
+            filters.add(new String[]{"Amount Range", min + " - " + max});
+        }
+        if (expected != null) {
+            filters.add(new String[]{"Status", expected ? "Planned / Expected" : "Realized"});
+        }
+        if (searchKeyword != null && !searchKeyword.isBlank()) {
+            filters.add(new String[]{"Search Keyword", searchKeyword});
+        }
+        return filters;
     }
 
     /**
