@@ -63,23 +63,55 @@ public class EmiDao {
     }
 
     /**
+     * Finds all running EMIs associated with a specific credit card.
+     *
+     * @param creditCardId Credit card primary key
+     * @return List of EMIs on that card
+     */
+    public List<Emi> findByCreditCardId(Long creditCardId) {
+        List<Emi> list = new ArrayList<>();
+        if (creditCardId == null) return list;
+        String sql = "SELECT * FROM emis WHERE is_credit_card_emi = ? AND credit_card_id = ? ORDER BY emi_name ASC";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setBoolean(1, true);
+            ps.setLong(2, creditCardId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Failed to fetch EMIs for credit card #" + creditCardId + ": " + e.getMessage());
+        }
+        return list;
+    }
+
+    /**
      * Inserts a new EMI master record.
      *
      * @param emi EMI entity to persist
      * @return Persisted EMI with generated ID and timestamps
      */
     public Emi insert(Emi emi) {
-        String sql = "INSERT INTO emis (emi_name, bank_lender, monthly_amount, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO emis (emi_name, bank_lender, monthly_amount, total_amount, outstanding_amount, due_amount, due_day, is_credit_card_emi, credit_card_id, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             LocalDateTime now = LocalDateTime.now();
             ps.setString(1, emi.getEmiName());
             ps.setString(2, emi.getBankLender());
             if (emi.getMonthlyAmount() != null) ps.setDouble(3, emi.getMonthlyAmount());
-            else ps.setNull(3, java.sql.Types.DECIMAL);
-            ps.setString(4, emi.getNotes());
-            ps.setTimestamp(5, Timestamp.valueOf(now));
-            ps.setTimestamp(6, Timestamp.valueOf(now));
+            else ps.setDouble(3, 0.0);
+            ps.setDouble(4, emi.getTotalAmount() != null ? emi.getTotalAmount() : 0.0);
+            ps.setDouble(5, emi.getOutstandingAmount() != null ? emi.getOutstandingAmount() : 0.0);
+            ps.setDouble(6, emi.getDueAmount() != null ? emi.getDueAmount() : 0.0);
+            ps.setInt(7, emi.getDueDay() != null ? emi.getDueDay() : 0);
+            ps.setBoolean(8, emi.isCreditCardEmi());
+            if (emi.getCreditCardId() != null) ps.setLong(9, emi.getCreditCardId());
+            else ps.setNull(9, java.sql.Types.BIGINT);
+            ps.setString(10, emi.getNotes());
+            ps.setTimestamp(11, Timestamp.valueOf(now));
+            ps.setTimestamp(12, Timestamp.valueOf(now));
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) {
@@ -101,17 +133,24 @@ public class EmiDao {
      * @return {@code true} if updated successfully, {@code false} otherwise
      */
     public boolean update(Emi emi) {
-        String sql = "UPDATE emis SET emi_name = ?, bank_lender = ?, monthly_amount = ?, notes = ?, updated_at = ? WHERE id = ?";
+        String sql = "UPDATE emis SET emi_name = ?, bank_lender = ?, monthly_amount = ?, total_amount = ?, outstanding_amount = ?, due_amount = ?, due_day = ?, is_credit_card_emi = ?, credit_card_id = ?, notes = ?, updated_at = ? WHERE id = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             LocalDateTime now = LocalDateTime.now();
             ps.setString(1, emi.getEmiName());
             ps.setString(2, emi.getBankLender());
             if (emi.getMonthlyAmount() != null) ps.setDouble(3, emi.getMonthlyAmount());
-            else ps.setNull(3, java.sql.Types.DECIMAL);
-            ps.setString(4, emi.getNotes());
-            ps.setTimestamp(5, Timestamp.valueOf(now));
-            ps.setLong(6, emi.getId());
+            else ps.setDouble(3, 0.0);
+            ps.setDouble(4, emi.getTotalAmount() != null ? emi.getTotalAmount() : 0.0);
+            ps.setDouble(5, emi.getOutstandingAmount() != null ? emi.getOutstandingAmount() : 0.0);
+            ps.setDouble(6, emi.getDueAmount() != null ? emi.getDueAmount() : 0.0);
+            ps.setInt(7, emi.getDueDay() != null ? emi.getDueDay() : 0);
+            ps.setBoolean(8, emi.isCreditCardEmi());
+            if (emi.getCreditCardId() != null) ps.setLong(9, emi.getCreditCardId());
+            else ps.setNull(9, java.sql.Types.BIGINT);
+            ps.setString(10, emi.getNotes());
+            ps.setTimestamp(11, Timestamp.valueOf(now));
+            ps.setLong(12, emi.getId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Failed to update EMI: " + e.getMessage());
@@ -151,12 +190,41 @@ public class EmiDao {
         e.setBankLender(rs.getString("bank_lender"));
         double amt = rs.getDouble("monthly_amount");
         if (!rs.wasNull()) e.setMonthlyAmount(amt);
+        e.setTotalAmount(getDoubleFromRs(rs, "total_amount"));
+        e.setOutstandingAmount(getDoubleFromRs(rs, "outstanding_amount"));
+        e.setDueAmount(getDoubleFromRs(rs, "due_amount"));
+        e.setDueDay(getIntFromRs(rs, "due_day"));
+        try {
+            e.setCreditCardEmi(rs.getBoolean("is_credit_card_emi"));
+        } catch (SQLException ignored) {}
+        try {
+            long ccId = rs.getLong("credit_card_id");
+            if (!rs.wasNull()) e.setCreditCardId(ccId);
+        } catch (SQLException ignored) {}
         e.setNotes(rs.getString("notes"));
         Timestamp cat = rs.getTimestamp("created_at");
         if (cat != null) e.setCreatedAt(cat.toLocalDateTime());
         Timestamp uat = rs.getTimestamp("updated_at");
         if (uat != null) e.setUpdatedAt(uat.toLocalDateTime());
         return e;
+    }
+
+    private Double getDoubleFromRs(ResultSet rs, String col) {
+        try {
+            double v = rs.getDouble(col);
+            return rs.wasNull() ? 0.0 : v;
+        } catch (SQLException e) {
+            return 0.0;
+        }
+    }
+
+    private Integer getIntFromRs(ResultSet rs, String col) {
+        try {
+            int v = rs.getInt(col);
+            return rs.wasNull() ? 0 : v;
+        } catch (SQLException e) {
+            return 0;
+        }
     }
 }
 

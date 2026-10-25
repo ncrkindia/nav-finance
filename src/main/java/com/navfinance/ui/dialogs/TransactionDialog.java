@@ -122,15 +122,23 @@ public class TransactionDialog extends JDialog {
     private JLabel lblSubCategoryTitle;
 
     public TransactionDialog(JFrame parent, Transaction transactionToEdit, TransactionType defaultType) {
-        super(parent, transactionToEdit == null ?
-                (defaultType == TransactionType.INCOME ? I18n.get("dialog.income.addTitle") : I18n.get("dialog.expense.addTitle")) :
-                (transactionToEdit.getType() == TransactionType.INCOME ? I18n.get("dialog.income.editTitle") : I18n.get("dialog.expense.editTitle")) + " #" + transactionToEdit.getId(), true);
+        super(parent, resolveDialogTitle(transactionToEdit, defaultType), true);
         this.existingTransaction = transactionToEdit;
 
         initComponents(defaultType != null ? defaultType : TransactionType.EXPENSE);
         pack();
         UiUtils.clampDialogToScreen(this);
         setLocationRelativeTo(parent);
+    }
+
+    private static String resolveDialogTitle(Transaction tx, TransactionType defaultType) {
+        if (tx == null) {
+            return defaultType == TransactionType.INCOME ? I18n.get("dialog.income.addTitle") : I18n.get("dialog.expense.addTitle");
+        } else if (tx.getId() == null) {
+            return I18n.get("dialog.duplicate.title");
+        } else {
+            return (tx.getType() == TransactionType.INCOME ? I18n.get("dialog.income.editTitle") : I18n.get("dialog.expense.editTitle")) + " #" + tx.getId();
+        }
     }
 
     private void initComponents(TransactionType defaultType) {
@@ -437,7 +445,8 @@ public class TransactionDialog extends JDialog {
         btnCancel.setFont(UiUtils.boldFont());
         btnCancel.addActionListener(e -> dispose());
 
-        JButton btnSave = UiUtils.createPrimaryButton(existingTransaction == null ? I18n.get("btn.save") : I18n.get("btn.edit"), NavIcons.check(13, Color.WHITE));
+        boolean isNewOrDuplicate = (existingTransaction == null || existingTransaction.getId() == null);
+        JButton btnSave = UiUtils.createPrimaryButton(isNewOrDuplicate ? I18n.get("btn.save") : I18n.get("btn.edit"), NavIcons.check(13, Color.WHITE));
         btnSave.setFont(UiUtils.boldFont());
         btnSave.addActionListener(e -> onSave());
 

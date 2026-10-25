@@ -77,24 +77,36 @@ public class DbSchemaManager {
                 + "created_at " + tsDef + ", "
                 + "updated_at " + tsDef + ")");
 
-        // 3. EMIs Table
-        list.add("CREATE TABLE IF NOT EXISTS emis ("
-                + "id " + pkDef + ", "
-                + "emi_name VARCHAR(150) NOT NULL, "
-                + "bank_lender VARCHAR(100), "
-                + "monthly_amount DECIMAL(15,2), "
-                + "notes VARCHAR(500), "
-                + "created_at " + tsDef + ", "
-                + "updated_at " + tsDef + ")");
-
-        // 4. Credit Cards Table
+        // 3. Credit Cards Table
         list.add("CREATE TABLE IF NOT EXISTS credit_cards ("
                 + "id " + pkDef + ", "
                 + "card_name VARCHAR(100) NOT NULL, "
                 + "bank VARCHAR(100), "
                 + "last_digits VARCHAR(10), "
+                + "total_limit DECIMAL(15,2) DEFAULT 0.0, "
+                + "outstanding_amount DECIMAL(15,2) DEFAULT 0.0, "
+                + "due_amount DECIMAL(15,2) DEFAULT 0.0, "
+                + "due_day INT DEFAULT 0, "
+                + "billing_day INT DEFAULT 0, "
                 + "created_at " + tsDef + ", "
                 + "updated_at " + tsDef + ")");
+
+        // 4. EMIs (Bank Loans & CC EMIs) Table
+        list.add("CREATE TABLE IF NOT EXISTS emis ("
+                + "id " + pkDef + ", "
+                + "emi_name VARCHAR(150) NOT NULL, "
+                + "bank_lender VARCHAR(100), "
+                + "monthly_amount DECIMAL(15,2), "
+                + "total_amount DECIMAL(15,2) DEFAULT 0.0, "
+                + "outstanding_amount DECIMAL(15,2) DEFAULT 0.0, "
+                + "due_amount DECIMAL(15,2) DEFAULT 0.0, "
+                + "due_day INT DEFAULT 0, "
+                + "is_credit_card_emi " + boolDef + " DEFAULT " + (dbType == DatabaseType.SQLITE ? "0" : "FALSE") + ", "
+                + "credit_card_id BIGINT, "
+                + "notes VARCHAR(500), "
+                + "created_at " + tsDef + ", "
+                + "updated_at " + tsDef + ", "
+                + "FOREIGN KEY (credit_card_id) REFERENCES credit_cards(id) ON DELETE SET NULL)");
 
         // 5. Payment Modes Table
         list.add("CREATE TABLE IF NOT EXISTS payment_modes ("
@@ -236,12 +248,62 @@ public class DbSchemaManager {
         createIndexSafely(conn, "idx_link_return", "transaction_links", "return_tx_id");
         createIndexSafely(conn, "idx_cat_type", "categories", "type");
         createIndexSafely(conn, "idx_subcat_cat_id", "sub_categories", "category_id");
+        createIndexSafely(conn, "idx_emi_cc_id", "emis", "credit_card_id");
+
+        // Auto-migrate schema updates for existing tables
+        addColumnSafely(conn, "credit_cards", "total_limit", "DECIMAL(15,2) DEFAULT 0.0");
+        addColumnSafely(conn, "credit_cards", "outstanding_amount", "DECIMAL(15,2) DEFAULT 0.0");
+        addColumnSafely(conn, "credit_cards", "due_amount", "DECIMAL(15,2) DEFAULT 0.0");
+        addColumnSafely(conn, "credit_cards", "due_day", "INT DEFAULT 0");
+        addColumnSafely(conn, "credit_cards", "billing_day", "INT DEFAULT 0");
+
+        addColumnSafely(conn, "emis", "total_amount", "DECIMAL(15,2) DEFAULT 0.0");
+        addColumnSafely(conn, "emis", "outstanding_amount", "DECIMAL(15,2) DEFAULT 0.0");
+        addColumnSafely(conn, "emis", "due_amount", "DECIMAL(15,2) DEFAULT 0.0");
+        addColumnSafely(conn, "emis", "due_day", "INT DEFAULT 0");
+        addColumnSafely(conn, "emis", "is_credit_card_emi", (dbType == DatabaseType.SQLITE ? "INTEGER DEFAULT 0" : "BOOLEAN DEFAULT FALSE"));
+        addColumnSafely(conn, "emis", "credit_card_id", "BIGINT");
 
         // Seed default payment modes across all databases
         seedDefaultPaymentModes(conn, dbType);
 
         // Seed default categories and associated sub-categories
         seedDefaultCategories(conn, dbType);
+    }
+
+    /**
+     * Checks if a column exists in a given table, and adds it if missing across all database dialects.
+     */
+    private static void addColumnSafely(Connection conn, String tableName, String columnName, String columnDef) {
+        boolean exists = false;
+        try {
+            java.sql.DatabaseMetaData meta = conn.getMetaData();
+            try (ResultSet rs = meta.getColumns(null, null, tableName.toUpperCase(), columnName.toUpperCase())) {
+                if (rs.next()) exists = true;
+            }
+            if (!exists) {
+                try (ResultSet rs = meta.getColumns(null, null, tableName.toLowerCase(), columnName.toLowerCase())) {
+                    if (rs.next()) exists = true;
+                }
+            }
+            if (!exists) {
+                try (ResultSet rs = meta.getColumns(null, null, tableName, columnName)) {
+                    if (rs.next()) exists = true;
+                }
+            }
+        } catch (SQLException ignored) {}
+
+        if (!exists) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDef);
+            } catch (SQLException e1) {
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute("ALTER TABLE " + tableName + " ADD " + columnName + " " + columnDef);
+                } catch (SQLException ignored) {
+                    // Column might already exist or DB syntax variation
+                }
+            }
+        }
     }
 
     /**

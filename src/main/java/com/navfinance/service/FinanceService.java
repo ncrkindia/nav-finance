@@ -323,6 +323,16 @@ public class FinanceService {
         return ok;
     }
 
+    /**
+     * Retrieves all active EMIs running on a specific credit card.
+     *
+     * @param creditCardId Credit Card ID
+     * @return List of {@link Emi} records linked to the card
+     */
+    public List<Emi> getEmisByCreditCard(Long creditCardId) {
+        return emiDao.findByCreditCardId(creditCardId);
+    }
+
     // --- Masters: Credit Cards ---
 
     /**

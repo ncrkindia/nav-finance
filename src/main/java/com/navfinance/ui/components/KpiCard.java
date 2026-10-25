@@ -139,6 +139,17 @@ public class KpiCard extends JPanel {
     }
 
     /**
+     * Updates both the primary metric value and the contextual subtitle.
+     *
+     * @param value new metric value text
+     * @param subtitle new subtitle text
+     */
+    public void updateValue(String value, String subtitle) {
+        setValue(value);
+        setSubtitle(subtitle);
+    }
+
+    /**
      * Updates the contextual subtitle description.
      *
      * @param subtitle new subtitle text

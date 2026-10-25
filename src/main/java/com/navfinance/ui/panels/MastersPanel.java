@@ -11,6 +11,7 @@ import com.navfinance.model.Emi;
 import com.navfinance.model.Person;
 import com.navfinance.model.SubCategory;
 import com.navfinance.service.FinanceService;
+import com.navfinance.ui.components.KpiCard;
 import com.navfinance.ui.dialogs.BillDialog;
 import com.navfinance.ui.dialogs.CategoryDialog;
 import com.navfinance.ui.dialogs.CreditCardDialog;
@@ -39,6 +40,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -85,6 +87,18 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
 
     /** Table model backing the Credit Card grid. */
     private DefaultTableModel modelCards;
+
+    // KPI summary indicators for Credit Cards
+    private KpiCard kpiCardTotalLimit;
+    private KpiCard kpiCardOutstanding;
+    private KpiCard kpiCardAvailable;
+    private KpiCard kpiCardDue;
+
+    // KPI summary indicators for EMIs / Loans
+    private KpiCard kpiEmiSanctioned;
+    private KpiCard kpiEmiOutstanding;
+    private KpiCard kpiEmiMonthly;
+    private KpiCard kpiEmiDue;
 
     /** Table displaying customizable payment channels and modes. */
     private JTable tblModes;
@@ -298,6 +312,21 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        JPanel topContainer = new JPanel(new BorderLayout(0, 8));
+        topContainer.setOpaque(false);
+
+        JPanel kpiRow = new JPanel(new GridLayout(1, 4, 10, 0));
+        kpiRow.setOpaque(false);
+        kpiEmiSanctioned = new KpiCard(I18n.get("masters.kpi.totalSanctioned"), AppConfig.formatCurrency(0.0), "Total loan sanctioned limit", UiUtils.COLOR_PRIMARY, NavIcons.emi(18, UiUtils.COLOR_PRIMARY));
+        kpiEmiOutstanding = new KpiCard(I18n.get("masters.kpi.totalOutstanding"), AppConfig.formatCurrency(0.0), "Remaining loan balance", UiUtils.COLOR_EXPENSE, NavIcons.minus(18, UiUtils.COLOR_EXPENSE));
+        kpiEmiMonthly = new KpiCard(I18n.get("masters.kpi.monthlyEmi"), AppConfig.formatCurrency(0.0), "Monthly commitment", UiUtils.COLOR_AMBER, NavIcons.dashboard(18, UiUtils.COLOR_AMBER));
+        kpiEmiDue = new KpiCard(I18n.get("masters.kpi.totalDue"), AppConfig.formatCurrency(0.0), "Current due amount", UiUtils.COLOR_EXPENSE, NavIcons.bill(18, UiUtils.COLOR_EXPENSE));
+        kpiRow.add(kpiEmiSanctioned);
+        kpiRow.add(kpiEmiOutstanding);
+        kpiRow.add(kpiEmiMonthly);
+        kpiRow.add(kpiEmiDue);
+        topContainer.add(kpiRow, BorderLayout.NORTH);
+
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         topBar.setOpaque(false);
 
@@ -322,13 +351,19 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
         topBar.add(btnEdit);
         topBar.add(btnDelete);
         topBar.add(btnTrack);
-        panel.add(topBar, BorderLayout.NORTH);
+        topContainer.add(topBar, BorderLayout.SOUTH);
+        panel.add(topContainer, BorderLayout.NORTH);
 
         String[] cols = {
                 "ID",
                 I18n.get("masters.table.name"),
                 I18n.get("masters.table.bank"),
+                I18n.get("masters.table.loanType"),
+                I18n.get("masters.table.totalLimit"),
                 I18n.get("masters.table.monthlyAmount"),
+                I18n.get("masters.table.outstanding"),
+                I18n.get("masters.table.dueAmount"),
+                I18n.get("masters.table.dueDay"),
                 I18n.get("masters.table.notes")
         };
         modelEmis = new DefaultTableModel(cols, 0) {
@@ -361,6 +396,21 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        JPanel topContainer = new JPanel(new BorderLayout(0, 8));
+        topContainer.setOpaque(false);
+
+        JPanel kpiRow = new JPanel(new GridLayout(1, 4, 10, 0));
+        kpiRow.setOpaque(false);
+        kpiCardTotalLimit = new KpiCard(I18n.get("masters.kpi.totalCreditLimit"), AppConfig.formatCurrency(0.0), "Total combined limit", UiUtils.COLOR_PRIMARY, NavIcons.card(18, UiUtils.COLOR_PRIMARY));
+        kpiCardOutstanding = new KpiCard(I18n.get("masters.kpi.totalOutstanding"), AppConfig.formatCurrency(0.0), "Utilized credit balance", UiUtils.COLOR_EXPENSE, NavIcons.minus(18, UiUtils.COLOR_EXPENSE));
+        kpiCardAvailable = new KpiCard(I18n.get("masters.kpi.availableCredit"), AppConfig.formatCurrency(0.0), "Remaining spend power", UiUtils.COLOR_INCOME, NavIcons.plus(18, UiUtils.COLOR_INCOME));
+        kpiCardDue = new KpiCard(I18n.get("masters.kpi.totalDue"), AppConfig.formatCurrency(0.0), "Statement bills due", UiUtils.COLOR_AMBER, NavIcons.bill(18, UiUtils.COLOR_AMBER));
+        kpiRow.add(kpiCardTotalLimit);
+        kpiRow.add(kpiCardOutstanding);
+        kpiRow.add(kpiCardAvailable);
+        kpiRow.add(kpiCardDue);
+        topContainer.add(kpiRow, BorderLayout.NORTH);
+
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         topBar.setOpaque(false);
 
@@ -385,13 +435,20 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
         topBar.add(btnEdit);
         topBar.add(btnDelete);
         topBar.add(btnTrack);
-        panel.add(topBar, BorderLayout.NORTH);
+        topContainer.add(topBar, BorderLayout.SOUTH);
+        panel.add(topContainer, BorderLayout.NORTH);
 
         String[] cols = {
                 "ID",
                 I18n.get("masters.table.name"),
                 I18n.get("masters.table.bank"),
-                I18n.get("masters.table.lastDigits")
+                I18n.get("masters.table.lastDigits"),
+                I18n.get("masters.table.totalLimit"),
+                I18n.get("masters.table.outstanding"),
+                I18n.get("masters.table.availableLimit"),
+                I18n.get("masters.table.dueAmount"),
+                I18n.get("masters.table.dueDay"),
+                "Active CC EMIs"
         };
         modelCards = new DefaultTableModel(cols, 0) {
             @Override
@@ -1099,15 +1156,42 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
     private void refreshEmis() {
         modelEmis.setRowCount(0);
         List<Emi> list = financeService.getAllEmis();
+        double totalSanctioned = 0.0;
+        double totalOut = 0.0;
+        double totalMonthly = 0.0;
+        double totalDue = 0.0;
+
         for (Emi e : list) {
+            double sanc = e.getTotalAmount() != null ? e.getTotalAmount() : 0.0;
+            double out = e.getOutstandingAmount() != null ? e.getOutstandingAmount() : 0.0;
+            double monthly = e.getMonthlyAmount() != null ? e.getMonthlyAmount() : 0.0;
+            double due = e.getDueAmount() != null ? e.getDueAmount() : 0.0;
+            totalSanctioned += sanc;
+            totalOut += out;
+            totalMonthly += monthly;
+            totalDue += due;
+
+            String typeStr = e.isCreditCardEmi() ? I18n.get("masters.table.ccEmi") : I18n.get("masters.table.bankLoan");
+            String dueDayStr = e.getDueDay() != null && e.getDueDay() > 0 ? e.getDueDay() + "th" : "-";
+
             modelEmis.addRow(new Object[]{
                     e.getId(),
                     e.getEmiName(),
-                    e.getBankLender(),
-                    e.getMonthlyAmount() != null ? AppConfig.formatCurrency(e.getMonthlyAmount()) : "-",
-                    e.getNotes()
+                    e.getBankLender() != null ? e.getBankLender() : "-",
+                    typeStr,
+                    sanc > 0 ? AppConfig.formatCurrency(sanc) : "-",
+                    monthly > 0 ? AppConfig.formatCurrency(monthly) : "-",
+                    out > 0 ? AppConfig.formatCurrency(out) : "-",
+                    due > 0 ? AppConfig.formatCurrency(due) : "-",
+                    dueDayStr,
+                    e.getNotes() != null ? e.getNotes() : "-"
             });
         }
+
+        if (kpiEmiSanctioned != null) kpiEmiSanctioned.updateValue(AppConfig.formatCurrency(totalSanctioned), list.size() + " active loans/EMIs");
+        if (kpiEmiOutstanding != null) kpiEmiOutstanding.updateValue(AppConfig.formatCurrency(totalOut), "Remaining principal balance");
+        if (kpiEmiMonthly != null) kpiEmiMonthly.updateValue(AppConfig.formatCurrency(totalMonthly), "Monthly commitment");
+        if (kpiEmiDue != null) kpiEmiDue.updateValue(AppConfig.formatCurrency(totalDue), "Current overdue / due amount");
     }
 
     /**
@@ -1116,9 +1200,48 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
     private void refreshCards() {
         modelCards.setRowCount(0);
         List<CreditCard> list = financeService.getAllCreditCards();
+        double totalLimit = 0.0;
+        double totalOut = 0.0;
+        double totalAvail = 0.0;
+        double totalDue = 0.0;
+
         for (CreditCard c : list) {
-            modelCards.addRow(new Object[]{c.getId(), c.getCardName(), c.getBank(), c.getLastDigits()});
+            double lim = c.getTotalLimit() != null ? c.getTotalLimit() : 0.0;
+            double out = c.getOutstandingAmount() != null ? c.getOutstandingAmount() : 0.0;
+            double due = c.getDueAmount() != null ? c.getDueAmount() : 0.0;
+            double avail = c.getAvailableLimit() != null ? c.getAvailableLimit() : 0.0;
+            totalLimit += lim;
+            totalOut += out;
+            totalAvail += avail;
+            totalDue += due;
+
+            List<Emi> cardEmis = financeService.getEmisByCreditCard(c.getId());
+            double emiMonthly = cardEmis.stream().mapToDouble(e -> e.getMonthlyAmount() != null ? e.getMonthlyAmount() : 0.0).sum();
+            String ccEmiInfo = cardEmis.isEmpty() ? "-" : cardEmis.size() + " (" + AppConfig.formatCurrency(emiMonthly) + "/mo)";
+            String dueDayStr = c.getDueDay() != null && c.getDueDay() > 0 ? c.getDueDay() + "th" : "-";
+            String last4Str = c.getLastDigits() != null && !c.getLastDigits().isEmpty() ? ".." + c.getLastDigits() : "-";
+
+            modelCards.addRow(new Object[]{
+                    c.getId(),
+                    c.getCardName(),
+                    c.getBank() != null ? c.getBank() : "-",
+                    last4Str,
+                    lim > 0 ? AppConfig.formatCurrency(lim) : "-",
+                    out > 0 ? AppConfig.formatCurrency(out) : "-",
+                    AppConfig.formatCurrency(avail),
+                    due > 0 ? AppConfig.formatCurrency(due) : "-",
+                    dueDayStr,
+                    ccEmiInfo
+            });
         }
+
+        if (kpiCardTotalLimit != null) kpiCardTotalLimit.updateValue(AppConfig.formatCurrency(totalLimit), list.size() + " credit cards");
+        if (kpiCardOutstanding != null) {
+            double util = totalLimit > 0 ? (totalOut / totalLimit) * 100.0 : 0.0;
+            kpiCardOutstanding.updateValue(AppConfig.formatCurrency(totalOut), String.format("Utilization: %.1f%%", util));
+        }
+        if (kpiCardAvailable != null) kpiCardAvailable.updateValue(AppConfig.formatCurrency(totalAvail), "Available to spend");
+        if (kpiCardDue != null) kpiCardDue.updateValue(AppConfig.formatCurrency(totalDue), "Statements due to pay");
     }
 
     /**

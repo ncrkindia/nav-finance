@@ -463,7 +463,7 @@ public class RecurringScheduleDialog extends JDialog {
         } else if ("EMI Payment".equalsIgnoreCase(cat)) {
             List<Emi> emis = financeService.getAllEmis();
             for (Emi em : emis) {
-                if (!containsItem(cmbSubCategory, em.getEmiName())) cmbSubCategory.addItem(em.getEmiName());
+                if (!em.isCreditCardEmi() && !containsItem(cmbSubCategory, em.getEmiName())) cmbSubCategory.addItem(em.getEmiName());
             }
         } else if ("Credit Card".equalsIgnoreCase(cat)) {
             List<CreditCard> cards = financeService.getAllCreditCards();

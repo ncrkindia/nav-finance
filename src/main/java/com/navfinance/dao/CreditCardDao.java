@@ -72,15 +72,20 @@ public class CreditCardDao {
      * @return Inserted credit card with generated ID and timestamps
      */
     public CreditCard insert(CreditCard card) {
-        String sql = "INSERT INTO credit_cards (card_name, bank, last_digits, created_at, updated_at) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO credit_cards (card_name, bank, last_digits, total_limit, outstanding_amount, due_amount, due_day, billing_day, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             LocalDateTime now = LocalDateTime.now();
             ps.setString(1, card.getCardName());
             ps.setString(2, card.getBank());
             ps.setString(3, card.getLastDigits());
-            ps.setTimestamp(4, Timestamp.valueOf(now));
-            ps.setTimestamp(5, Timestamp.valueOf(now));
+            ps.setDouble(4, card.getTotalLimit() != null ? card.getTotalLimit() : 0.0);
+            ps.setDouble(5, card.getOutstandingAmount() != null ? card.getOutstandingAmount() : 0.0);
+            ps.setDouble(6, card.getDueAmount() != null ? card.getDueAmount() : 0.0);
+            ps.setInt(7, card.getDueDay() != null ? card.getDueDay() : 0);
+            ps.setInt(8, card.getBillingDay() != null ? card.getBillingDay() : 0);
+            ps.setTimestamp(9, Timestamp.valueOf(now));
+            ps.setTimestamp(10, Timestamp.valueOf(now));
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) {
@@ -102,15 +107,20 @@ public class CreditCardDao {
      * @return {@code true} if updated successfully, {@code false} otherwise
      */
     public boolean update(CreditCard card) {
-        String sql = "UPDATE credit_cards SET card_name = ?, bank = ?, last_digits = ?, updated_at = ? WHERE id = ?";
+        String sql = "UPDATE credit_cards SET card_name = ?, bank = ?, last_digits = ?, total_limit = ?, outstanding_amount = ?, due_amount = ?, due_day = ?, billing_day = ?, updated_at = ? WHERE id = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             LocalDateTime now = LocalDateTime.now();
             ps.setString(1, card.getCardName());
             ps.setString(2, card.getBank());
             ps.setString(3, card.getLastDigits());
-            ps.setTimestamp(4, Timestamp.valueOf(now));
-            ps.setLong(5, card.getId());
+            ps.setDouble(4, card.getTotalLimit() != null ? card.getTotalLimit() : 0.0);
+            ps.setDouble(5, card.getOutstandingAmount() != null ? card.getOutstandingAmount() : 0.0);
+            ps.setDouble(6, card.getDueAmount() != null ? card.getDueAmount() : 0.0);
+            ps.setInt(7, card.getDueDay() != null ? card.getDueDay() : 0);
+            ps.setInt(8, card.getBillingDay() != null ? card.getBillingDay() : 0);
+            ps.setTimestamp(9, Timestamp.valueOf(now));
+            ps.setLong(10, card.getId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Failed to update credit card: " + e.getMessage());
@@ -149,11 +159,34 @@ public class CreditCardDao {
         c.setCardName(rs.getString("card_name"));
         c.setBank(rs.getString("bank"));
         c.setLastDigits(rs.getString("last_digits"));
+        c.setTotalLimit(getDoubleFromRs(rs, "total_limit"));
+        c.setOutstandingAmount(getDoubleFromRs(rs, "outstanding_amount"));
+        c.setDueAmount(getDoubleFromRs(rs, "due_amount"));
+        c.setDueDay(getIntFromRs(rs, "due_day"));
+        c.setBillingDay(getIntFromRs(rs, "billing_day"));
         Timestamp cat = rs.getTimestamp("created_at");
         if (cat != null) c.setCreatedAt(cat.toLocalDateTime());
         Timestamp uat = rs.getTimestamp("updated_at");
         if (uat != null) c.setUpdatedAt(uat.toLocalDateTime());
         return c;
+    }
+
+    private Double getDoubleFromRs(ResultSet rs, String col) {
+        try {
+            double v = rs.getDouble(col);
+            return rs.wasNull() ? 0.0 : v;
+        } catch (SQLException e) {
+            return 0.0;
+        }
+    }
+
+    private Integer getIntFromRs(ResultSet rs, String col) {
+        try {
+            int v = rs.getInt(col);
+            return rs.wasNull() ? 0 : v;
+        } catch (SQLException e) {
+            return 0;
+        }
     }
 }
 

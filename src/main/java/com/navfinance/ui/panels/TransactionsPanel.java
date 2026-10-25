@@ -42,6 +42,8 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
@@ -54,6 +56,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
@@ -193,6 +196,10 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         JButton btnEdit = UiUtils.createSecondaryButton(I18n.get("btn.edit"), NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnEdit.addActionListener(e -> onEditSelected());
 
+        JButton btnDuplicate = UiUtils.createSecondaryButton(I18n.get("transactions.action.duplicate"), NavIcons.plus(13, UiUtils.COLOR_INCOME));
+        btnDuplicate.setToolTipText("Duplicate selected transaction for quick modifications (Quick Add)");
+        btnDuplicate.addActionListener(e -> onDuplicateSelected());
+
         JButton btnDelete = UiUtils.createSecondaryButton(I18n.get("btn.delete"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
         btnDelete.addActionListener(e -> onDeleteSelected());
 
@@ -230,6 +237,7 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         btnGroup.add(btnAddIncome);
         btnGroup.add(btnAddExpense);
         btnGroup.add(btnEdit);
+        btnGroup.add(btnDuplicate);
         btnGroup.add(btnDelete);
         btnGroup.add(btnTrack);
         btnGroup.add(btnLink);
@@ -548,9 +556,30 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
 
         tblTransactions.addMouseListener(new MouseAdapter() {
             @Override
+            public void mousePressed(MouseEvent e) {
+                handleRowSelection(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                handleRowSelection(e);
+            }
+
+            @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2 && tblTransactions.getSelectedRow() >= 0) {
                     onEditSelected();
+                }
+            }
+
+            private void handleRowSelection(MouseEvent e) {
+                if (e.isPopupTrigger() || SwingUtilities.isRightMouseButton(e)) {
+                    int r = tblTransactions.rowAtPoint(e.getPoint());
+                    if (r >= 0 && r < tblTransactions.getRowCount()) {
+                        if (!tblTransactions.isRowSelected(r)) {
+                            tblTransactions.setRowSelectionInterval(r, r);
+                        }
+                    }
                 }
             }
         });
@@ -1431,6 +1460,45 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         }
     }
 
+    private void onDuplicateSelected() {
+        int row = tblTransactions.getSelectedRow();
+        if (row < 0) {
+            UiUtils.showError(this, "Please select a transaction to duplicate.");
+            return;
+        }
+
+        Long id = (Long) tblTransactions.getValueAt(row, 0);
+        Transaction tx = financeService.getTransactionById(id);
+        if (tx != null) {
+            Transaction copy = new Transaction();
+            copy.setType(tx.getType());
+            copy.setAmount(tx.getAmount());
+            copy.setCategory(tx.getCategory());
+            copy.setSubCategory(tx.getSubCategory());
+            copy.setTxDate(tx.getTxDate() != null ? tx.getTxDate() : LocalDate.now());
+            copy.setPaymentVia(tx.getPaymentVia());
+            copy.setPersonId(tx.getPersonId());
+            copy.setPersonName(tx.getPersonName());
+            copy.setBillId(tx.getBillId());
+            copy.setBillName(tx.getBillName());
+            copy.setEmiId(tx.getEmiId());
+            copy.setEmiName(tx.getEmiName());
+            copy.setCreditCardId(tx.getCreditCardId());
+            copy.setCardName(tx.getCardName());
+            copy.setNotes(tx.getNotes());
+            copy.setExpected(tx.isExpected());
+
+            JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
+            TransactionDialog dialog = new TransactionDialog(frame, copy, copy.getType());
+            dialog.setVisible(true);
+            if (dialog.isSaved()) {
+                applyFilters();
+                populateFilterDropdowns();
+                UiUtils.showSuccess(this, "Transaction duplicated and recorded successfully.");
+            }
+        }
+    }
+
     private void onDeleteSelected() {
         int row = tblTransactions.getSelectedRow();
         if (row < 0) {
@@ -1553,8 +1621,13 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
     private void setupTableContextMenu() {
         JPopupMenu popup = new JPopupMenu();
 
-        JMenuItem itmEdit = new JMenuItem(I18n.get("btn.edit"), NavIcons.edit(12, UiUtils.COLOR_PRIMARY));
+        JMenuItem itmEdit = new JMenuItem(I18n.get("transactions.action.editQuick"), NavIcons.edit(12, UiUtils.COLOR_PRIMARY));
+        itmEdit.setToolTipText("Edit or quickly modify details for the selected transaction");
         itmEdit.addActionListener(e -> onEditSelected());
+
+        JMenuItem itmDuplicate = new JMenuItem(I18n.get("transactions.action.duplicate"), NavIcons.plus(12, UiUtils.COLOR_INCOME));
+        itmDuplicate.setToolTipText("Duplicate selected transaction for quick add with instant modifications");
+        itmDuplicate.addActionListener(e -> onDuplicateSelected());
 
         JMenuItem itmTrack = new JMenuItem("Track Entity & Trends 📊", NavIcons.dashboard(12, UiUtils.COLOR_PRIMARY));
         itmTrack.addActionListener(e -> onTrackEntityFromTable());
@@ -1562,14 +1635,35 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         JMenuItem itmLink = new JMenuItem(I18n.get("link.action.linkCounterpart"), NavIcons.link(12, UiUtils.COLOR_PRIMARY));
         itmLink.addActionListener(e -> onLinkSelected());
 
-        JMenuItem itmDelete = new JMenuItem(I18n.get("btn.delete"), NavIcons.trash(12, UiUtils.COLOR_EXPENSE));
+        JMenuItem itmDelete = new JMenuItem(I18n.get("transactions.action.delete"), NavIcons.trash(12, UiUtils.COLOR_EXPENSE));
+        itmDelete.setToolTipText("Permanently delete the selected transaction");
         itmDelete.addActionListener(e -> onDeleteSelected());
 
         popup.add(itmEdit);
+        popup.add(itmDuplicate);
+        popup.addSeparator();
         popup.add(itmTrack);
         popup.add(itmLink);
         popup.addSeparator();
         popup.add(itmDelete);
+
+        popup.addPopupMenuListener(new PopupMenuListener() {
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+                boolean hasSelection = tblTransactions.getSelectedRow() >= 0;
+                itmEdit.setEnabled(hasSelection);
+                itmDuplicate.setEnabled(hasSelection);
+                itmTrack.setEnabled(hasSelection);
+                itmLink.setEnabled(hasSelection);
+                itmDelete.setEnabled(hasSelection);
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {}
+
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent e) {}
+        });
 
         tblTransactions.setComponentPopupMenu(popup);
     }
