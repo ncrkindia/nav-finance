@@ -7,12 +7,15 @@ import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
 
 import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import java.awt.Color;
+import java.awt.Component;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -112,6 +115,16 @@ public class PersonDialog extends JDialog {
         gbc.gridx = 1; gbc.gridy = row++;
         cmbRelation = new JComboBox<>(new String[]{"Friend", "Relative", "Colleague", "Family", "Landlord", "Neighbor", "Business Associate", "Other"});
         cmbRelation.setFont(UiUtils.regularFont());
+        cmbRelation.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null && !value.toString().isBlank()) {
+                    setIcon(NavIcons.person(14, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         cmbRelation.setEditable(true);
         mainPanel.add(cmbRelation, gbc);
 

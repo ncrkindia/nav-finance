@@ -307,6 +307,12 @@ public final class I18n {
         UIManager.put("PopupMenu.font", defaultFont);
         UIManager.put("ToolTip.font", defaultFont);
 
+        // ComboBox dropdown arrow and button high-contrast visibility
+        UIManager.put("Component.arrowType", "chevron");
+        UIManager.put("ComboBox.buttonStyle", "chevron");
+        UIManager.put("ComboBox.buttonArrowColor", new java.awt.Color(71, 85, 105));
+        UIManager.put("ComboBox.buttonHoverArrowColor", new java.awt.Color(15, 23, 42));
+
         // Update centralized UiUtils static font caches
         com.navfinance.ui.util.UiUtils.refreshFonts();
     }

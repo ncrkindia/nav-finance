@@ -17,12 +17,14 @@ import com.navfinance.ui.util.UiUtils;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
@@ -31,6 +33,7 @@ import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -184,6 +187,20 @@ public class RecurringScheduleDialog extends JDialog {
 
         gbc.gridx = 1; gbc.gridy = row++;
         cmbType = new JComboBox<>(new TransactionType[]{TransactionType.EXPENSE, TransactionType.INCOME});
+        cmbType.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value == TransactionType.EXPENSE) {
+                    setIcon(NavIcons.minus(14, UiUtils.COLOR_EXPENSE));
+                    setText("Expense");
+                } else if (value == TransactionType.INCOME) {
+                    setIcon(NavIcons.plus(14, UiUtils.COLOR_INCOME));
+                    setText("Income");
+                }
+                return this;
+            }
+        });
         cmbType.addActionListener(e -> updateCategories());
         form.add(cmbType, gbc);
 
@@ -304,6 +321,16 @@ public class RecurringScheduleDialog extends JDialog {
 
         gbc.gridx = 1; gbc.gridy = row++;
         cmbPaymentVia = new JComboBox<>();
+        cmbPaymentVia.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null && !value.toString().isBlank()) {
+                    setIcon(NavIcons.paymentMode(14, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         for (String m : financeService.getAllPaymentModes()) cmbPaymentVia.addItem(m);
         cmbPaymentVia.setSelectedItem("Net Banking");
         form.add(cmbPaymentVia, gbc);

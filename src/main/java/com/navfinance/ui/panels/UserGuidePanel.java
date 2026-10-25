@@ -220,22 +220,24 @@ public class UserGuidePanel extends JPanel {
             </ol>
         """);
 
-        topicContent.put("9. Database Storage & Full Backup", """
-            <h2>9. Database Storage & Full Backup</h2>
-            <p>All data is maintained inside an embedded H2 database located at:</p>
-            <pre style='background:#f1f5f9; padding:8px; border-radius:6px;'>~user/nav-finance/navfinance_db.mv.db</pre>
-            <p>In the <b>Settings & Database</b> tab:</p>
+        topicContent.put("9. Database Storage, Integrity & Full Backup", """
+            <h2>9. Database Storage, Integrity Verification & Full Backup</h2>
+            <p>All data is maintained inside an embedded H2 database (or your configured external SQL engine) located at:</p>
+            <pre style='background:#f1f5f9; padding:8px; border-radius:6px;'>~user/.nav-finance/navfinance_db.mv.db</pre>
+            <p>In the <b>Settings & Database</b> tab, powerful data integrity and backup tools are available:</p>
             <ul>
-                <li><b>Export All Database as CSV Files:</b> Dumps all 7 tables (<i>transactions, persons, bills, emis, credit_cards, payment_modes, audit_logs</i>) into individual CSV files.</li>
-                <li><b>Open Database Folder:</b> Opens the local storage folder in Windows File Explorer.</li>
+                <li><b>Verify Integrity & Counts:</b> Instantly audits all 9 core relational tables (<i>transactions, persons, emis, credit_cards, bills, recurring_schedules, transaction_links, audit_logs, budgets</i>) with real-time row counts and database health validation.</li>
+                <li><b>Quick 1-Click Backup:</b> Instantly exports an automated timestamped CSV snapshot into <code>~/.nav-finance/backups/</code> with zero prompt friction.</li>
+                <li><b>Custom Directory CSV Export:</b> Select any target folder or external drive to dump all tables as individual CSV spreadsheets.</li>
+                <li><b>Open Database Folder:</b> Launches Windows File Explorer directly into the application data directory.</li>
             </ul>
         """);
 
         topicContent.put("10. Zoom In / Out & Appearance", """
-            <h2>10. UI Zooming & Theme Customization</h2>
+            <h2>10. UI Zooming, Currency Presets & Appearance</h2>
             <ul>
-                <li><b>Zoom In & Zoom Out:</b> Scalable UI magnification from 80% to 175% with instant re-rendering of all fonts, cards, and tables.</li>
-                <li><b>Reset Zoom:</b> Click the percentage badge (e.g. <code>100%</code>) to reset default scale.</li>
+                <li><b>UI Zoom Scaling:</b> Scale UI magnification smoothly from 80% to 175% with instant re-rendering of vector icons, fonts, and layout bounds.</li>
+                <li><b>In-Panel & Header Zoom Controls:</b> Click <code>Zoom In (+)</code>, <code>Zoom Out (-)</code>, or <code>Reset (100%)</code> directly from the Settings panel or use the top-right zoom controls.</li>
                 <li><b>Keyboard Shortcuts:</b>
                     <ul>
                         <li><code>Ctrl</code> + <code>Plus (+)</code>: Zoom In</li>
@@ -243,8 +245,9 @@ public class UserGuidePanel extends JPanel {
                         <li><code>Ctrl</code> + <code>0</code>: Reset Zoom to 100%</li>
                     </ul>
                 </li>
+                <li><b>Quick Currency Presets:</b> Click preset buttons (<b>₹</b>, <b>$</b>, <b>€</b>, <b>£</b>, <b>¥</b>, <b>AED</b>) or enter a custom symbol.</li>
+                <li><b>Live Currency Preview:</b> View instant live formatting for positive inflow, negative outflow, and balance amounts as you type or select presets.</li>
                 <li><b>Light & Dark Mode:</b> Switch themes anytime under <b>Settings & Database</b>.</li>
-                <li><b>Custom Currency Symbol:</b> Change from <code>₹</code> to <code>$</code>, <code>€</code>, etc.</li>
             </ul>
         """);
 
@@ -317,6 +320,18 @@ public class UserGuidePanel extends JPanel {
                 <li><b>Connection Testing:</b> Click <b>Test Connection</b> to verify database host, port, database name, and credentials with latency feedback.</li>
                 <li><b>Automated Schema DDL:</b> Clicking <b>Save & Connect</b> automatically verifies tables, creates primary/foreign keys and indexes, seeds default payment modes, and migrates runtime queries live.</li>
                 <li><b>One-Click Reset:</b> Click <b>Reset to Default H2</b> anytime to return to local embedded storage safely.</li>
+            </ul>
+        """);
+
+        topicContent.put("14. System Diagnostics & About Center", """
+            <h2>14. System Diagnostics & Executive About Center</h2>
+            <p>Access the <b>About Us</b> tab for real-time engine diagnostics, performance telemetry, and system actions:</p>
+            <ul>
+                <li><b>Live JVM Heap Meter:</b> Dynamic memory gauge showing real-time used heap, allocated RAM, and max heap limit with automatic color-coding (healthy green/blue, warning amber, critical red).</li>
+                <li><b>Database Engine & Ping Latency:</b> Asynchronously tests connection round-trip latency to the active database engine without blocking the user interface.</li>
+                <li><b>Local Storage Footprint:</b> Live inspection of the primary embedded <code>navfinance_db.mv.db</code> disk size and user profile directory.</li>
+                <li><b>Quick Actions Bar:</b> Direct 1-click shortcuts to open the local application data directory in Windows File Explorer, switch to the User Manual, jump to Database Settings, or copy a full diagnostics snapshot to the clipboard for support.</li>
+                <li><b>Architectural Pillars:</b> Summary of zero-telemetry local privacy, bi-directional linking, tri-script typography, and multi-engine portability.</li>
             </ul>
         """);
     }

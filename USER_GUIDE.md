@@ -254,20 +254,24 @@ To export filtered transactions or custom entity statements:
 
 ---
 
-## 9. Full Database Backup
+## 9. Full Database Backup & Integrity Auditing
 
-To export the entire database as standard CSV files:
+To maintain and back up your financial records:
 1. Click the **`⚙️ Settings & Database`** tab.
-2. In the **Full Database Export** section, click **`Export All Database as CSV Files`**.
-3. Choose a destination folder (defaults to `~user/nav-finance/backups/backup_<timestamp>`).
-4. All 7 tables will be exported as:
+2. In the **Database Integrity & Full Backup** section:
+   - **`Verify Integrity & Counts`**: Instantly tests connectivity and audits all 9 database tables (`transactions`, `persons`, `emis`, `credit_cards`, `bills`, `recurring_schedules`, `transaction_links`, `audit_logs`, `budgets`), reporting live row counts and schema health.
+   - **`Quick 1-Click Backup`**: Exports an automated timestamped snapshot into `~/.nav-finance/backups/` without dialog prompts.
+   - **`Export All Database as CSV Files`**: Allows choosing a custom target folder or USB backup drive.
+3. All core tables are exported as standard CSV spreadsheets:
    - `transactions.csv`
    - `persons.csv`
    - `bills.csv`
    - `emis.csv`
    - `credit_cards.csv`
-   - `payment_modes.csv`
+   - `recurring_schedules.csv`
+   - `transaction_links.csv`
    - `audit_logs.csv`
+   - `budgets.csv`
 
 ---
 

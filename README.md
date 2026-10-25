@@ -171,6 +171,16 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
   - **Test Connection** with millisecond diagnostic feedback before applying.
   - **Live Switch**: Connects, executes automated schema DDL tables and indexes, seeds default payment modes, and migrates runtime queries seamlessly.
   - **One-Click Reset**: Safely revert to default embedded H2 at any time.
+  - **Database Integrity & Table Counts**: Instant query audit of all 9 tables (`transactions`, `persons`, `emis`, `credit_cards`, `bills`, `recurring_schedules`, `transaction_links`, `audit_logs`, `budgets`) with health and row counts.
+  - **Quick 1-Click Backup**: Timestamped CSV export package saved into `~/.nav-finance/backups/`.
+  - **Currency Presets & Live Preview**: Switch symbols (`₹`, `$`, `€`, `£`, `¥`, `AED`) with live formatting previews for inflows, outflows, and balance.
+  - **In-Panel Zoom Scaling**: Direct Zoom In, Zoom Out, and Reset buttons for high-DPI displays.
+
+### 15. Executive Diagnostics Center (About Us)
+- **Live JVM Heap Meter**: Color-coded memory utilization gauge (used MB, allocated MB, max limit).
+- **Asynchronous Database Latency**: Live ping test displaying real-time round-trip latency to the active database engine.
+- **Storage Footprint**: Disk usage monitor showing the exact size of the primary `.mv.db` database file.
+- **Quick Actions**: 1-click access to open app data directory, navigate to User Manual, jump to Database Settings, or copy a full system snapshot to clipboard.
 
 ---
 

@@ -10,16 +10,19 @@ import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
 
 import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
@@ -169,6 +172,16 @@ public class SettlePaymentDialog extends JDialog {
         gbc.gridx = 1; gbc.gridy = row++;
         cmbPaymentVia = new JComboBox<>();
         cmbPaymentVia.setFont(UiUtils.regularFont());
+        cmbPaymentVia.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null && !value.toString().isBlank()) {
+                    setIcon(NavIcons.paymentMode(14, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         List<String> modes = financeService.getAllPaymentModes();
         for (String m : modes) cmbPaymentVia.addItem(m);
         cmbPaymentVia.setSelectedItem(payment.isAutoPay() ? "Net Banking" : "UPI");

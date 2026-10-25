@@ -112,6 +112,13 @@ public final class ZoomManager {
     }
 
     /**
+     * Steps up to the next magnification level for the active application window.
+     */
+    public static void zoomIn() {
+        zoomIn(null);
+    }
+
+    /**
      * Steps down to the next smaller magnification level, persists setting, and refreshes component trees.
      *
      * @param mainFrame the primary application frame
@@ -125,6 +132,13 @@ public final class ZoomManager {
     }
 
     /**
+     * Steps down to the next smaller magnification level for the active application window.
+     */
+    public static void zoomOut() {
+        zoomOut(null);
+    }
+
+    /**
      * Resets the application zoom level to the default 100% baseline and persists setting.
      *
      * @param mainFrame the primary application frame
@@ -133,6 +147,13 @@ public final class ZoomManager {
         zoomIndex = 2; // 100%
         AppConfig.setZoomIndex(zoomIndex);
         applyZoom(mainFrame);
+    }
+
+    /**
+     * Resets the application zoom level to the default 100% baseline.
+     */
+    public static void resetZoom() {
+        resetZoom(null);
     }
 
     /**
@@ -176,6 +197,12 @@ public final class ZoomManager {
         // Dynamically scale table row height globally
         int scaledRowHeight = Math.max(26, Math.round(28.0f * scale));
         UIManager.put("Table.rowHeight", scaledRowHeight);
+
+        // Ensure ComboBox dropdown arrow visibility
+        UIManager.put("Component.arrowType", "chevron");
+        UIManager.put("ComboBox.buttonStyle", "chevron");
+        UIManager.put("ComboBox.buttonArrowColor", new java.awt.Color(71, 85, 105));
+        UIManager.put("ComboBox.buttonHoverArrowColor", new java.awt.Color(15, 23, 42));
 
         // Update centralized UiUtils static font caches
         UiUtils.refreshFonts();

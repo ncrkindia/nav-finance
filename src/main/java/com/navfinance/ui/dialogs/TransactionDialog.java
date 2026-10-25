@@ -19,12 +19,14 @@ import com.navfinance.ui.util.UiUtils;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
@@ -33,6 +35,7 @@ import javax.swing.JTextField;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -62,12 +65,12 @@ import java.util.List;
 public class TransactionDialog extends JDialog {
 
     public enum TransactionNature {
-        ONE_TIME_EXPENSE("💸 One-Time Expense (Done / Expected)"),
-        ONE_TIME_INCOME("💰 One-Time Received / Income"),
-        EMI_PAYMENT("🏦 EMI Payment (Monthly Installment)"),
-        CREDIT_CARD_BILL("💳 Credit Card Bill (Variable Monthly)"),
-        UTILITY_BILL("🧾 Utility / Other Bill (Electricity, Wi-Fi, etc.)"),
-        PERSONAL_LOAN("🤝 Personal Loan / Transfer (Lent / Borrowed / Return)");
+        ONE_TIME_EXPENSE("One-Time Expense (Done / Expected)"),
+        ONE_TIME_INCOME("One-Time Received / Income"),
+        EMI_PAYMENT("EMI Payment (Monthly Installment)"),
+        CREDIT_CARD_BILL("Credit Card Bill (Variable Monthly)"),
+        UTILITY_BILL("Utility / Other Bill (Electricity, Wi-Fi, etc.)"),
+        PERSONAL_LOAN("Personal Loan / Transfer (Lent / Borrowed / Return)");
 
         private final String label;
         TransactionNature(String label) { this.label = label; }
@@ -150,6 +153,24 @@ public class TransactionDialog extends JDialog {
         gbc.gridx = 1; gbc.gridy = row++; gbc.weightx = 0.7;
         cmbNature = new JComboBox<>(TransactionNature.values());
         cmbNature.setFont(UiUtils.boldFont());
+        cmbNature.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof TransactionNature nat) {
+                    setText(nat.toString());
+                    switch (nat) {
+                        case ONE_TIME_EXPENSE -> setIcon(NavIcons.minus(14, UiUtils.COLOR_EXPENSE));
+                        case ONE_TIME_INCOME -> setIcon(NavIcons.plus(14, UiUtils.COLOR_INCOME));
+                        case EMI_PAYMENT -> setIcon(NavIcons.emi(14, UiUtils.COLOR_PRIMARY));
+                        case CREDIT_CARD_BILL -> setIcon(NavIcons.card(14, UiUtils.COLOR_PRIMARY));
+                        case UTILITY_BILL -> setIcon(NavIcons.bill(14, UiUtils.COLOR_PRIMARY));
+                        case PERSONAL_LOAN -> setIcon(NavIcons.person(14, UiUtils.COLOR_AMBER));
+                    }
+                }
+                return this;
+            }
+        });
         cmbNature.addActionListener(e -> onNatureChanged());
         mainPanel.add(cmbNature, gbc);
 
@@ -189,6 +210,20 @@ public class TransactionDialog extends JDialog {
         // Master 1: Person
         cmbPerson = new JComboBox<>();
         cmbPerson.setFont(UiUtils.regularFont());
+        cmbPerson.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Person p) {
+                    setText(p.getName() + (p.getRelation() != null && !p.getRelation().isBlank() ? " (" + p.getRelation() + ")" : ""));
+                    setIcon(NavIcons.person(14, UiUtils.COLOR_PRIMARY));
+                } else if (value == null) {
+                    setText("(None / No Master Person Associated)");
+                    setIcon(NavIcons.person(14, UiUtils.COLOR_TEXT_MUTED));
+                }
+                return this;
+            }
+        });
         populatePersons();
         cmbPerson.addActionListener(e -> updateLinkingVisibility());
         pnlMasterCard.add(cmbPerson, "PERSON");
@@ -196,6 +231,18 @@ public class TransactionDialog extends JDialog {
         // Master 2: EMI
         cmbEmi = new JComboBox<>();
         cmbEmi.setFont(UiUtils.regularFont());
+        cmbEmi.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Emi e) {
+                    double amt = e.getMonthlyAmount() != null ? e.getMonthlyAmount() : 0.0;
+                    setText(e.getEmiName() + " (" + AppConfig.formatCurrency(amt) + "/mo" + (e.getBankLender() != null ? " - " + e.getBankLender() : "") + ")");
+                    setIcon(NavIcons.emi(14, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         populateEmis();
         cmbEmi.addActionListener(e -> onEmiSelected());
         pnlMasterCard.add(cmbEmi, "EMI");
@@ -203,6 +250,17 @@ public class TransactionDialog extends JDialog {
         // Master 3: Credit Card
         cmbCreditCard = new JComboBox<>();
         cmbCreditCard.setFont(UiUtils.regularFont());
+        cmbCreditCard.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof CreditCard c) {
+                    setText(c.getCardName() + (c.getBank() != null && !c.getBank().isBlank() ? " (" + c.getBank() + ")" : ""));
+                    setIcon(NavIcons.card(14, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         populateCards();
         cmbCreditCard.addActionListener(e -> onCreditCardSelected());
         pnlMasterCard.add(cmbCreditCard, "CARD");
@@ -210,6 +268,17 @@ public class TransactionDialog extends JDialog {
         // Master 4: Bill
         cmbBill = new JComboBox<>();
         cmbBill.setFont(UiUtils.regularFont());
+        cmbBill.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Bill b) {
+                    setText(b.getBillName() + (b.getDefaultAmount() > 0 ? " (" + AppConfig.formatCurrency(b.getDefaultAmount()) + ")" : ""));
+                    setIcon(NavIcons.bill(14, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         populateBills();
         cmbBill.addActionListener(e -> onBillSelected());
         pnlMasterCard.add(cmbBill, "BILL");
@@ -236,7 +305,7 @@ public class TransactionDialog extends JDialog {
 
         // 4. Recurring / Upcoming Schedule Management Checkbox
         gbc.gridx = 1; gbc.gridy = row++;
-        chkManageRecurring = new JCheckBox("📅 Also manage in Due / Upcoming payments schedule");
+        chkManageRecurring = new JCheckBox("Also manage in Due / Upcoming payments schedule");
         chkManageRecurring.setFont(UiUtils.FONT_REGULAR);
         chkManageRecurring.setForeground(new Color(15, 118, 110)); // Teal
         mainPanel.add(chkManageRecurring, gbc);
@@ -283,6 +352,16 @@ public class TransactionDialog extends JDialog {
         gbc.gridx = 1; gbc.gridy = row++;
         cmbPaymentVia = new JComboBox<>();
         cmbPaymentVia.setFont(UiUtils.regularFont());
+        cmbPaymentVia.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null && !value.toString().isBlank()) {
+                    setIcon(NavIcons.paymentMode(14, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         cmbPaymentVia.setEditable(true);
         populatePaymentModes();
         mainPanel.add(cmbPaymentVia, gbc);

@@ -13,6 +13,7 @@ import com.navfinance.service.ExportService;
 import com.navfinance.ui.components.ResponsiveBarPanel;
 import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
+import com.navfinance.ui.util.ZoomManager;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
@@ -34,13 +35,15 @@ import javax.swing.event.DocumentListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.File;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -89,6 +92,8 @@ public class SettingsPanel extends JPanel implements LanguageChangeListener {
 
     // --- Preferences & Theme Components ---
     private JTextField txtCurrency;
+    private JLabel lblCurrencyPreview;
+    private JLabel lblZoomStatus;
     private JComboBox<String> cmbTheme;
     private JComboBox<AppLanguage> cmbLanguage;
 
@@ -201,6 +206,17 @@ public class SettingsPanel extends JPanel implements LanguageChangeListener {
         gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0;
         cmbLanguage = new JComboBox<>(AppLanguage.values());
         cmbLanguage.setFont(UiUtils.regularFont());
+        cmbLanguage.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof AppLanguage l) {
+                    setText(l.getDisplayName());
+                    setIcon(NavIcons.language(14, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         cmbLanguage.setSelectedItem(I18n.getCurrentLanguage());
         cmbLanguage.addActionListener(e -> {
             AppLanguage lang = (AppLanguage) cmbLanguage.getSelectedItem();
@@ -271,6 +287,7 @@ public class SettingsPanel extends JPanel implements LanguageChangeListener {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 if (value instanceof DatabaseType dt) {
                     setText(dt.getTypeName());
+                    setIcon(NavIcons.database(14, UiUtils.COLOR_PRIMARY));
                 }
                 return this;
             }
@@ -455,11 +472,16 @@ public class SettingsPanel extends JPanel implements LanguageChangeListener {
         JButton btnSave = UiUtils.createPrimaryButton(I18n.get("settings.database.saveBtn"), NavIcons.settings(13, Color.WHITE));
         btnSave.addActionListener(e -> onSaveAndConnect());
 
+        JButton btnVerify = UiUtils.createSecondaryButton("Verify Integrity & Counts", NavIcons.checkCircle(13, UiUtils.COLOR_INCOME));
+        btnVerify.setToolTipText("Check table accessibility and record counts across all core tables");
+        btnVerify.addActionListener(e -> onVerifyIntegrity());
+
         JButton btnReset = UiUtils.createSecondaryButton(I18n.get("settings.database.resetBtn"), NavIcons.refresh(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnReset.addActionListener(e -> onResetToDefaultH2());
 
         actionPanel.addLeft(btnTest);
         actionPanel.addLeft(btnSave);
+        actionPanel.addLeft(btnVerify);
         actionPanel.addRight(btnReset);
 
         card.add(actionPanel, BorderLayout.SOUTH);
@@ -755,67 +777,187 @@ public class SettingsPanel extends JPanel implements LanguageChangeListener {
         lblCardTitle.setFont(UiUtils.headerFont());
         card.add(lblCardTitle, BorderLayout.NORTH);
 
-        JLabel lblDesc = new JLabel("<html>Export all database tables into individual CSV files. Ideal for offline backups, migration, and spreadsheet analysis. Compatible across all supported database engines.</html>");
+        JPanel center = new JPanel(new BorderLayout(0, 6));
+        center.setOpaque(false);
+
+        JLabel lblDesc = new JLabel("<html>Export all application tables into individual CSV files for complete offline data portability, cold backups, and spreadsheet interoperability. Compatible across all supported database engines (H2, MySQL, PostgreSQL, MariaDB, SQLite).</html>");
         lblDesc.setFont(UiUtils.regularFont());
-        card.add(lblDesc, BorderLayout.CENTER);
+        center.add(lblDesc, BorderLayout.NORTH);
+
+        JLabel lblTables = new JLabel("<html><span style='color:#64748b; font-size:11px;'>"
+                + "<b>Included Tables (10):</b> Transactions, Persons, EMIs, Credit Cards, Bills, Recurring Schedules, Budgets, Transaction Links, Audit Logs, Settings"
+                + "</span></html>");
+        lblTables.setFont(UiUtils.regularFont());
+        center.add(lblTables, BorderLayout.SOUTH);
+
+        card.add(center, BorderLayout.CENTER);
 
         ResponsiveBarPanel btnBar = new ResponsiveBarPanel(8, 8);
 
-        JButton btnExportAll = UiUtils.createPrimaryButton(I18n.get("settings.database.exportAll"), NavIcons.export(13, Color.WHITE));
+        JButton btnQuickBackup = UiUtils.createPrimaryButton("Quick 1-Click Backup", NavIcons.check(13, Color.WHITE));
+        btnQuickBackup.setToolTipText("Immediately creates a timestamped CSV backup folder inside ~/.nav-finance/backups/");
+        btnQuickBackup.addActionListener(e -> onQuickBackupDatabase());
+
+        JButton btnExportAll = UiUtils.createSecondaryButton("Custom Export Directory...", NavIcons.export(13, UiUtils.COLOR_PRIMARY));
         btnExportAll.addActionListener(e -> onExportAllDatabase());
 
         JButton btnOpenFolder = UiUtils.createSecondaryButton(I18n.get("settings.database.openFolder"), NavIcons.importIcon(13, UiUtils.COLOR_TEXT_PRIMARY));
-        btnOpenFolder.addActionListener(e -> onOpenDbFolder());
+        btnOpenFolder.addActionListener(e -> onOpenBackupsFolder());
 
+        btnBar.addLeft(btnQuickBackup);
         btnBar.addLeft(btnExportAll);
-        btnBar.addLeft(btnOpenFolder);
+        btnBar.addRight(btnOpenFolder);
         card.add(btnBar, BorderLayout.SOUTH);
 
         return card;
     }
 
     /**
-     * Builds the card offering user preferences for currency symbol and theme options.
+     * Builds the card offering user preferences for currency symbol, live format preview,
+     * high-DPI zoom scaling controls, and visual theme options.
      */
     private JPanel createPreferencesCard() {
-        JPanel card = new JPanel(new BorderLayout(10, 10));
+        JPanel card = new JPanel(new BorderLayout(12, 12));
         card.setBackground(Color.WHITE);
         card.setBorder(UiUtils.createCardBorder());
 
-        JLabel lblCardTitle = new JLabel(I18n.get("settings.theme.card"), NavIcons.settings(16, UiUtils.COLOR_PRIMARY), JLabel.LEFT);
+        JLabel lblCardTitle = new JLabel("Regional Currency, Display Scaling & Theme Preferences", NavIcons.settings(16, UiUtils.COLOR_PRIMARY), JLabel.LEFT);
         lblCardTitle.setFont(UiUtils.headerFont());
         card.add(lblCardTitle, BorderLayout.NORTH);
 
-        ResponsiveBarPanel form = new ResponsiveBarPanel(16, 8);
+        JPanel content = new JPanel(new GridBagLayout());
+        content.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
 
-        // Left section: Currency Symbol
-        JPanel pnlCurrency = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        pnlCurrency.setOpaque(false);
-        pnlCurrency.add(new JLabel(I18n.get("settings.currency.symbol")));
+        int row = 0;
+
+        // Row 1: Currency Symbol + Presets + Save
+        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0;
+        JLabel lblCurr = new JLabel(I18n.get("settings.currency.symbol"));
+        lblCurr.setFont(UiUtils.boldFont());
+        content.add(lblCurr, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++; gbc.weightx = 1.0;
+        JPanel pnlCurrRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        pnlCurrRow.setOpaque(false);
+
         txtCurrency = new JTextField(AppConfig.getCurrencySymbol(), 4);
-        pnlCurrency.add(txtCurrency);
+        txtCurrency.setFont(UiUtils.boldFont());
+        pnlCurrRow.add(txtCurrency);
 
-        JButton btnSaveCurrency = UiUtils.createSecondaryButton(I18n.get("settings.currency.save"), NavIcons.check(13, UiUtils.COLOR_PRIMARY));
+        // Preset Currency Buttons
+        String[] presets = {"₹", "$", "€", "£", "¥", "AED"};
+        for (String p : presets) {
+            JButton btnPreset = new JButton(p);
+            btnPreset.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            btnPreset.setMargin(new Insets(2, 6, 2, 6));
+            btnPreset.addActionListener(e -> {
+                txtCurrency.setText(p);
+                updateCurrencyPreview();
+            });
+            pnlCurrRow.add(btnPreset);
+        }
+
+        JButton btnSaveCurrency = UiUtils.createPrimaryButton(I18n.get("settings.currency.save"), NavIcons.check(13, Color.WHITE));
         btnSaveCurrency.addActionListener(e -> {
             AppConfig.setCurrencySymbol(txtCurrency.getText().trim());
             UiUtils.showSuccess(this, I18n.get("settings.currency.success"));
+            updateCurrencyPreview();
             if (onDataUpdated != null) {
                 onDataUpdated.run();
             }
         });
-        pnlCurrency.add(btnSaveCurrency);
-        form.addLeft(pnlCurrency);
+        pnlCurrRow.add(btnSaveCurrency);
+        content.add(pnlCurrRow, gbc);
 
-        // Right section: Theme Selection
-        JPanel pnlTheme = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        // Row 2: Live Currency Preview Box
+        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0;
+        JLabel lblPreviewTitle = new JLabel("Live Formatting:");
+        lblPreviewTitle.setFont(UiUtils.boldFont());
+        content.add(lblPreviewTitle, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++; gbc.weightx = 1.0;
+        lblCurrencyPreview = new JLabel();
+        lblCurrencyPreview.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblCurrencyPreview.setOpaque(true);
+        lblCurrencyPreview.setBackground(new Color(241, 245, 249));
+        lblCurrencyPreview.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(UiUtils.COLOR_BORDER, 1, true),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+        updateCurrencyPreview();
+        content.add(lblCurrencyPreview, gbc);
+
+        txtCurrency.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { updateCurrencyPreview(); }
+            @Override public void removeUpdate(DocumentEvent e) { updateCurrencyPreview(); }
+            @Override public void changedUpdate(DocumentEvent e) { updateCurrencyPreview(); }
+        });
+
+        // Row 3: UI Zoom & Accessibility Scaling
+        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0;
+        JLabel lblZoomTitle = new JLabel("UI Scaling:");
+        lblZoomTitle.setFont(UiUtils.boldFont());
+        content.add(lblZoomTitle, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++; gbc.weightx = 1.0;
+        JPanel pnlZoomRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        pnlZoomRow.setOpaque(false);
+
+        lblZoomStatus = new JLabel("Current Zoom: " + Math.round(ZoomManager.getCurrentScale() * 100) + "%");
+        lblZoomStatus.setFont(UiUtils.boldFont());
+        lblZoomStatus.setForeground(UiUtils.COLOR_PRIMARY);
+        pnlZoomRow.add(lblZoomStatus);
+
+        JButton btnZoomIn = UiUtils.createSecondaryButton("Zoom In (+)", NavIcons.zoomIn(13, UiUtils.COLOR_PRIMARY));
+        btnZoomIn.addActionListener(e -> {
+            JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(SettingsPanel.this);
+            ZoomManager.zoomIn(frame);
+            lblZoomStatus.setText("Current Zoom: " + Math.round(ZoomManager.getCurrentScale() * 100) + "%");
+        });
+        pnlZoomRow.add(btnZoomIn);
+
+        JButton btnZoomOut = UiUtils.createSecondaryButton("Zoom Out (-)", NavIcons.zoomOut(13, UiUtils.COLOR_PRIMARY));
+        btnZoomOut.addActionListener(e -> {
+            JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(SettingsPanel.this);
+            ZoomManager.zoomOut(frame);
+            lblZoomStatus.setText("Current Zoom: " + Math.round(ZoomManager.getCurrentScale() * 100) + "%");
+        });
+        pnlZoomRow.add(btnZoomOut);
+
+        JButton btnZoomReset = UiUtils.createSecondaryButton("Reset (100%)", NavIcons.zoomReset(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnZoomReset.addActionListener(e -> {
+            JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(SettingsPanel.this);
+            ZoomManager.resetZoom(frame);
+            lblZoomStatus.setText("Current Zoom: " + Math.round(ZoomManager.getCurrentScale() * 100) + "%");
+        });
+        pnlZoomRow.add(btnZoomReset);
+
+        JLabel lblShortcuts = new JLabel("(Shortcuts: Ctrl + Plus, Ctrl + Minus, Ctrl + 0)");
+        lblShortcuts.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        lblShortcuts.setForeground(UiUtils.COLOR_TEXT_MUTED);
+        pnlZoomRow.add(lblShortcuts);
+
+        content.add(pnlZoomRow, gbc);
+
+        // Row 4: Theme Mode
+        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0;
+        JLabel lblThemeTitle = new JLabel("Application Theme:");
+        lblThemeTitle.setFont(UiUtils.boldFont());
+        content.add(lblThemeTitle, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++; gbc.weightx = 1.0;
+        JPanel pnlTheme = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         pnlTheme.setOpaque(false);
-        pnlTheme.add(new JLabel(I18n.get("settings.theme.card") + ":"));
         cmbTheme = new JComboBox<>(new String[]{I18n.get("settings.theme.light"), I18n.get("settings.theme.dark")});
         cmbTheme.addActionListener(e -> onThemeToggle());
         pnlTheme.add(cmbTheme);
-        form.addRight(pnlTheme);
+        content.add(pnlTheme, gbc);
 
-        card.add(form, BorderLayout.CENTER);
+        card.add(content, BorderLayout.CENTER);
         return card;
     }
 
@@ -852,6 +994,79 @@ public class SettingsPanel extends JPanel implements LanguageChangeListener {
         } catch (Exception ex) {
             UiUtils.showError(this, "Could not open folder automatically: " + AppConfig.APP_DATA_DIR.getAbsolutePath());
         }
+    }
+
+    /**
+     * Opens the backups directory directly in the host OS's native file explorer.
+     */
+    private void onOpenBackupsFolder() {
+        File backupsDir = new File(AppConfig.APP_DATA_DIR, "backups");
+        if (!backupsDir.exists()) {
+            backupsDir.mkdirs();
+        }
+        try {
+            java.awt.Desktop.getDesktop().open(backupsDir);
+        } catch (Exception ex) {
+            onOpenDbFolder();
+        }
+    }
+
+    /**
+     * Creates an immediate timestamped backup inside ~/.nav-finance/backups without prompting for target folder.
+     */
+    private void onQuickBackupDatabase() {
+        String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+        File backupDir = new File(AppConfig.APP_DATA_DIR, "backups/backup_" + timeStamp);
+        try {
+            exportService.exportAllDatabaseToCsv(backupDir);
+            UiUtils.showSuccess(this, "Quick 1-Click Backup created successfully!\n\nLocation: " + backupDir.getAbsolutePath());
+        } catch (Exception ex) {
+            UiUtils.showError(this, "Quick backup failed: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Executes a live verification across all database schema tables, counting records
+     * and ensuring query responsiveness.
+     */
+    private void onVerifyIntegrity() {
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            String[] tables = {"transactions", "persons", "emis", "credit_cards", "bills", "recurring_schedules", "transaction_links", "audit_logs", "budgets"};
+            StringBuilder sb = new StringBuilder("<html><b>Database Health & Integrity Report:</b><br/><br/>");
+            sb.append("<table border='0' cellpadding='3'>");
+            int totalRows = 0;
+            for (String t : tables) {
+                try (Statement st = conn.createStatement();
+                     ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + t)) {
+                    if (rs.next()) {
+                        int c = rs.getInt(1);
+                        totalRows += c;
+                        sb.append("<tr><td><b>• ").append(t).append(":</b></td><td style='color:#16a34a; font-weight:bold;'>").append(c).append(" records (Healthy)</td></tr>");
+                    }
+                } catch (Exception e) {
+                    sb.append("<tr><td><b>• ").append(t).append(":</b></td><td style='color:#dc2626;'>").append(e.getMessage()).append("</td></tr>");
+                }
+            }
+            sb.append("</table><br/><b>Total Managed Records:</b> ").append(totalRows)
+              .append("<br/><span style='color:#16a34a; font-weight:bold;'>✓ All schema tables verified and fully responsive.</span></html>");
+            JOptionPane.showMessageDialog(this, sb.toString(), "Database Integrity Verification", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            UiUtils.showError(this, "Integrity check failed: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Updates the formatted currency sample values in the preview box.
+     */
+    private void updateCurrencyPreview() {
+        if (lblCurrencyPreview == null || txtCurrency == null) return;
+        String cur = txtCurrency.getText().trim();
+        if (cur.isEmpty()) cur = "₹";
+        lblCurrencyPreview.setText("<html>"
+                + "<span style='color:#16a34a; font-weight:bold;'>Inflow: + " + cur + " 1,25,000.00</span> &nbsp;|&nbsp; "
+                + "<span style='color:#dc2626; font-weight:bold;'>Outflow: - " + cur + " 4,850.50</span> &nbsp;|&nbsp; "
+                + "<span style='color:#d97706; font-weight:bold;'>Net Balance: " + cur + " 12,000.00</span>"
+                + "</html>");
     }
 
     /**

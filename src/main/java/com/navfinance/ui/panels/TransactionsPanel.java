@@ -27,11 +27,13 @@ import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
 
 import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
@@ -327,7 +329,19 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         JPanel sortBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
         sortBox.setOpaque(false);
         cmbSortBy = new JComboBox<>(new String[]{"Date", "Amount", "Type", "Category", "Sub Category"});
-        cmbSortDir = new JComboBox<>(new String[]{"Desc ▼", "Asc ▲"});
+        cmbSortDir = new JComboBox<>(new String[]{"Descending", "Ascending"});
+        cmbSortDir.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if ("Descending".equals(value)) {
+                    setIcon(NavIcons.minus(11, UiUtils.COLOR_PRIMARY));
+                } else if ("Ascending".equals(value)) {
+                    setIcon(NavIcons.plus(11, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         cmbSortBy.addActionListener(e -> applyFilters());
         cmbSortDir.addActionListener(e -> applyFilters());
         sortBox.add(cmbSortBy);
@@ -586,9 +600,21 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         pnlControlsCard.add(lblType);
 
         cmbTrackerType = new JComboBox<>(new String[]{
-                "Person 👤", "Bill 🧾", "EMI 🏦", "Credit Card 💳", "Category 🏷️"
+                "Person", "Bill", "EMI", "Credit Card", "Category"
         });
         cmbTrackerType.setFont(UiUtils.boldFont());
+        cmbTrackerType.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if ("Person".equals(value)) setIcon(NavIcons.person(14, UiUtils.COLOR_PRIMARY));
+                else if ("Bill".equals(value)) setIcon(NavIcons.bill(14, UiUtils.COLOR_PRIMARY));
+                else if ("EMI".equals(value)) setIcon(NavIcons.emi(14, UiUtils.COLOR_PRIMARY));
+                else if ("Credit Card".equals(value)) setIcon(NavIcons.card(14, UiUtils.COLOR_PRIMARY));
+                else if ("Category".equals(value)) setIcon(NavIcons.filter(14, UiUtils.COLOR_PRIMARY));
+                return this;
+            }
+        });
         cmbTrackerType.addActionListener(e -> {
             populateTrackerEntities();
             loadEntityTrackerData();
@@ -602,6 +628,29 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         cmbTrackerEntity = new JComboBox<>();
         cmbTrackerEntity.setFont(UiUtils.boldFont());
         cmbTrackerEntity.setPreferredSize(new Dimension(170, 28));
+        cmbTrackerEntity.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Person p) {
+                    setText(p.getName());
+                    setIcon(NavIcons.person(14, UiUtils.COLOR_PRIMARY));
+                } else if (value instanceof Bill b) {
+                    setText(b.getBillName());
+                    setIcon(NavIcons.bill(14, UiUtils.COLOR_PRIMARY));
+                } else if (value instanceof Emi e) {
+                    setText(e.getEmiName());
+                    setIcon(NavIcons.emi(14, UiUtils.COLOR_PRIMARY));
+                } else if (value instanceof CreditCard c) {
+                    setText(c.getCardName());
+                    setIcon(NavIcons.card(14, UiUtils.COLOR_PRIMARY));
+                } else if (value != null) {
+                    setText(value.toString());
+                    setIcon(NavIcons.filter(14, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         cmbTrackerEntity.addActionListener(e -> loadEntityTrackerData());
         pnlControlsCard.add(cmbTrackerEntity);
 
@@ -610,9 +659,21 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         pnlControlsCard.add(lblGran);
 
         cmbTrackerGranularity = new JComboBox<>(new String[]{
-                "Months 🗓️", "Days 📅", "Week 📆", "Quarter 📈", "Years 📊"
+                "Months", "Days", "Week", "Quarter", "Years"
         });
         cmbTrackerGranularity.setFont(UiUtils.boldFont());
+        cmbTrackerGranularity.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if ("Months".equals(value) || "Days".equals(value) || "Week".equals(value)) {
+                    setIcon(NavIcons.calendar(14, UiUtils.COLOR_PRIMARY));
+                } else {
+                    setIcon(NavIcons.dashboard(14, UiUtils.COLOR_PRIMARY));
+                }
+                return this;
+            }
+        });
         cmbTrackerGranularity.addActionListener(e -> loadEntityTrackerData());
         pnlControlsCard.add(cmbTrackerGranularity);
 
@@ -1247,7 +1308,7 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
             default -> "tx_date";
         };
         currentCriteria.setSortBy(sortCol);
-        currentCriteria.setSortAscending("Asc ▲".equals(cmbSortDir.getSelectedItem()));
+        currentCriteria.setSortAscending(cmbSortDir.getSelectedIndex() == 1 || "Ascending".equals(cmbSortDir.getSelectedItem()) || "Asc ▲".equals(cmbSortDir.getSelectedItem()));
 
         // Query Database
         currentTransactions = financeService.filterTransactions(currentCriteria);

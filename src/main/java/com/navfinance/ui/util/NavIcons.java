@@ -1086,4 +1086,43 @@ public final class NavIcons {
             g2.draw(new Line2D.Float(s * 0.25f, s * 0.75f, s * 0.75f, s * 0.25f));
         });
     }
+
+    /**
+     * Creates an informational badge icon ('i' in a circular boundary).
+     *
+     * @param size dimension in pixels
+     * @param color stroke and fill color
+     * @return vector {@link Icon}
+     */
+    public static Icon info(int size, Color color) {
+        return aboutUs(size, color);
+    }
+
+    /**
+     * Creates a relational database / server storage cylinder icon.
+     *
+     * @param size dimension in pixels
+     * @param color stroke color
+     * @return vector {@link Icon}
+     */
+    public static Icon database(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            g2.setStroke(new BasicStroke(Math.max(1.3f, s * 0.08f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            float w = s * 0.70f;
+            float hDisc = s * 0.22f;
+            float x = (s - w) / 2f;
+
+            // Top disc
+            g2.draw(new Ellipse2D.Float(x, s * 0.12f, w, hDisc));
+            // Vertical sides
+            g2.draw(new Line2D.Float(x, s * 0.23f, x, s * 0.78f));
+            g2.draw(new Line2D.Float(x + w, s * 0.23f, x + w, s * 0.78f));
+            // Mid disc arc
+            g2.draw(new java.awt.geom.Arc2D.Float(x, s * 0.40f, w, hDisc, 180, 180, java.awt.geom.Arc2D.OPEN));
+            // Bottom disc arc
+            g2.draw(new java.awt.geom.Arc2D.Float(x, s * 0.67f, w, hDisc, 180, 180, java.awt.geom.Arc2D.OPEN));
+        });
+    }
 }

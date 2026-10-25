@@ -585,6 +585,17 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
     }
 
     /**
+     * Programmatically switches the active main window tab.
+     *
+     * @param tabIndex zero-based tab index
+     */
+    public void switchToTab(int tabIndex) {
+        if (mainTabs != null && tabIndex >= 0 && tabIndex < mainTabs.getTabCount()) {
+            mainTabs.setSelectedIndex(tabIndex);
+        }
+    }
+
+    /**
      * Directly routes navigation to the Entity Tracker tab in TransactionsPanel,
      * pre-selecting the entity type, specific entity, and time granularity.
      *
