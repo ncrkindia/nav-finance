@@ -57,6 +57,9 @@ public final class AppConfig {
     /** Standard timestamp formatter: {@code dd-MMM-yyyy hh:mm a} (e.g. 24-Oct-2026 06:15 PM). */
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd-MMM-yyyy hh:mm a");
 
+    /** Standard manual input and display date formatter: {@code dd-MM-yyyy} (e.g. 25-10-2026). */
+    public static final DateTimeFormatter INPUT_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
     /** ISO date formatter: {@code yyyy-MM-dd} (e.g. 2026-10-24). */
     public static final DateTimeFormatter ISO_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 

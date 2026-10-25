@@ -311,8 +311,8 @@ public class TransactionDialog extends JDialog {
         mainPanel.add(chkManageRecurring, gbc);
 
         // 5. Date & Expected (Done vs Expected Unrealized)
-        lblDateTitle = new JLabel(I18n.get("transactions.table.date") + ":");
-        lblDateTitle.setFont(UiUtils.regularFont());
+        lblDateTitle = new JLabel(I18n.get("transactions.table.date") + " (DD-MM-YYYY):*");
+        lblDateTitle.setFont(UiUtils.boldFont());
         gbc.gridx = 0; gbc.gridy = row;
         mainPanel.add(lblDateTitle, gbc);
 
@@ -812,7 +812,7 @@ public class TransactionDialog extends JDialog {
 
         LocalDate txDate = txtDate.getDate();
         if (txDate == null) {
-            UiUtils.showError(this, "Invalid date format. Please use YYYY-MM-DD or select from the calendar picker.");
+            UiUtils.showError(this, I18n.get("dialog.validation.invalidDate"));
             txtDate.getTextField().requestFocus();
             return;
         }

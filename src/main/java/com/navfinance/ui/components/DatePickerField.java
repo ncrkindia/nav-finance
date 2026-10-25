@@ -5,6 +5,7 @@ import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
 
 import javax.swing.BorderFactory;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
@@ -31,15 +32,19 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Reusable composite Date Picker component combining a manual text input field with an
  * interactive modal popup calendar widget.
  * <p>
- * Supports ISO-8601 formatted text entry (YYYY-MM-DD) with lenient parsing fallbacks,
- * automatic normalization upon focus loss, and month/year visual navigation.
+ * Supports Indian/Standard formatted text entry (dd-MM-yyyy) with lenient parsing fallbacks
+ * (slashes, dots, compact digits, 2-digit years, and ISO format), automatic normalization upon focus loss,
+ * and comprehensive month/year visual navigation.
  * </p>
  */
 public class DatePickerField extends JPanel {
@@ -52,6 +57,27 @@ public class DatePickerField extends JPanel {
 
     /** Observers registered for date modification events. */
     private final List<ActionListener> actionListeners = new ArrayList<>();
+
+    /**
+     * Supported date parsing patterns ordered by precedence:
+     * Primary is dd-MM-yyyy / d-M-yyyy, followed by slash/dot separators, compact 8-digit, 2-digit year, and ISO fallback.
+     */
+    private static final DateTimeFormatter[] PARSE_FORMATTERS = new DateTimeFormatter[] {
+            DateTimeFormatter.ofPattern("d-M-uuuu"),
+            DateTimeFormatter.ofPattern("d/M/uuuu"),
+            DateTimeFormatter.ofPattern("d.M.uuuu"),
+            DateTimeFormatter.ofPattern("ddMMuuuu"),
+            new DateTimeFormatterBuilder()
+                    .appendPattern("d-M-")
+                    .appendValueReduced(ChronoField.YEAR, 2, 2, 2000)
+                    .toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder()
+                    .appendPattern("d/M/")
+                    .appendValueReduced(ChronoField.YEAR, 2, 2, 2000)
+                    .toFormatter(Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("uuuu-M-d"),
+            DateTimeFormatter.ofPattern("uuuu/M/d")
+    };
 
     /**
      * Constructs a DatePickerField initialized to the current system date.
@@ -81,8 +107,9 @@ public class DatePickerField extends JPanel {
 
         txtDate = new JTextField(columns);
         txtDate.setFont(UiUtils.FONT_REGULAR);
+        txtDate.setToolTipText("Enter date in DD-MM-YYYY format");
         if (initialDate != null) {
-            txtDate.setText(initialDate.format(AppConfig.ISO_DATE_FORMATTER));
+            txtDate.setText(initialDate.format(AppConfig.INPUT_DATE_FORMATTER));
         }
 
         btnPicker = new JButton(NavIcons.calendar(14, UiUtils.COLOR_PRIMARY));
@@ -99,10 +126,10 @@ public class DatePickerField extends JPanel {
         txtDate.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                // If valid date was typed, keep normalized in standard ISO format
+                // If valid date was typed, keep normalized in standard DD-MM-YYYY format
                 LocalDate d = getDate();
                 if (d != null) {
-                    txtDate.setText(d.format(AppConfig.ISO_DATE_FORMATTER));
+                    txtDate.setText(d.format(AppConfig.INPUT_DATE_FORMATTER));
                 }
             }
         });
@@ -113,37 +140,44 @@ public class DatePickerField extends JPanel {
 
     /**
      * Parses the current text content into a {@link LocalDate}.
-     * Supports ISO (yyyy-MM-dd), Indian format (dd-MM-yyyy), and slash-separated (dd/MM/yyyy).
+     * Supports dd-MM-yyyy (primary), slash-separated (dd/MM/yyyy), dot-separated (dd.MM.yyyy),
+     * compact (ddMMyyyy), 2-digit years, and ISO (yyyy-MM-dd).
      *
      * @return parsed {@link LocalDate}, or {@code null} if the field is blank or unparseable
      */
     public LocalDate getDate() {
-        String val = txtDate.getText().trim();
-        if (val.isEmpty()) return null;
-        try {
-            return LocalDate.parse(val, AppConfig.ISO_DATE_FORMATTER);
-        } catch (Exception e1) {
-            // Lenient fallbacks: try dd-MM-yyyy or dd/MM/yyyy
-            try {
-                return LocalDate.parse(val, DateTimeFormatter.ofPattern("dd-MM-yyyy"));
-            } catch (Exception e2) {
-                try {
-                    return LocalDate.parse(val, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                } catch (Exception ignored) {
-                    return null;
-                }
-            }
-        }
+        return parseDateLenient(txtDate.getText());
     }
 
     /**
-     * Sets the displayed date value in ISO format and notifies action listeners.
+     * Parses the given text string leniently into a {@link LocalDate}.
+     * Prioritizes dd-MM-yyyy format, then slash/dot separators, compact 8-digit, 2-digit year, and ISO format.
+     *
+     * @param text date string to parse
+     * @return parsed {@link LocalDate}, or {@code null} if unparseable or blank
+     */
+    public static LocalDate parseDateLenient(String text) {
+        if (text == null) return null;
+        String val = text.trim();
+        if (val.isEmpty()) return null;
+
+        for (DateTimeFormatter fmt : PARSE_FORMATTERS) {
+            try {
+                return LocalDate.parse(val, fmt);
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Sets the displayed date value in dd-MM-yyyy format and notifies action listeners.
      *
      * @param date date value to display, or {@code null} to clear
      */
     public void setDate(LocalDate date) {
         if (date != null) {
-            txtDate.setText(date.format(AppConfig.ISO_DATE_FORMATTER));
+            txtDate.setText(date.format(AppConfig.INPUT_DATE_FORMATTER));
         } else {
             txtDate.setText("");
         }
@@ -252,7 +286,7 @@ public class DatePickerField extends JPanel {
             }
 
             popup.setLocation(x, y);
-        } catch (Exception ex) {
+        } catch (java.awt.IllegalComponentStateException | NullPointerException ex) {
             popup.setLocationRelativeTo(this);
         }
 
@@ -278,8 +312,10 @@ public class DatePickerField extends JPanel {
 
         /** Month selection combo box. */
         private JComboBox<String> cmbMonth;
-        /** Year selection combo box. */
+        /** Year selection combo box (editable). */
         private JComboBox<Integer> cmbYear;
+        /** Flag to prevent action listener feedback loops while synchronizing combo boxes. */
+        private boolean updatingCombos = false;
         /** Day cell button container panel. */
         private JPanel daysGrid;
 
@@ -311,7 +347,7 @@ public class DatePickerField extends JPanel {
                     BorderFactory.createLineBorder(UiUtils.COLOR_PRIMARY, 1, true),
                     BorderFactory.createEmptyBorder(10, 10, 10, 10)
             ));
-            setPreferredSize(new Dimension(280, 270));
+            setPreferredSize(new Dimension(330, 285));
 
             initComponents();
             renderDays();
@@ -325,65 +361,112 @@ public class DatePickerField extends JPanel {
             JPanel headerPanel = new JPanel(new BorderLayout(4, 0));
             headerPanel.setOpaque(false);
 
-            JButton btnPrev = new JButton(NavIcons.chevronLeft(10, UiUtils.COLOR_TEXT_PRIMARY));
-            btnPrev.setMargin(new Insets(2, 4, 2, 4));
-            btnPrev.setFocusPainted(false);
-            btnPrev.addActionListener(e -> {
+            // Left Navigation: Previous Year (<<) and Previous Month (<)
+            JPanel leftNav = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+            leftNav.setOpaque(false);
+
+            JButton btnPrevYear = new JButton(NavIcons.chevronDoubleLeft(10, UiUtils.COLOR_TEXT_PRIMARY));
+            btnPrevYear.setToolTipText("Previous Year");
+            btnPrevYear.setMargin(new Insets(2, 4, 2, 4));
+            btnPrevYear.setFocusPainted(false);
+            btnPrevYear.addActionListener(e -> {
+                currentYearMonth = currentYearMonth.minusYears(1);
+                syncCombos();
+                renderDays();
+            });
+
+            JButton btnPrevMonth = new JButton(NavIcons.chevronLeft(10, UiUtils.COLOR_TEXT_PRIMARY));
+            btnPrevMonth.setToolTipText("Previous Month");
+            btnPrevMonth.setMargin(new Insets(2, 4, 2, 4));
+            btnPrevMonth.setFocusPainted(false);
+            btnPrevMonth.addActionListener(e -> {
                 currentYearMonth = currentYearMonth.minusMonths(1);
                 syncCombos();
                 renderDays();
             });
 
-            JButton btnNext = new JButton(NavIcons.chevronRight(10, UiUtils.COLOR_TEXT_PRIMARY));
-            btnNext.setMargin(new Insets(2, 4, 2, 4));
-            btnNext.setFocusPainted(false);
-            btnNext.addActionListener(e -> {
-                currentYearMonth = currentYearMonth.plusMonths(1);
-                syncCombos();
-                renderDays();
-            });
+            leftNav.add(btnPrevYear);
+            leftNav.add(btnPrevMonth);
 
-            JPanel selectors = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
-            selectors.setOpaque(false);
+            // Center: Month & Year Dropdowns
+            JPanel centerSelectors = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
+            centerSelectors.setOpaque(false);
 
             cmbMonth = new JComboBox<>(MONTH_NAMES);
             cmbMonth.setFont(UiUtils.FONT_REGULAR);
             cmbMonth.setSelectedIndex(currentYearMonth.getMonthValue() - 1);
             cmbMonth.addActionListener(e -> {
+                if (updatingCombos) return;
                 int m = cmbMonth.getSelectedIndex() + 1;
                 currentYearMonth = YearMonth.of(currentYearMonth.getYear(), m);
                 renderDays();
             });
 
-            int currentYear = LocalDate.now().getYear();
-            Integer[] years = new Integer[41];
-            for (int i = 0; i <= 40; i++) {
-                years[i] = (currentYear - 20) + i;
+            // Populate Year Model with wide coverage (1950 to 2070)
+            DefaultComboBoxModel<Integer> yearModel = new DefaultComboBoxModel<>();
+            for (int y = 1950; y <= 2070; y++) {
+                yearModel.addElement(y);
             }
-            cmbYear = new JComboBox<>(years);
+            if (yearModel.getIndexOf(currentYearMonth.getYear()) == -1) {
+                yearModel.addElement(currentYearMonth.getYear());
+            }
+
+            cmbYear = new JComboBox<>(yearModel);
             cmbYear.setFont(UiUtils.FONT_REGULAR);
+            cmbYear.setEditable(true);
             cmbYear.setSelectedItem(currentYearMonth.getYear());
+            cmbYear.setToolTipText("Select or type any year");
             cmbYear.addActionListener(e -> {
-                Object yr = cmbYear.getSelectedItem();
-                if (yr instanceof Integer y) {
-                    currentYearMonth = YearMonth.of(y, currentYearMonth.getMonthValue());
+                if (updatingCombos) return;
+                int yr = parseYearFromCombo(cmbYear.getSelectedItem());
+                if (yr > 0 && yr != currentYearMonth.getYear()) {
+                    currentYearMonth = YearMonth.of(yr, currentYearMonth.getMonthValue());
+                    syncCombos();
                     renderDays();
                 }
             });
 
+            centerSelectors.add(cmbMonth);
+            centerSelectors.add(cmbYear);
+
+            // Right Navigation: Next Month (>), Next Year (>>), and Close (X)
+            JPanel rightNav = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
+            rightNav.setOpaque(false);
+
+            JButton btnNextMonth = new JButton(NavIcons.chevronRight(10, UiUtils.COLOR_TEXT_PRIMARY));
+            btnNextMonth.setToolTipText("Next Month");
+            btnNextMonth.setMargin(new Insets(2, 4, 2, 4));
+            btnNextMonth.setFocusPainted(false);
+            btnNextMonth.addActionListener(e -> {
+                currentYearMonth = currentYearMonth.plusMonths(1);
+                syncCombos();
+                renderDays();
+            });
+
+            JButton btnNextYear = new JButton(NavIcons.chevronDoubleRight(10, UiUtils.COLOR_TEXT_PRIMARY));
+            btnNextYear.setToolTipText("Next Year");
+            btnNextYear.setMargin(new Insets(2, 4, 2, 4));
+            btnNextYear.setFocusPainted(false);
+            btnNextYear.addActionListener(e -> {
+                currentYearMonth = currentYearMonth.plusYears(1);
+                syncCombos();
+                renderDays();
+            });
+
             JButton btnClose = new JButton(NavIcons.cross(10, UiUtils.COLOR_TEXT_MUTED));
+            btnClose.setToolTipText("Close");
             btnClose.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
             btnClose.setContentAreaFilled(false);
             btnClose.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             btnClose.addActionListener(e -> onClose.run());
 
-            selectors.add(btnPrev);
-            selectors.add(cmbMonth);
-            selectors.add(cmbYear);
-            selectors.add(btnNext);
-            selectors.add(btnClose);
+            rightNav.add(btnNextMonth);
+            rightNav.add(btnNextYear);
+            rightNav.add(btnClose);
 
-            headerPanel.add(selectors, BorderLayout.CENTER);
+            headerPanel.add(leftNav, BorderLayout.WEST);
+            headerPanel.add(centerSelectors, BorderLayout.CENTER);
+            headerPanel.add(rightNav, BorderLayout.EAST);
             add(headerPanel, BorderLayout.NORTH);
 
             // Center Panel: Weekday Headers + Days Grid
@@ -432,11 +515,39 @@ public class DatePickerField extends JPanel {
         }
 
         /**
-         * Synchronizes combo box selections with the active year and month.
+         * Safely parses a year value from the combo box, handling both Integer objects and manual string typing.
+         */
+        private int parseYearFromCombo(Object val) {
+            if (val instanceof Integer i) {
+                return i;
+            } else if (val != null) {
+                try {
+                    int parsed = Integer.parseInt(val.toString().trim());
+                    if (parsed >= 1900 && parsed <= 2100) {
+                        return parsed;
+                    }
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            return currentYearMonth.getYear();
+        }
+
+        /**
+         * Synchronizes combo box selections with the active year and month without triggering recursive events.
          */
         private void syncCombos() {
-            cmbMonth.setSelectedIndex(currentYearMonth.getMonthValue() - 1);
-            cmbYear.setSelectedItem(currentYearMonth.getYear());
+            updatingCombos = true;
+            try {
+                cmbMonth.setSelectedIndex(currentYearMonth.getMonthValue() - 1);
+                int yr = currentYearMonth.getYear();
+                DefaultComboBoxModel<Integer> model = (DefaultComboBoxModel<Integer>) cmbYear.getModel();
+                if (model.getIndexOf(yr) == -1) {
+                    model.addElement(yr);
+                }
+                cmbYear.setSelectedItem(yr);
+            } finally {
+                updatingCombos = false;
+            }
         }
 
         /**

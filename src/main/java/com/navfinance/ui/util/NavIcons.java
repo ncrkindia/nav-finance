@@ -1027,6 +1027,58 @@ public final class NavIcons {
     }
 
     /**
+     * Creates a double left chevron icon for multi-period / year pagination.
+     *
+     * @param size dimension in pixels
+     * @param color stroke color
+     * @return vector {@link Icon}
+     */
+    public static Icon chevronDoubleLeft(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            g2.setStroke(new BasicStroke(Math.max(1.6f, s * 0.14f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            GeneralPath p1 = new GeneralPath();
+            p1.moveTo(s * 0.50f, s * 0.20f);
+            p1.lineTo(s * 0.22f, s * 0.50f);
+            p1.lineTo(s * 0.50f, s * 0.80f);
+            g2.draw(p1);
+
+            GeneralPath p2 = new GeneralPath();
+            p2.moveTo(s * 0.82f, s * 0.20f);
+            p2.lineTo(s * 0.54f, s * 0.50f);
+            p2.lineTo(s * 0.82f, s * 0.80f);
+            g2.draw(p2);
+        });
+    }
+
+    /**
+     * Creates a double right chevron icon for multi-period / year pagination.
+     *
+     * @param size dimension in pixels
+     * @param color stroke color
+     * @return vector {@link Icon}
+     */
+    public static Icon chevronDoubleRight(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            g2.setStroke(new BasicStroke(Math.max(1.6f, s * 0.14f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            GeneralPath p1 = new GeneralPath();
+            p1.moveTo(s * 0.18f, s * 0.20f);
+            p1.lineTo(s * 0.46f, s * 0.50f);
+            p1.lineTo(s * 0.18f, s * 0.80f);
+            g2.draw(p1);
+
+            GeneralPath p2 = new GeneralPath();
+            p2.moveTo(s * 0.50f, s * 0.20f);
+            p2.lineTo(s * 0.78f, s * 0.50f);
+            p2.lineTo(s * 0.50f, s * 0.80f);
+            g2.draw(p2);
+        });
+    }
+
+    /**
      * Creates a globe / language vector icon for UI language selection.
      *
      * @param size dimension in pixels
