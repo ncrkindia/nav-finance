@@ -242,6 +242,58 @@ public final class NavIcons {
 
 
     /**
+     * Creates a Category taxonomy grid icon (4 rounded quadrants).
+     *
+     * @param size dimension in pixels
+     * @param color stroke and fill color
+     * @return vector {@link Icon}
+     */
+    public static Icon category(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            float pad = s * 0.12f;
+            float gap = s * 0.10f;
+            float boxSize = (s - 2 * pad - gap) / 2f;
+            float arc = Math.max(2, s * 0.14f);
+
+            // Top-left
+            g2.fill(new RoundRectangle2D.Float(pad, pad, boxSize, boxSize, arc, arc));
+            // Top-right
+            g2.fill(new RoundRectangle2D.Float(pad + boxSize + gap, pad, boxSize, boxSize, arc, arc));
+            // Bottom-left
+            g2.fill(new RoundRectangle2D.Float(pad, pad + boxSize + gap, boxSize, boxSize, arc, arc));
+            // Bottom-right
+            g2.fill(new RoundRectangle2D.Float(pad + boxSize + gap, pad + boxSize + gap, boxSize, boxSize, arc, arc));
+        });
+    }
+
+    /**
+     * Creates a Sub-Category branch / hierarchical child tag icon.
+     *
+     * @param size dimension in pixels
+     * @param color stroke color
+     * @return vector {@link Icon}
+     */
+    public static Icon subCategory(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            g2.setStroke(new BasicStroke(Math.max(1.3f, s * 0.10f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+            // L-branch tree line
+            GeneralPath path = new GeneralPath();
+            path.moveTo(s * 0.25f, s * 0.18f);
+            path.lineTo(s * 0.25f, s * 0.65f);
+            path.lineTo(s * 0.60f, s * 0.65f);
+            g2.draw(path);
+
+            // Child tag/circle at branch end
+            g2.fill(new RoundRectangle2D.Float(s * 0.55f, s * 0.50f, s * 0.32f, s * 0.30f, 2, 2));
+        });
+    }
+
+    /**
      * Creates a Catalog / Masters folder layer icon.
      *
      * @param size dimension in pixels

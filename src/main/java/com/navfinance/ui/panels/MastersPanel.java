@@ -5,11 +5,14 @@ import com.navfinance.i18n.AppLanguage;
 import com.navfinance.i18n.I18n;
 import com.navfinance.i18n.LanguageChangeListener;
 import com.navfinance.model.Bill;
+import com.navfinance.model.Category;
 import com.navfinance.model.CreditCard;
 import com.navfinance.model.Emi;
 import com.navfinance.model.Person;
+import com.navfinance.model.SubCategory;
 import com.navfinance.service.FinanceService;
 import com.navfinance.ui.dialogs.BillDialog;
+import com.navfinance.ui.dialogs.CategoryDialog;
 import com.navfinance.ui.dialogs.CreditCardDialog;
 import com.navfinance.ui.dialogs.EmiDialog;
 import com.navfinance.ui.dialogs.PersonDialog;
@@ -25,8 +28,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
@@ -87,6 +92,24 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
     /** Table model backing the Payment Modes grid. */
     private DefaultTableModel modelModes;
 
+    /** Table displaying Category master entities. */
+    private JTable tblCategories;
+
+    /** Table model backing the Category master grid. */
+    private DefaultTableModel modelCategories;
+
+    /** Table displaying associated Sub-Category entities. */
+    private JTable tblSubCategories;
+
+    /** Table model backing the Sub-Category grid. */
+    private DefaultTableModel modelSubCategories;
+
+    /** Currently selected Category entity in the master-detail view. */
+    private Category selectedCategory;
+
+    /** Header label indicating current selected Category for sub-categories. */
+    private JLabel lblSubCategoryHeader;
+
     /**
      * Constructs a new {@code MastersPanel}, setting up header labels, sub-tabs for
      * each catalog type, and loading initial catalog data from the database.
@@ -130,6 +153,7 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
         tabbedPane.addTab(I18n.get("masters.tab.emis"), NavIcons.emi(15, UiUtils.COLOR_PRIMARY), createEmisPanel());
         tabbedPane.addTab(I18n.get("masters.tab.cards"), NavIcons.card(15, UiUtils.COLOR_PRIMARY), createCardsPanel());
         tabbedPane.addTab(I18n.get("masters.tab.paymentModes"), NavIcons.paymentMode(15, UiUtils.COLOR_PRIMARY), createModesPanel());
+        tabbedPane.addTab(I18n.get("masters.tab.categories"), NavIcons.category(15, UiUtils.COLOR_PRIMARY), createCategoriesPanel());
 
         add(tabbedPane, BorderLayout.CENTER);
     }
@@ -440,6 +464,158 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
     }
 
     // -------------------------------------------------------------------------
+    // 6. Categories & Sub-Categories Panel (Master-Detail)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Builds the panel for managing Categories and their associated Sub-Categories.
+     * Uses a responsive Master-Detail JSplitPane layout.
+     *
+     * @return fully configured JPanel for Category catalog management
+     */
+    private JPanel createCategoriesPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // LEFT: Categories Panel
+        JPanel leftPanel = new JPanel(new BorderLayout(0, 8));
+        leftPanel.setOpaque(false);
+
+        JPanel leftTopBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        leftTopBar.setOpaque(false);
+
+        JButton btnAddCat = UiUtils.createPrimaryButton(I18n.get("masters.btn.addCategory"), NavIcons.plus(13, Color.WHITE));
+        btnAddCat.addActionListener(e -> onAddCategory());
+
+        JButton btnEditCat = UiUtils.createSecondaryButton(I18n.get("btn.edit"), NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnEditCat.addActionListener(e -> onEditCategory());
+
+        JButton btnDeleteCat = UiUtils.createSecondaryButton(I18n.get("btn.delete"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        btnDeleteCat.addActionListener(e -> onDeleteCategory());
+
+        leftTopBar.add(btnAddCat);
+        leftTopBar.add(btnEditCat);
+        leftTopBar.add(btnDeleteCat);
+        leftPanel.add(leftTopBar, BorderLayout.NORTH);
+
+        String[] catCols = {"ID", I18n.get("masters.table.categoryName"), I18n.get("masters.table.categoryType"), I18n.get("masters.table.subCategoryCount")};
+        modelCategories = new DefaultTableModel(catCols, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        tblCategories = new JTable(modelCategories);
+        tblCategories.setRowHeight(28);
+        tblCategories.setFont(UiUtils.regularFont());
+        tblCategories.getTableHeader().setFont(UiUtils.boldFont());
+        tblCategories.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tblCategories.getColumnModel().getColumn(0).setMaxWidth(60);
+        tblCategories.getColumnModel().getColumn(0).setPreferredWidth(50);
+        tblCategories.getColumnModel().getColumn(2).setPreferredWidth(85);
+        tblCategories.getColumnModel().getColumn(3).setPreferredWidth(95);
+
+        // Type color badge renderer
+        tblCategories.getColumnModel().getColumn(2).setCellRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
+                l.setHorizontalAlignment(CENTER);
+                l.setFont(UiUtils.boldFont());
+                if (!isSelected) {
+                    if ("EXPENSE".equals(value)) {
+                        l.setForeground(UiUtils.COLOR_EXPENSE);
+                    } else if ("INCOME".equals(value)) {
+                        l.setForeground(UiUtils.COLOR_INCOME);
+                    } else {
+                        l.setForeground(UiUtils.COLOR_PRIMARY);
+                    }
+                }
+                return l;
+            }
+        });
+
+        tblCategories.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int row = tblCategories.getSelectedRow();
+                if (row >= 0 && row < tblCategories.getRowCount()) {
+                    Long id = (Long) tblCategories.getValueAt(row, 0);
+                    selectedCategory = financeService.getAllCategories().stream()
+                            .filter(c -> c.getId().equals(id))
+                            .findFirst().orElse(null);
+                } else {
+                    selectedCategory = null;
+                }
+                refreshSubCategories();
+            }
+        });
+
+        setupTableInteractions(tblCategories, this::onEditCategory, null, this::onDeleteCategory);
+
+        JScrollPane spCat = new JScrollPane(tblCategories);
+        spCat.setBorder(UiUtils.createCardBorder());
+        leftPanel.add(spCat, BorderLayout.CENTER);
+
+        // RIGHT: Sub-Categories Panel
+        JPanel rightPanel = new JPanel(new BorderLayout(0, 8));
+        rightPanel.setOpaque(false);
+
+        JPanel rightTopBar = new JPanel(new BorderLayout(8, 0));
+        rightTopBar.setOpaque(false);
+
+        lblSubCategoryHeader = new JLabel("Associated Sub-Categories");
+        lblSubCategoryHeader.setFont(UiUtils.boldFont());
+        lblSubCategoryHeader.setForeground(UiUtils.COLOR_TEXT_PRIMARY);
+        rightTopBar.add(lblSubCategoryHeader, BorderLayout.WEST);
+
+        JPanel rightBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        rightBtns.setOpaque(false);
+
+        JButton btnAddSub = UiUtils.createPrimaryButton(I18n.get("masters.btn.addSubCategory"), NavIcons.plus(13, Color.WHITE));
+        btnAddSub.addActionListener(e -> onAddSubCategory());
+
+        JButton btnEditSub = UiUtils.createSecondaryButton(I18n.get("btn.edit"), NavIcons.edit(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnEditSub.addActionListener(e -> onEditSubCategory());
+
+        JButton btnDeleteSub = UiUtils.createSecondaryButton(I18n.get("btn.delete"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        btnDeleteSub.addActionListener(e -> onDeleteSubCategory());
+
+        rightBtns.add(btnAddSub);
+        rightBtns.add(btnEditSub);
+        rightBtns.add(btnDeleteSub);
+        rightTopBar.add(rightBtns, BorderLayout.EAST);
+        rightPanel.add(rightTopBar, BorderLayout.NORTH);
+
+        String[] subCols = {"ID", I18n.get("masters.table.subCategoryName")};
+        modelSubCategories = new DefaultTableModel(subCols, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        tblSubCategories = new JTable(modelSubCategories);
+        tblSubCategories.setRowHeight(28);
+        tblSubCategories.setFont(UiUtils.regularFont());
+        tblSubCategories.getTableHeader().setFont(UiUtils.boldFont());
+        tblSubCategories.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tblSubCategories.getColumnModel().getColumn(0).setMaxWidth(60);
+        tblSubCategories.getColumnModel().getColumn(0).setPreferredWidth(50);
+
+        setupTableInteractions(tblSubCategories, this::onEditSubCategory, null, this::onDeleteSubCategory);
+
+        JScrollPane spSub = new JScrollPane(tblSubCategories);
+        spSub.setBorder(UiUtils.createCardBorder());
+        rightPanel.add(spSub, BorderLayout.CENTER);
+
+        // Split pane
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
+        splitPane.setResizeWeight(0.55);
+        splitPane.setBorder(null);
+        splitPane.setOpaque(false);
+        splitPane.setContinuousLayout(true);
+
+        panel.add(splitPane, BorderLayout.CENTER);
+        return panel;
+    }
+
+    // -------------------------------------------------------------------------
     // Master Actions & Table Interactions
     // -------------------------------------------------------------------------
 
@@ -645,6 +821,123 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
         }
     }
 
+    private void onAddCategory() {
+        JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
+        CategoryDialog dialog = new CategoryDialog(frame, null);
+        dialog.setVisible(true);
+        if (dialog.isSaved()) {
+            refreshCategories();
+        }
+    }
+
+    private void onEditCategory() {
+        int row = tblCategories.getSelectedRow();
+        if (row < 0) {
+            UiUtils.showError(this, "Select a category to edit.");
+            return;
+        }
+        Long id = (Long) tblCategories.getValueAt(row, 0);
+        Category cat = financeService.getAllCategories().stream()
+                .filter(c -> c.getId().equals(id))
+                .findFirst().orElse(null);
+        if (cat != null) {
+            JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
+            CategoryDialog dialog = new CategoryDialog(frame, cat);
+            dialog.setVisible(true);
+            if (dialog.isSaved()) {
+                refreshCategories();
+            }
+        }
+    }
+
+    private void onDeleteCategory() {
+        int row = tblCategories.getSelectedRow();
+        if (row < 0) {
+            UiUtils.showError(this, "Select a category to delete.");
+            return;
+        }
+        Long id = (Long) tblCategories.getValueAt(row, 0);
+        String name = (String) tblCategories.getValueAt(row, 1);
+        int txCount = financeService.countTransactionsForCategory(name);
+        if (txCount > 0) {
+            UiUtils.showError(this, String.format(
+                    "Cannot delete Category '%s' because it is referenced by %d transaction(s).\nPlease reassign those transactions before deleting.",
+                    name, txCount));
+            return;
+        }
+
+        String msg = I18n.get("masters.confirm.deleteCategory", name);
+        if (UiUtils.confirm(this, msg)) {
+            boolean success = financeService.deleteCategory(id);
+            if (success) {
+                selectedCategory = null;
+                refreshCategories();
+            } else {
+                UiUtils.showError(this, "Failed to delete category.");
+            }
+        }
+    }
+
+    private void onAddSubCategory() {
+        if (selectedCategory == null) {
+            UiUtils.showError(this, "Please select a Category from the left table first.");
+            return;
+        }
+        String prompt = I18n.get("masters.prompt.addSubCategory");
+        String title = I18n.get("masters.btn.addSubCategory");
+        String subName = (String) JOptionPane.showInputDialog(
+                this, prompt, title, JOptionPane.PLAIN_MESSAGE, null, null, "");
+        if (subName != null && !subName.trim().isEmpty()) {
+            SubCategory sub = financeService.addSubCategory(selectedCategory.getId(), subName.trim());
+            if (sub != null) {
+                refreshCategories();
+            } else {
+                UiUtils.showError(this, "Failed to add sub-category. A sub-category with that name may already exist.");
+            }
+        }
+    }
+
+    private void onEditSubCategory() {
+        if (selectedCategory == null || tblSubCategories.getSelectedRow() < 0) {
+            UiUtils.showError(this, "Select a sub-category to edit.");
+            return;
+        }
+        int row = tblSubCategories.getSelectedRow();
+        Long subId = (Long) tblSubCategories.getValueAt(row, 0);
+        String oldName = (String) tblSubCategories.getValueAt(row, 1);
+        String prompt = I18n.get("masters.prompt.editSubCategory");
+        String title = I18n.get("btn.edit");
+        String newName = (String) JOptionPane.showInputDialog(
+                this, prompt, title, JOptionPane.PLAIN_MESSAGE, null, null, oldName);
+        if (newName != null && !newName.trim().isEmpty() && !newName.trim().equalsIgnoreCase(oldName.trim())) {
+            boolean success = financeService.updateSubCategory(subId, newName.trim(), oldName, selectedCategory.getName());
+            if (success) {
+                refreshCategories();
+            } else {
+                UiUtils.showError(this, "Failed to update sub-category.");
+            }
+        }
+    }
+
+    private void onDeleteSubCategory() {
+        if (selectedCategory == null || tblSubCategories.getSelectedRow() < 0) {
+            UiUtils.showError(this, "Select a sub-category to delete.");
+            return;
+        }
+        int row = tblSubCategories.getSelectedRow();
+        Long subId = (Long) tblSubCategories.getValueAt(row, 0);
+        String subName = (String) tblSubCategories.getValueAt(row, 1);
+        String msg = I18n.get("masters.confirm.deleteSubCategory", subName);
+        if (UiUtils.confirm(this, msg)) {
+            boolean success = financeService.deleteSubCategory(subId, subName);
+            if (success) {
+                refreshCategories();
+            } else {
+                UiUtils.showError(this, "Failed to delete sub-category.");
+            }
+        }
+    }
+
     /**
      * Attaches double-click editing and right-click context menu (Edit, Track, Delete) to a master table.
      * Ensures right-clicking an unselected row selects that row before displaying the context menu,
@@ -769,6 +1062,7 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
         refreshEmis();
         refreshCards();
         refreshModes();
+        refreshCategories();
     }
 
     /**
@@ -839,6 +1133,67 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
         }
     }
 
+    /**
+     * Queries and re-populates the Categories master table.
+     */
+    private void refreshCategories() {
+        Long prevSelectedId = selectedCategory != null ? selectedCategory.getId() : null;
+        modelCategories.setRowCount(0);
+        List<Category> list = financeService.getAllCategories();
+        int rowToSelect = -1;
+
+        for (int i = 0; i < list.size(); i++) {
+            Category c = list.get(i);
+            int subCount = c.getSubCategories() != null ? c.getSubCategories().size() : 0;
+            String typeStr = c.getType() != null ? c.getType().name() : "ALL";
+            modelCategories.addRow(new Object[]{c.getId(), c.getName(), typeStr, subCount});
+            if (prevSelectedId != null && prevSelectedId.equals(c.getId())) {
+                rowToSelect = i;
+                selectedCategory = c;
+            }
+        }
+
+        if (rowToSelect >= 0 && rowToSelect < tblCategories.getRowCount()) {
+            tblCategories.setRowSelectionInterval(rowToSelect, rowToSelect);
+        } else if (!list.isEmpty()) {
+            tblCategories.setRowSelectionInterval(0, 0);
+            selectedCategory = list.get(0);
+        } else {
+            selectedCategory = null;
+        }
+
+        refreshSubCategories();
+    }
+
+    /**
+     * Populates the Sub-Categories table for the currently selected category.
+     */
+    private void refreshSubCategories() {
+        modelSubCategories.setRowCount(0);
+        if (selectedCategory == null) {
+            if (lblSubCategoryHeader != null) {
+                lblSubCategoryHeader.setText("Associated Sub-Categories (Select a category)");
+            }
+            return;
+        }
+
+        if (lblSubCategoryHeader != null) {
+            String typeStr = selectedCategory.getType() != null ? " [" + selectedCategory.getType().name() + "]" : "";
+            lblSubCategoryHeader.setText("Associated Sub-Categories for: " + selectedCategory.getName() + typeStr);
+        }
+
+        Category latest = financeService.getAllCategories().stream()
+                .filter(c -> c.getId().equals(selectedCategory.getId()))
+                .findFirst().orElse(selectedCategory);
+        selectedCategory = latest;
+
+        if (latest.getSubCategories() != null) {
+            for (SubCategory s : latest.getSubCategories()) {
+                modelSubCategories.addRow(new Object[]{s.getId(), s.getName()});
+            }
+        }
+    }
+
     @Override
     public void onLanguageChanged(AppLanguage newLanguage) {
         removeAll();
@@ -854,5 +1209,7 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
     public JTable getTblEmis() { return tblEmis; }
     public JTable getTblCards() { return tblCards; }
     public JTable getTblModes() { return tblModes; }
+    public JTable getTblCategories() { return tblCategories; }
+    public JTable getTblSubCategories() { return tblSubCategories; }
 }
 

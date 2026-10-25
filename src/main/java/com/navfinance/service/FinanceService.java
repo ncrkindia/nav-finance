@@ -3,6 +3,7 @@ package com.navfinance.service;
 import com.navfinance.config.AppConfig;
 import com.navfinance.dao.AuditDao;
 import com.navfinance.dao.BillDao;
+import com.navfinance.dao.CategoryDao;
 import com.navfinance.dao.CreditCardDao;
 import com.navfinance.dao.EmiDao;
 import com.navfinance.dao.PaymentModeDao;
@@ -11,11 +12,13 @@ import com.navfinance.dao.TransactionDao;
 import com.navfinance.dao.TransactionLinkDao;
 import com.navfinance.model.AuditLog;
 import com.navfinance.model.Bill;
+import com.navfinance.model.Category;
 import com.navfinance.model.CreditCard;
 import com.navfinance.model.Emi;
 import com.navfinance.model.EntityTrackerSummary;
 import com.navfinance.model.FilterCriteria;
 import com.navfinance.model.Person;
+import com.navfinance.model.SubCategory;
 import com.navfinance.model.Transaction;
 import com.navfinance.model.TransactionLink;
 import com.navfinance.model.TransactionSettlementInfo;
@@ -30,7 +33,7 @@ import java.util.Map;
 
 /**
  * Core business orchestration service managing ledger transactions, master entities (Persons,
- * Bills, EMIs, Credit Cards, Payment Channels), audit tracking, and loans and dues counterparty balance calculations.
+ * Bills, EMIs, Credit Cards, Categories, Payment Channels), audit tracking, and loans and dues counterparty balance calculations.
  * <p>
  * Ensures audit logging is automatically triggered on every creation, update, and deletion.
  * </p>
@@ -46,6 +49,7 @@ public class FinanceService {
     private final EmiDao emiDao = new EmiDao();
     private final CreditCardDao creditCardDao = new CreditCardDao();
     private final PaymentModeDao paymentModeDao = new PaymentModeDao();
+    private final CategoryDao categoryDao = new CategoryDao();
     private final AuditDao auditDao = new AuditDao();
 
     /**
@@ -412,6 +416,174 @@ public class FinanceService {
             return true;
         }
         return false;
+    }
+
+    // --- Masters: Categories & Associated Sub-Categories ---
+
+    /**
+     * Retrieves all configured categories with associated sub-categories.
+     *
+     * @return List of Category entities
+     */
+    public List<Category> getAllCategories() {
+        return categoryDao.findAll();
+    }
+
+    /**
+     * Retrieves all categories of a given TransactionType (INCOME or EXPENSE).
+     *
+     * @param type target TransactionType
+     * @return List of matching Category entities
+     */
+    public List<Category> getCategoriesByType(TransactionType type) {
+        return categoryDao.findByType(type);
+    }
+
+    /**
+     * Retrieves distinct category names for the specified TransactionType.
+     *
+     * @param type target TransactionType (or null for all)
+     * @return List of category name strings
+     */
+    public List<String> getCategoryNames(TransactionType type) {
+        List<Category> list = type != null ? categoryDao.findByType(type) : categoryDao.findAll();
+        List<String> names = new ArrayList<>();
+        for (Category c : list) {
+            if (c != null && c.getName() != null && !c.getName().trim().isEmpty()) {
+                if (!names.contains(c.getName().trim())) {
+                    names.add(c.getName().trim());
+                }
+            }
+        }
+        return names;
+    }
+
+    /**
+     * Retrieves distinct associated sub-category names for a specific category name and transaction type.
+     *
+     * @param categoryName category name
+     * @param type transaction type
+     * @return List of sub-category name strings
+     */
+    public List<String> getSubCategoryNames(String categoryName, TransactionType type) {
+        List<String> names = new ArrayList<>();
+        if (categoryName == null || categoryName.trim().isEmpty()) return names;
+
+        Category c = categoryDao.findByNameAndType(categoryName.trim(), type);
+        if (c != null && c.getSubCategories() != null) {
+            for (SubCategory s : c.getSubCategories()) {
+                if (s != null && s.getName() != null && !s.getName().trim().isEmpty()) {
+                    names.add(s.getName().trim());
+                }
+            }
+        }
+        return names;
+    }
+
+    /**
+     * Saves a new or updated Category.
+     *
+     * @param category Category entity to save
+     * @return persisted Category
+     */
+    public Category saveCategory(Category category) {
+        return saveCategory(category, null);
+    }
+
+    /**
+     * Saves or updates a Category (and its initial sub-categories) with audit logging.
+     *
+     * @param category Category entity to save
+     * @param oldName previous name if updating
+     * @return persisted Category
+     */
+    public Category saveCategory(Category category, String oldName) {
+        if (category == null) return null;
+        if (category.getId() == null) {
+            Category created = categoryDao.insert(category);
+            if (created != null) {
+                auditDao.log("CATEGORY", created.getId(), "CREATE", "Created Category: " + created.getName() + " (" + created.getType() + ")");
+            }
+            return created;
+        } else {
+            boolean ok = categoryDao.update(category, oldName);
+            if (ok) {
+                auditDao.log("CATEGORY", category.getId(), "UPDATE", "Updated Category: " + category.getName() + " (" + category.getType() + ")");
+            }
+            return category;
+        }
+    }
+
+    /**
+     * Deletes a Category and its associated sub-categories with audit logging.
+     *
+     * @param categoryId ID of category to delete
+     * @return true if deleted
+     */
+    public boolean deleteCategory(Long categoryId) {
+        Category c = categoryDao.findById(categoryId);
+        boolean ok = categoryDao.delete(categoryId);
+        if (ok) {
+            auditDao.log("CATEGORY", categoryId, "DELETE", "Deleted Category: " + (c != null ? c.getName() : categoryId));
+        }
+        return ok;
+    }
+
+    /**
+     * Adds an associated sub-category under a parent category with audit logging.
+     *
+     * @param categoryId parent category ID
+     * @param name sub-category name
+     * @return created SubCategory
+     */
+    public SubCategory addSubCategory(Long categoryId, String name) {
+        SubCategory sub = categoryDao.addSubCategory(categoryId, name);
+        if (sub != null) {
+            auditDao.log("SUB_CATEGORY", sub.getId(), "CREATE", "Added Associated Category: '" + name + "' to Category #" + categoryId);
+        }
+        return sub;
+    }
+
+    /**
+     * Updates an associated sub-category name with audit logging and transaction cascade.
+     *
+     * @param subCategoryId sub-category ID
+     * @param newName new name
+     * @param oldName previous name
+     * @param categoryName parent category name
+     * @return true if updated
+     */
+    public boolean updateSubCategory(Long subCategoryId, String newName, String oldName, String categoryName) {
+        boolean ok = categoryDao.updateSubCategory(subCategoryId, newName, oldName, categoryName);
+        if (ok) {
+            auditDao.log("SUB_CATEGORY", subCategoryId, "UPDATE", "Renamed Associated Category from '" + oldName + "' to '" + newName + "'");
+        }
+        return ok;
+    }
+
+    /**
+     * Deletes an associated sub-category with audit logging.
+     *
+     * @param subCategoryId sub-category ID
+     * @param name sub-category name for audit logging
+     * @return true if deleted
+     */
+    public boolean deleteSubCategory(Long subCategoryId, String name) {
+        boolean ok = categoryDao.deleteSubCategory(subCategoryId);
+        if (ok) {
+            auditDao.log("SUB_CATEGORY", subCategoryId, "DELETE", "Deleted Associated Category: " + (name != null ? name : subCategoryId));
+        }
+        return ok;
+    }
+
+    /**
+     * Counts transactions currently referencing a category name.
+     *
+     * @param categoryName category name
+     * @return count
+     */
+    public int countTransactionsForCategory(String categoryName) {
+        return categoryDao.countTransactionsForCategory(categoryName);
     }
 
     // --- Audit Logs ---

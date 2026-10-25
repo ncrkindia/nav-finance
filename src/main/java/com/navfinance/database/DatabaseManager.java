@@ -217,7 +217,7 @@ public class DatabaseManager {
             targetDirectory.mkdirs();
         }
 
-        String[] tables = {"transactions", "persons", "bills", "emis", "credit_cards", "payment_modes", "recurring_schedules", "due_payments", "audit_logs", "transaction_links"};
+        String[] tables = {"transactions", "persons", "bills", "emis", "credit_cards", "payment_modes", "categories", "sub_categories", "recurring_schedules", "due_payments", "audit_logs", "transaction_links"};
 
         try (Connection conn = getConnection()) {
             for (String tableName : tables) {

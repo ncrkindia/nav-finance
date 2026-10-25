@@ -187,6 +187,27 @@ public class DbSchemaManager {
                 + "FOREIGN KEY (return_tx_id) REFERENCES transactions(id) ON DELETE CASCADE, "
                 + "CONSTRAINT uc_give_return UNIQUE (give_tx_id, return_tx_id))");
 
+        // 11. Categories Table
+        list.add("CREATE TABLE IF NOT EXISTS categories ("
+                + "id " + pkDef + ", "
+                + "name VARCHAR(100) NOT NULL, "
+                + "type VARCHAR(20) NOT NULL, "
+                + "is_system " + boolDef + " DEFAULT " + (dbType == DatabaseType.SQLITE ? "0" : "FALSE") + ", "
+                + "created_at " + tsDef + ", "
+                + "updated_at " + tsDef + ", "
+                + "CONSTRAINT uc_cat_name_type UNIQUE (name, type))");
+
+        // 12. Sub-Categories (Associated Categories) Table
+        list.add("CREATE TABLE IF NOT EXISTS sub_categories ("
+                + "id " + pkDef + ", "
+                + "category_id BIGINT NOT NULL, "
+                + "name VARCHAR(150) NOT NULL, "
+                + "is_system " + boolDef + " DEFAULT " + (dbType == DatabaseType.SQLITE ? "0" : "FALSE") + ", "
+                + "created_at " + tsDef + ", "
+                + "updated_at " + tsDef + ", "
+                + "FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE, "
+                + "CONSTRAINT uc_subcat_cat_name UNIQUE (category_id, name))");
+
         return list;
     }
 
@@ -213,9 +234,14 @@ public class DbSchemaManager {
         createIndexSafely(conn, "idx_audit_time", "audit_logs", "log_timestamp");
         createIndexSafely(conn, "idx_link_give", "transaction_links", "give_tx_id");
         createIndexSafely(conn, "idx_link_return", "transaction_links", "return_tx_id");
+        createIndexSafely(conn, "idx_cat_type", "categories", "type");
+        createIndexSafely(conn, "idx_subcat_cat_id", "sub_categories", "category_id");
 
         // Seed default payment modes across all databases
         seedDefaultPaymentModes(conn, dbType);
+
+        // Seed default categories and associated sub-categories
+        seedDefaultCategories(conn, dbType);
     }
 
     /**
@@ -257,6 +283,200 @@ public class DbSchemaManager {
             }
         } catch (SQLException e) {
             LOGGER.log(Level.WARNING, "Failed to check or seed payment modes: {0}", e.getMessage());
+        }
+    }
+
+    /**
+     * Seeds essential standard categories and associated sub-categories if the categories table is empty.
+     */
+    private static void seedDefaultCategories(Connection conn, DatabaseType dbType) {
+        String countSql = "SELECT COUNT(*) FROM categories";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(countSql)) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                record CategorySeed(String name, String type, String[] subs) {}
+
+                CategorySeed[] seeds = new CategorySeed[] {
+                        // Expense Categories
+                        new CategorySeed("EMI Payment", "EXPENSE", new String[] {"Home Loan EMI", "Car Loan EMI", "Personal Loan EMI", "Other Loan EMI"}),
+                        new CategorySeed("Credit Card", "EXPENSE", new String[] {"Credit Card Bill", "Other Card"}),
+                        new CategorySeed("Bill", "EXPENSE", new String[] {"Electricity Bill", "Mobile / Internet", "Water Bill", "Gas Bill", "Other Bill"}),
+                        new CategorySeed("Loan Given", "EXPENSE", new String[] {"Friend / Relative", "Personal Loan Given"}),
+                        new CategorySeed("Special Expense", "EXPENSE", new String[] {"Family Gathering / Dinner", "Vacation / Trip", "Festival / Celebration", "Electronics Purchase", "Home Renovation"}),
+                        new CategorySeed("Groceries & Food", "EXPENSE", new String[] {"Supermarket", "Vegetables & Fruits", "Dairy & Bakery", "Dining Out / Delivery"}),
+                        new CategorySeed("Shopping", "EXPENSE", new String[] {"Clothing & Apparel", "Footwear", "Household & Decor", "Online Shopping"}),
+                        new CategorySeed("Health & Medical", "EXPENSE", new String[] {"Doctor Consultation", "Medicines & Pharmacy", "Diagnostics / Lab", "Hospital / Treatment"}),
+                        new CategorySeed("Fuel & Travel", "EXPENSE", new String[] {"Petrol / Diesel", "Taxi / Cab", "Train / Flight", "Vehicle Maintenance"}),
+                        new CategorySeed("Investment", "EXPENSE", new String[] {"Axis Max Savings Plan", "Mutual Funds", "Stock Market", "Fixed Deposit", "PPF"}),
+                        new CategorySeed("Other Expense", "EXPENSE", new String[] {"General Expense", "Miscellaneous"}),
+
+                        // Income Categories
+                        new CategorySeed("Salary", "INCOME", new String[] {"Primary Employer", "Bonus / Incentive", "Arrears / Reimbursement", "Monthly Salary"}),
+                        new CategorySeed("Investment", "INCOME", new String[] {"NPS Contribution", "Provident Fund (PF)", "Dividends", "Interest", "Capital Gains"}),
+                        new CategorySeed("Relative", "INCOME", new String[] {"Family Support", "Gift", "Other Person"}),
+                        new CategorySeed("Return", "INCOME", new String[] {"Loan Return", "Advance Return"}),
+                        new CategorySeed("Loan", "INCOME", new String[] {"Personal Loan Disbursal", "Gold Loan", "Friend Loan"}),
+                        new CategorySeed("Freelance / Business", "INCOME", new String[] {"Client Project", "Consulting", "Sales"}),
+                        new CategorySeed("Other Income", "INCOME", new String[] {"Cashback / Rewards", "Interest", "Miscellaneous", "Sodexo Meal Voucher"})
+                };
+
+                String insertCatSql = "INSERT INTO categories (name, type, is_system) VALUES (?, ?, ?)";
+                String insertSubSql = "INSERT INTO sub_categories (category_id, name, is_system) VALUES (?, ?, ?)";
+
+                for (CategorySeed seed : seeds) {
+                    long catId = -1;
+                    try (PreparedStatement psCat = conn.prepareStatement(insertCatSql, Statement.RETURN_GENERATED_KEYS)) {
+                        psCat.setString(1, seed.name());
+                        psCat.setString(2, seed.type());
+                        psCat.setBoolean(3, true);
+                        psCat.executeUpdate();
+                        try (ResultSet gk = psCat.getGeneratedKeys()) {
+                            if (gk.next()) {
+                                catId = gk.getLong(1);
+                            }
+                        }
+                    } catch (SQLException ignored) {}
+
+                    if (catId > 0 && seed.subs() != null) {
+                        try (PreparedStatement psSub = conn.prepareStatement(insertSubSql)) {
+                            for (String sub : seed.subs()) {
+                                psSub.setLong(1, catId);
+                                psSub.setString(2, sub);
+                                psSub.setBoolean(3, true);
+                                try {
+                                    psSub.executeUpdate();
+                                } catch (SQLException ignored) {}
+                            }
+                        } catch (SQLException ignored) {}
+                    }
+                }
+                LOGGER.log(Level.INFO, "Seeded standard categories and associated sub-categories into {0}", dbType);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Failed to check or seed categories: {0}", e.getMessage());
+        }
+    }
+
+    /**
+     * Scans existing transactions, recurring schedules, and due payments to ensure
+     * any existing category or associated sub-category already in use in historical records
+     * is automatically present in the categories and sub_categories master tables.
+     */
+    public static void syncCategoriesFromExistingEntries(Connection conn) {
+        String insertCatSql = "INSERT INTO categories (name, type, is_system) VALUES (?, ?, FALSE)";
+        String insertSubSql = "INSERT INTO sub_categories (category_id, name, is_system) VALUES (?, ?, FALSE)";
+        String findCatSql = "SELECT id FROM categories WHERE LOWER(name) = LOWER(?) AND type = ?";
+        String findSubSql = "SELECT id FROM sub_categories WHERE category_id = ? AND LOWER(name) = LOWER(?)";
+
+        // 1. Scan transactions for categories and sub-categories
+        String scanTxSql = "SELECT DISTINCT category, sub_category, type FROM transactions "
+                + "WHERE category IS NOT NULL AND TRIM(category) != ''";
+
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(scanTxSql)) {
+
+            while (rs.next()) {
+                String catName = rs.getString("category") != null ? rs.getString("category").trim() : null;
+                String subName = rs.getString("sub_category") != null ? rs.getString("sub_category").trim() : null;
+                String typeStr = rs.getString("type") != null ? rs.getString("type").trim().toUpperCase() : "EXPENSE";
+
+                if (catName == null || catName.isEmpty()) continue;
+
+                long catId = -1;
+                try (PreparedStatement psFind = conn.prepareStatement(findCatSql)) {
+                    psFind.setString(1, catName);
+                    psFind.setString(2, typeStr);
+                    try (ResultSet rsFind = psFind.executeQuery()) {
+                        if (rsFind.next()) {
+                            catId = rsFind.getLong(1);
+                        }
+                    }
+                }
+
+                if (catId <= 0) {
+                    try (PreparedStatement psIns = conn.prepareStatement(insertCatSql, Statement.RETURN_GENERATED_KEYS)) {
+                        psIns.setString(1, catName);
+                        psIns.setString(2, typeStr);
+                        psIns.executeUpdate();
+                        try (ResultSet gk = psIns.getGeneratedKeys()) {
+                            if (gk.next()) catId = gk.getLong(1);
+                        }
+                    } catch (SQLException ignored) {}
+                }
+
+                if (catId > 0 && subName != null && !subName.isEmpty() && !"-".equals(subName)) {
+                    boolean subExists = false;
+                    try (PreparedStatement psSubFind = conn.prepareStatement(findSubSql)) {
+                        psSubFind.setLong(1, catId);
+                        psSubFind.setString(2, subName);
+                        try (ResultSet rsSubFind = psSubFind.executeQuery()) {
+                            if (rsSubFind.next()) subExists = true;
+                        }
+                    }
+                    if (!subExists) {
+                        try (PreparedStatement psSubIns = conn.prepareStatement(insertSubSql)) {
+                            psSubIns.setLong(1, catId);
+                            psSubIns.setString(2, subName);
+                            psSubIns.executeUpdate();
+                        } catch (SQLException ignored) {}
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            // Table transactions may not exist yet or be empty
+        }
+
+        // 2. Also scan recurring_schedules
+        String scanSchedSql = "SELECT DISTINCT category, sub_category, type FROM recurring_schedules "
+                + "WHERE category IS NOT NULL AND TRIM(category) != ''";
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(scanSchedSql)) {
+            while (rs.next()) {
+                String catName = rs.getString("category") != null ? rs.getString("category").trim() : null;
+                String subName = rs.getString("sub_category") != null ? rs.getString("sub_category").trim() : null;
+                String typeStr = rs.getString("type") != null ? rs.getString("type").trim().toUpperCase() : "EXPENSE";
+
+                if (catName == null || catName.isEmpty()) continue;
+
+                long catId = -1;
+                try (PreparedStatement psFind = conn.prepareStatement(findCatSql)) {
+                    psFind.setString(1, catName);
+                    psFind.setString(2, typeStr);
+                    try (ResultSet rsFind = psFind.executeQuery()) {
+                        if (rsFind.next()) catId = rsFind.getLong(1);
+                    }
+                }
+
+                if (catId <= 0) {
+                    try (PreparedStatement psIns = conn.prepareStatement(insertCatSql, Statement.RETURN_GENERATED_KEYS)) {
+                        psIns.setString(1, catName);
+                        psIns.setString(2, typeStr);
+                        psIns.executeUpdate();
+                        try (ResultSet gk = psIns.getGeneratedKeys()) {
+                            if (gk.next()) catId = gk.getLong(1);
+                        }
+                    } catch (SQLException ignored) {}
+                }
+
+                if (catId > 0 && subName != null && !subName.isEmpty() && !"-".equals(subName)) {
+                    boolean subExists = false;
+                    try (PreparedStatement psSubFind = conn.prepareStatement(findSubSql)) {
+                        psSubFind.setLong(1, catId);
+                        psSubFind.setString(2, subName);
+                        try (ResultSet rsSubFind = psSubFind.executeQuery()) {
+                            if (rsSubFind.next()) subExists = true;
+                        }
+                    }
+                    if (!subExists) {
+                        try (PreparedStatement psSubIns = conn.prepareStatement(insertSubSql)) {
+                            psSubIns.setLong(1, catId);
+                            psSubIns.setString(2, subName);
+                            psSubIns.executeUpdate();
+                        } catch (SQLException ignored) {}
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            // Ignore if recurring_schedules is empty or missing
         }
     }
 }

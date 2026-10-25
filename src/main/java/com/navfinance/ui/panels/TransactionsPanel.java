@@ -1143,41 +1143,26 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         for (CreditCard c : financeService.getAllCreditCards()) cmbMasterFilter.addItem(c);
     }
 
+    private boolean containsFilterItem(JComboBox<String> cmb, String item) {
+        if (item == null) return false;
+        for (int i = 0; i < cmb.getItemCount(); i++) {
+            if (item.equalsIgnoreCase(cmb.getItemAt(i))) return true;
+        }
+        return false;
+    }
+
     private void updateCategoryOptions() {
         cmbCategoryFilter.removeAllItems();
         cmbCategoryFilter.addItem(I18n.get("transactions.filter.allGeneric"));
 
         int typeIdx = cmbTypeFilter.getSelectedIndex();
-        if (typeIdx == 1) { // Income
-            cmbCategoryFilter.addItem("Salary");
-            cmbCategoryFilter.addItem("Relative");
-            cmbCategoryFilter.addItem("Return");
-            cmbCategoryFilter.addItem("Loan");
-            cmbCategoryFilter.addItem("Freelance / Business");
-            cmbCategoryFilter.addItem("Other Income");
-        } else if (typeIdx == 2) { // Expense
-            cmbCategoryFilter.addItem("EMI Payment");
-            cmbCategoryFilter.addItem("Credit Card");
-            cmbCategoryFilter.addItem("Bill");
-            cmbCategoryFilter.addItem("Loan Given");
-            cmbCategoryFilter.addItem("Special Expense");
-            cmbCategoryFilter.addItem("Groceries & Food");
-            cmbCategoryFilter.addItem("Shopping");
-            cmbCategoryFilter.addItem("Health & Medical");
-            cmbCategoryFilter.addItem("Fuel & Travel");
-            cmbCategoryFilter.addItem("Other Expense");
-        } else { // All
-            cmbCategoryFilter.addItem("Salary");
-            cmbCategoryFilter.addItem("EMI Payment");
-            cmbCategoryFilter.addItem("Credit Card");
-            cmbCategoryFilter.addItem("Bill");
-            cmbCategoryFilter.addItem("Loan Given");
-            cmbCategoryFilter.addItem("Return");
-            cmbCategoryFilter.addItem("Special Expense");
-            cmbCategoryFilter.addItem("Groceries & Food");
-            cmbCategoryFilter.addItem("Shopping");
-            cmbCategoryFilter.addItem("Health & Medical");
-            cmbCategoryFilter.addItem("Fuel & Travel");
+        TransactionType type = null;
+        if (typeIdx == 1) type = TransactionType.INCOME;
+        else if (typeIdx == 2) type = TransactionType.EXPENSE;
+
+        List<String> categories = financeService.getCategoryNames(type);
+        for (String c : categories) {
+            cmbCategoryFilter.addItem(c);
         }
         updateSubCategoryOptions();
     }
@@ -1189,14 +1174,40 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         String cat = (String) cmbCategoryFilter.getSelectedItem();
         if (cat == null || cat.equalsIgnoreCase(I18n.get("transactions.filter.allGeneric"))) return;
 
+        int typeIdx = cmbTypeFilter.getSelectedIndex();
+        TransactionType type = null;
+        if (typeIdx == 1) type = TransactionType.INCOME;
+        else if (typeIdx == 2) type = TransactionType.EXPENSE;
+
+        List<String> subs = financeService.getSubCategoryNames(cat, type);
+        for (String s : subs) {
+            cmbSubCategoryFilter.addItem(s);
+        }
+
         if ("Bill".equalsIgnoreCase(cat)) {
-            for (Bill b : financeService.getAllBills()) cmbSubCategoryFilter.addItem(b.getBillName());
+            for (Bill b : financeService.getAllBills()) {
+                if (!containsFilterItem(cmbSubCategoryFilter, b.getBillName())) {
+                    cmbSubCategoryFilter.addItem(b.getBillName());
+                }
+            }
         } else if ("Credit Card".equalsIgnoreCase(cat)) {
-            for (CreditCard c : financeService.getAllCreditCards()) cmbSubCategoryFilter.addItem(c.getCardName());
+            for (CreditCard c : financeService.getAllCreditCards()) {
+                if (!containsFilterItem(cmbSubCategoryFilter, c.getCardName())) {
+                    cmbSubCategoryFilter.addItem(c.getCardName());
+                }
+            }
         } else if ("EMI Payment".equalsIgnoreCase(cat)) {
-            for (Emi e : financeService.getAllEmis()) cmbSubCategoryFilter.addItem(e.getEmiName());
+            for (Emi e : financeService.getAllEmis()) {
+                if (!containsFilterItem(cmbSubCategoryFilter, e.getEmiName())) {
+                    cmbSubCategoryFilter.addItem(e.getEmiName());
+                }
+            }
         } else if ("Loan Given".equalsIgnoreCase(cat) || "Return".equalsIgnoreCase(cat) || "Relative".equalsIgnoreCase(cat)) {
-            for (Person p : financeService.getAllPersons()) cmbSubCategoryFilter.addItem(p.getName());
+            for (Person p : financeService.getAllPersons()) {
+                if (!containsFilterItem(cmbSubCategoryFilter, p.getName())) {
+                    cmbSubCategoryFilter.addItem(p.getName());
+                }
+            }
         }
     }
 

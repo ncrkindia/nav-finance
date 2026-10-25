@@ -408,54 +408,81 @@ public class RecurringScheduleDialog extends JDialog {
         updateCategories();
     }
 
+    private boolean containsItem(JComboBox<String> cmb, String item) {
+        if (item == null) return false;
+        for (int i = 0; i < cmb.getItemCount(); i++) {
+            if (item.equalsIgnoreCase(cmb.getItemAt(i))) return true;
+        }
+        return false;
+    }
+
     /**
      * Updates category options based on whether EXPENSE or INCOME is currently selected.
      */
     private void updateCategories() {
         TransactionType type = (TransactionType) cmbType.getSelectedItem();
+        Object currentCat = cmbCategory.getSelectedItem();
         cmbCategory.removeAllItems();
-        if (type == TransactionType.EXPENSE) {
-            cmbCategory.addItem("EMI Payment");
-            cmbCategory.addItem("Bill");
-            cmbCategory.addItem("Credit Card");
-            cmbCategory.addItem("Loan Given");
-            cmbCategory.addItem("Special Expense");
-            cmbCategory.addItem("Rent & Housing");
-            cmbCategory.addItem("Groceries & Food");
-            cmbCategory.addItem("Subscription / OTT");
-            cmbCategory.addItem("Insurance Premium");
-            cmbCategory.addItem("Other Expense");
-        } else {
-            cmbCategory.addItem("Salary");
-            cmbCategory.addItem("Return");
-            cmbCategory.addItem("Loan");
-            cmbCategory.addItem("Rental Income");
-            cmbCategory.addItem("Freelance");
-            cmbCategory.addItem("Other Income");
+
+        List<String> categories = financeService.getCategoryNames(type);
+        for (String c : categories) {
+            cmbCategory.addItem(c);
         }
+
+        if (currentCat != null && !currentCat.toString().isBlank()) {
+            String catStr = currentCat.toString();
+            if (!containsItem(cmbCategory, catStr)) {
+                cmbCategory.addItem(catStr);
+            }
+            cmbCategory.setSelectedItem(catStr);
+        }
+
         updateSubCategories();
     }
 
     /**
-     * Dynamically populates sub-categories from master entities (Bills, EMIs, Cards, Persons).
+     * Dynamically populates sub-categories from master entities and FinanceService.
      */
     private void updateSubCategories() {
         String cat = (String) cmbCategory.getSelectedItem();
+        Object currentSub = cmbSubCategory.getSelectedItem();
         cmbSubCategory.removeAllItems();
-        if (cat == null) return;
+        if (cat == null || cat.isBlank()) return;
+
+        TransactionType type = (TransactionType) cmbType.getSelectedItem();
+        List<String> subs = financeService.getSubCategoryNames(cat, type);
+        for (String s : subs) {
+            cmbSubCategory.addItem(s);
+        }
 
         if ("Bill".equalsIgnoreCase(cat)) {
             List<Bill> bills = financeService.getAllBills();
-            for (Bill b : bills) cmbSubCategory.addItem(b.getBillName());
+            for (Bill b : bills) {
+                if (!containsItem(cmbSubCategory, b.getBillName())) cmbSubCategory.addItem(b.getBillName());
+            }
         } else if ("EMI Payment".equalsIgnoreCase(cat)) {
             List<Emi> emis = financeService.getAllEmis();
-            for (Emi em : emis) cmbSubCategory.addItem(em.getEmiName());
+            for (Emi em : emis) {
+                if (!containsItem(cmbSubCategory, em.getEmiName())) cmbSubCategory.addItem(em.getEmiName());
+            }
         } else if ("Credit Card".equalsIgnoreCase(cat)) {
             List<CreditCard> cards = financeService.getAllCreditCards();
-            for (CreditCard cc : cards) cmbSubCategory.addItem(cc.getCardName());
+            for (CreditCard cc : cards) {
+                if (!containsItem(cmbSubCategory, cc.getCardName())) cmbSubCategory.addItem(cc.getCardName());
+            }
         } else if ("Loan Given".equalsIgnoreCase(cat) || "Loan".equalsIgnoreCase(cat) || "Return".equalsIgnoreCase(cat)) {
             List<Person> persons = financeService.getAllPersons();
-            for (Person p : persons) cmbSubCategory.addItem(p.getName());
+            for (Person p : persons) {
+                if (!containsItem(cmbSubCategory, p.getName())) cmbSubCategory.addItem(p.getName());
+            }
+        }
+
+        if (currentSub != null && !currentSub.toString().isBlank()) {
+            String subStr = currentSub.toString();
+            if (!containsItem(cmbSubCategory, subStr)) {
+                cmbSubCategory.addItem(subStr);
+            }
+            cmbSubCategory.setSelectedItem(subStr);
         }
     }
 
@@ -479,8 +506,14 @@ public class RecurringScheduleDialog extends JDialog {
         txtName.setText(existingSchedule.getName());
         cmbType.setSelectedItem(existingSchedule.getType());
         updateCategories();
+        if (existingSchedule.getCategory() != null && !containsItem(cmbCategory, existingSchedule.getCategory())) {
+            cmbCategory.addItem(existingSchedule.getCategory());
+        }
         cmbCategory.setSelectedItem(existingSchedule.getCategory());
         updateSubCategories();
+        if (existingSchedule.getSubCategory() != null && !containsItem(cmbSubCategory, existingSchedule.getSubCategory())) {
+            cmbSubCategory.addItem(existingSchedule.getSubCategory());
+        }
         if (existingSchedule.getSubCategory() != null) {
             cmbSubCategory.setSelectedItem(existingSchedule.getSubCategory());
         }

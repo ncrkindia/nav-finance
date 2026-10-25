@@ -722,30 +722,36 @@ public class TransactionDialog extends JDialog {
         }
     }
 
+    private boolean containsItem(JComboBox<String> cmb, String item) {
+        if (item == null) return false;
+        for (int i = 0; i < cmb.getItemCount(); i++) {
+            if (item.equalsIgnoreCase(cmb.getItemAt(i))) return true;
+        }
+        return false;
+    }
+
     private void onTypeChanged(TransactionType type) {
+        Object currentCat = cmbCategory.getSelectedItem();
         cmbCategory.removeAllItems();
         if (type == TransactionType.INCOME) {
             lblDateTitle.setText("Date / Expected Date:");
             chkExpected.setText("Expected (Not Received Yet)");
-            cmbCategory.addItem("Salary");
-            cmbCategory.addItem("Relative");
-            cmbCategory.addItem("Return");
-            cmbCategory.addItem("Loan");
-            cmbCategory.addItem("Freelance / Business");
-            cmbCategory.addItem("Other Income");
         } else {
             lblDateTitle.setText("Date / Planned Date:");
             chkExpected.setText("Planned / Due (Not Paid Yet)");
-            cmbCategory.addItem("EMI Payment");
-            cmbCategory.addItem("Credit Card");
-            cmbCategory.addItem("Bill");
-            cmbCategory.addItem("Loan Given");
-            cmbCategory.addItem("Special Expense");
-            cmbCategory.addItem("Groceries & Food");
-            cmbCategory.addItem("Shopping");
-            cmbCategory.addItem("Health & Medical");
-            cmbCategory.addItem("Fuel & Travel");
-            cmbCategory.addItem("Other Expense");
+        }
+
+        List<String> categories = financeService.getCategoryNames(type);
+        for (String c : categories) {
+            cmbCategory.addItem(c);
+        }
+
+        if (currentCat != null && !currentCat.toString().isBlank()) {
+            String catStr = currentCat.toString();
+            if (!containsItem(cmbCategory, catStr)) {
+                cmbCategory.addItem(catStr);
+            }
+            cmbCategory.setSelectedItem(catStr);
         }
         onCategoryChanged();
     }
@@ -753,40 +759,49 @@ public class TransactionDialog extends JDialog {
     private void onCategoryChanged() {
         Object catObj = cmbCategory.getSelectedItem();
         String cat = catObj != null ? catObj.toString().trim() : "";
+        Object currentSub = cmbSubCategory.getSelectedItem();
         cmbSubCategory.removeAllItems();
+
+        if (cat.isEmpty()) return;
+
+        TransactionType type = rbIncome.isSelected() ? TransactionType.INCOME : TransactionType.EXPENSE;
+        List<String> subNames = financeService.getSubCategoryNames(cat, type);
+        for (String s : subNames) {
+            cmbSubCategory.addItem(s);
+        }
 
         if (rbExpense.isSelected()) {
             if ("Bill".equalsIgnoreCase(cat)) {
-                for (Bill b : financeService.getAllBills()) cmbSubCategory.addItem(b.getBillName());
-                cmbSubCategory.addItem("Other Bill");
+                for (Bill b : financeService.getAllBills()) {
+                    if (!containsItem(cmbSubCategory, b.getBillName())) cmbSubCategory.addItem(b.getBillName());
+                }
             } else if ("Credit Card".equalsIgnoreCase(cat)) {
-                for (CreditCard c : financeService.getAllCreditCards()) cmbSubCategory.addItem(c.getCardName());
-                cmbSubCategory.addItem("Other Card");
+                for (CreditCard c : financeService.getAllCreditCards()) {
+                    if (!containsItem(cmbSubCategory, c.getCardName())) cmbSubCategory.addItem(c.getCardName());
+                }
             } else if ("EMI Payment".equalsIgnoreCase(cat)) {
-                for (Emi e : financeService.getAllEmis()) cmbSubCategory.addItem(e.getEmiName());
-                cmbSubCategory.addItem("Other Loan EMI");
-            } else if ("Loan Given".equalsIgnoreCase(cat)) {
-                for (Person p : financeService.getAllPersons()) cmbSubCategory.addItem(p.getName());
-            } else if ("Special Expense".equalsIgnoreCase(cat)) {
-                cmbSubCategory.addItem("Family Gathering / Dinner");
-                cmbSubCategory.addItem("Vacation / Trip");
-                cmbSubCategory.addItem("Festival / Celebration");
-                cmbSubCategory.addItem("Electronics Purchase");
-                cmbSubCategory.addItem("Home Renovation");
+                for (Emi e : financeService.getAllEmis()) {
+                    if (!containsItem(cmbSubCategory, e.getEmiName())) cmbSubCategory.addItem(e.getEmiName());
+                }
+            } else if ("Loan Given".equalsIgnoreCase(cat) || "Lent".equalsIgnoreCase(cat)) {
+                for (Person p : financeService.getAllPersons()) {
+                    if (!containsItem(cmbSubCategory, p.getName())) cmbSubCategory.addItem(p.getName());
+                }
             }
         } else {
-            if ("Salary".equalsIgnoreCase(cat)) {
-                cmbSubCategory.addItem("Primary Employer");
-                cmbSubCategory.addItem("Bonus / Incentive");
-                cmbSubCategory.addItem("Arrears / Reimbursement");
-            } else if ("Relative".equalsIgnoreCase(cat) || "Return".equalsIgnoreCase(cat)) {
-                for (Person p : financeService.getAllPersons()) cmbSubCategory.addItem(p.getName());
-                cmbSubCategory.addItem("Other Person");
-            } else if ("Loan".equalsIgnoreCase(cat)) {
-                cmbSubCategory.addItem("Personal Loan Disbursal");
-                cmbSubCategory.addItem("Gold Loan");
-                cmbSubCategory.addItem("Friend Loan");
+            if ("Relative".equalsIgnoreCase(cat) || "Return".equalsIgnoreCase(cat) || "Loan".equalsIgnoreCase(cat)) {
+                for (Person p : financeService.getAllPersons()) {
+                    if (!containsItem(cmbSubCategory, p.getName())) cmbSubCategory.addItem(p.getName());
+                }
             }
+        }
+
+        if (currentSub != null && !currentSub.toString().isBlank()) {
+            String subStr = currentSub.toString();
+            if (!containsItem(cmbSubCategory, subStr)) {
+                cmbSubCategory.addItem(subStr);
+            }
+            cmbSubCategory.setSelectedItem(subStr);
         }
     }
 

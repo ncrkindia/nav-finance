@@ -25,10 +25,19 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Window;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,8 +80,8 @@ public class TransactionLinkDialog extends JDialog {
         setTitle(String.format("Link %s [%s]", isGive ? "Give Transaction" : "Return Received Transaction", txIdStr));
         initComponents();
         loadCandidates();
-        UiUtils.clampDialogToScreen(this);
-        setLocationRelativeTo(owner);
+        initWindowBounds(owner);
+        setupBoundsPersistence();
     }
 
     private void initComponents() {
@@ -91,8 +100,9 @@ public class TransactionLinkDialog extends JDialog {
         gbc.insets = new Insets(2, 4, 2, 16);
 
         gbc.gridx = 0; gbc.gridy = 0;
-        JLabel lblTarget = new JLabel(String.format("Transaction #%d [%s]",
-                targetTx.getId(), isGive ? "Give / Loan Given" : "Return Received"));
+        String txLabel = targetTx.getId() != null ? "Transaction #" + targetTx.getId() : "New Transaction";
+        JLabel lblTarget = new JLabel(String.format("%s [%s]",
+                txLabel, isGive ? "Give / Loan Given" : "Return Received"));
         lblTarget.setFont(UiUtils.headerFont());
         lblTarget.setForeground(isGive ? UiUtils.COLOR_EXPENSE : UiUtils.COLOR_INCOME);
         infoPanel.add(lblTarget, gbc);
@@ -100,8 +110,9 @@ public class TransactionLinkDialog extends JDialog {
         gbc.gridx = 0; gbc.gridy = 1;
         String personStr = targetTx.getPersonName() != null ? targetTx.getPersonName() : "General";
         String dateStr = targetTx.getTxDate() != null ? targetTx.getTxDate().format(AppConfig.DATE_FORMATTER) : "-";
+        String catStr = targetTx.getCategory() != null ? targetTx.getCategory() : "-";
         JLabel lblDetails = new JLabel(String.format("Person: %s  |  Date: %s  |  Category: %s",
-                personStr, dateStr, targetTx.getCategory()));
+                personStr, dateStr, catStr));
         lblDetails.setFont(UiUtils.regularFont());
         lblDetails.setForeground(UiUtils.COLOR_TEXT_MUTED);
         infoPanel.add(lblDetails, gbc);
@@ -437,6 +448,66 @@ public class TransactionLinkDialog extends JDialog {
 
     public List<TransactionLink> getResultLinks() {
         return resultLinks;
+    }
+
+    private void initWindowBounds(Window owner) {
+        Rectangle saved = AppConfig.getLinkDialogBounds();
+        if (saved != null && saved.width > 200 && saved.height > 150) {
+            setSize(saved.width, saved.height);
+            if (saved.x >= 0 && saved.y >= 0 && isLocationOnScreen(saved.getLocation())) {
+                setLocation(saved.getLocation());
+            } else {
+                setLocationRelativeTo(owner);
+            }
+        } else {
+            setSize(960, 600);
+            setLocationRelativeTo(owner);
+        }
+        UiUtils.clampDialogToScreen(this);
+    }
+
+    private boolean isLocationOnScreen(Point pt) {
+        try {
+            for (GraphicsDevice gd : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+                for (GraphicsConfiguration gc : gd.getConfigurations()) {
+                    if (gc.getBounds().contains(pt)) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private void setupBoundsPersistence() {
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                if (isShowing()) {
+                    AppConfig.saveLinkDialogBounds(getBounds());
+                }
+            }
+
+            @Override
+            public void componentMoved(ComponentEvent e) {
+                if (isShowing()) {
+                    AppConfig.saveLinkDialogBounds(getBounds());
+                }
+            }
+        });
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                AppConfig.saveLinkDialogBounds(getBounds());
+            }
+        });
+    }
+
+    @Override
+    public void dispose() {
+        AppConfig.saveLinkDialogBounds(getBounds());
+        super.dispose();
     }
 
     private static class CandidateRow {

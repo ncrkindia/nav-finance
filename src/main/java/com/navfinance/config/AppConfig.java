@@ -1,5 +1,6 @@
 package com.navfinance.config;
 
+import java.awt.Rectangle;
 import java.io.File;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
@@ -87,6 +88,12 @@ public final class AppConfig {
     /** Persisted window maximized state (default: true for full size). */
     private static boolean windowMaximized = true;
 
+    /** Persisted TransactionLinkDialog bounds. */
+    private static int linkDialogX = -1;
+    private static int linkDialogY = -1;
+    private static int linkDialogWidth = 960;
+    private static int linkDialogHeight = 600;
+
     /** Active database configuration instance. */
     private static com.navfinance.database.DatabaseConfig activeDatabaseConfig =
             com.navfinance.database.DatabaseConfig.createDefaultH2(DB_PATH);
@@ -147,6 +154,23 @@ public final class AppConfig {
                 windowMaximized = Boolean.parseBoolean(wm.trim());
             }
 
+            String ldx = props.getProperty("linkDialogX");
+            String ldy = props.getProperty("linkDialogY");
+            String ldw = props.getProperty("linkDialogWidth");
+            String ldh = props.getProperty("linkDialogHeight");
+            if (ldx != null && !ldx.trim().isEmpty()) {
+                try { linkDialogX = Integer.parseInt(ldx.trim()); } catch (NumberFormatException ignored) {}
+            }
+            if (ldy != null && !ldy.trim().isEmpty()) {
+                try { linkDialogY = Integer.parseInt(ldy.trim()); } catch (NumberFormatException ignored) {}
+            }
+            if (ldw != null && !ldw.trim().isEmpty()) {
+                try { linkDialogWidth = Integer.parseInt(ldw.trim()); } catch (NumberFormatException ignored) {}
+            }
+            if (ldh != null && !ldh.trim().isEmpty()) {
+                try { linkDialogHeight = Integer.parseInt(ldh.trim()); } catch (NumberFormatException ignored) {}
+            }
+
             // Database configuration properties
             String dbTypeStr = props.getProperty("db.type");
             com.navfinance.database.DatabaseType dbType = com.navfinance.database.DatabaseType.fromString(dbTypeStr);
@@ -202,6 +226,10 @@ public final class AppConfig {
             props.setProperty("windowWidth", String.valueOf(windowWidth));
             props.setProperty("windowHeight", String.valueOf(windowHeight));
             props.setProperty("windowMaximized", String.valueOf(windowMaximized));
+            props.setProperty("linkDialogX", String.valueOf(linkDialogX));
+            props.setProperty("linkDialogY", String.valueOf(linkDialogY));
+            props.setProperty("linkDialogWidth", String.valueOf(linkDialogWidth));
+            props.setProperty("linkDialogHeight", String.valueOf(linkDialogHeight));
 
             if (activeDatabaseConfig != null) {
                 props.setProperty("db.type", activeDatabaseConfig.getType().name());
@@ -328,6 +356,33 @@ public final class AppConfig {
         windowHeight = height;
         windowMaximized = maximized;
         saveSettings();
+    }
+
+    /**
+     * Gets the persisted bounds for {@link com.navfinance.ui.dialogs.TransactionLinkDialog}.
+     *
+     * @return Rectangle containing x, y, width, height or default centered bounds
+     */
+    public static synchronized Rectangle getLinkDialogBounds() {
+        if (linkDialogWidth > 200 && linkDialogHeight > 150) {
+            return new Rectangle(linkDialogX, linkDialogY, linkDialogWidth, linkDialogHeight);
+        }
+        return new Rectangle(-1, -1, 960, 600);
+    }
+
+    /**
+     * Saves the bounds of {@link com.navfinance.ui.dialogs.TransactionLinkDialog} and persists to settings.
+     *
+     * @param bounds current dialog bounds
+     */
+    public static synchronized void saveLinkDialogBounds(Rectangle bounds) {
+        if (bounds != null && bounds.width > 200 && bounds.height > 150) {
+            linkDialogX = bounds.x;
+            linkDialogY = bounds.y;
+            linkDialogWidth = bounds.width;
+            linkDialogHeight = bounds.height;
+            saveSettings();
+        }
     }
 
     /**
