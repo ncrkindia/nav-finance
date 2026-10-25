@@ -1,7 +1,7 @@
 # Nav Finance 💰
 
-> **A Modern Personal Finance & Loan Management System for Windows**  
-> Built with **Java 21**, **Modern Swing (FlatLaf)**, and an embedded **H2 Database** stored locally at `~user/nav-finance`.
+> **A Modern Personal Finance, EMI, Bill & Loan Management System for Windows**  
+> Built with **Java 21**, **Modern Swing (FlatLaf)**, and a **Database-Agnostic Relational Architecture** (Embedded **H2 Database** default, with seamless configuration for **MySQL**, **PostgreSQL**, **MariaDB**, and **SQLite** in Settings).
 
 ---
 
@@ -10,37 +10,38 @@
 Managing daily household finances, recurring bills, EMIs, credit cards, and informal loans (*Loans Given or Taken*) is often painful with generic spreadsheets or cloud apps that compromise privacy.
 
 **Nav Finance** is designed specifically for personal and family finances in India and worldwide:
-- **Private & Local-First**: No external cloud tracking. All financial data is securely kept in an embedded H2 database located in your user profile: `~user/nav-finance/navfinance_db.mv.db`.
-- **Income & Expense Tracking**: Categorize daily transactions, recurring salaries, dividend returns, credit card payments, household utility bills, and personal EMIs.
+- **Private & Local-First**: No external cloud tracking. All financial data is securely kept in your embedded H2 database located in your user profile: `~user/nav-finance/navfinance_db.mv.db`, or your self-hosted MySQL / PostgreSQL / MariaDB / SQLite server.
+- **Specialized Transaction Management**: Handles One-Time Expenses (Done / Expected), One-Time Incomes (Done / Expected), periodic monthly EMIs, variable Credit Card bills, and utility bills.
+- **Strict Non-Returnable Bill Rule**: Outright utility bills, credit cards, and EMI payments are recognized as permanent expenses and **are never treated as loan balances expected back like Given Money**.
+- **Entity & Category Tracking Dashboard**: Track any Person, Bill, EMI, Credit Card, or Category across **Days**, **Week**, **Months**, **Quarter**, or **Years** with real-time KPI metrics and visual trend graphs.
 - **Personal Loans & Dues Ledger**: Track informal lending and borrowing between friends, relatives, and colleagues with exact contact, relation, and net settlement tracking (*Who owes whom*).
 - **Bidirectional Transaction Linking**: Link "Return Received" transactions directly to "Loan Given" transactions (and vice versa) with automatic calculation of partially settled or completely **Nullified** (fully paid) records.
 - **Multi-Language Support**: Seamless runtime switching between **English**, **Hindi (हिन्दी)**, and **Hinglish** (Roman Hindi) with clear Indian typography (`Nirmala UI`) preventing tofu/square characters (`□`).
+- **Professional Reports & Statements**: Export filtered records with a single click to **PDF**, **Excel (.xlsx)**, or **CSV** complete with active filter criteria summaries and dedicated Master Entity columns.
+- **Multi-Database Agnostic Engine**: Switch on-the-fly between embedded H2, MySQL, PostgreSQL, MariaDB, and SQLite with automated schema migration directly from the Settings tab.
 - **Audit Details**: Every creation, modification, and deletion records full timestamps and change logs for complete financial integrity.
 - **Executive Dashboard**: Visual trends of In vs Out (Green and Red) categorized by **Weekly**, **Monthly**, **Quarterly**, or **Annually**.
-- **Multi-Format Reports**: Export filtered records with a single click to **PDF**, **Excel (.xlsx)**, or **CSV**.
-- **Full Database CSV Backup**: Export all database tables as standard CSV files for offline backups or spreadsheet analysis.
 
 ---
 
 ## 🚀 Key Features
 
-### 1. In & Out Income/Expense Tracking
-- **Income Entry**:
-  - **Date / Expected Date**: Dual input with interactive **`📅` Date Picker** popup and manual typing (`YYYY-MM-DD` / `DD-MM-YYYY`)
-  - **Amount** formatted in INR (`₹`) or custom currency symbol
-  - **Category**: `Salary`, `Relative`, `Return`, `Loan`, `Freelance`, `Other Income`
-  - **Sub-Category**: `Person`, `Loan`, `Bonus`, `Others`
-  - **Payment Mode**: Cash, Net Banking, UPI, Paytm, PhonePe, Cheque, etc.
-- **Expense Entry**:
-  - **Expense Date / Planned Date**: Dual input with interactive **`📅` Date Picker** popup and manual typing
-  - **Amount**
-  - **Via (Payment Mode)**: `Cash`, `Paytm`, `PhonePe`, `UPI`, `Net Banking`, `Credit Card`, `Debit Card`, `Other` *(supports custom modes on-the-fly)*
-  - **Category**: `EMI Payment`, `Credit Card`, `Loan Given`, `Bill`, `Special Expense`, `Groceries & Food`, `Shopping`, `Fuel & Travel`, `Health`
-  - **Dynamic Sub-Category**:
-    - When selecting **Bill** → Pick from registered bills (e.g., *Airtel Bill*, *Electricity (Khardoni)*, *Electricity (Noida)*)
-    - When selecting **Credit Card** → Pick from registered credit cards (e.g., *HDFC Millennia*, *ICICI Amazon Pay*, *SBI SimplyCLICK*)
-    - When selecting **EMI Payment** → Pick from registered loan EMIs (e.g., *Home Loan EMI*, *Car Loan EMI*, *Laptop EMI*)
-    - When selecting **Loan Given** → Pick from registered Persons (*Rahul*, *Amit*, *Suresh*, etc.)
+### 1. Specialized Transaction Natures & Workflow
+- **One-Time Expense (Done vs Expected)**:
+  - Realized expense entries (cash out today) vs Planned future commitments (unrealized expenses).
+- **One-Time Received (Done vs Expected)**:
+  - Realized earnings/inflows vs Planned future receipts (expected salary, bonus, dividend).
+- **EMI Payment (Monthly Installment)**:
+  - Links to registered EMI loan catalog, auto-fills monthly installment amount and bank lender.
+  - Option to check `[x] Also manage in Due / Upcoming payments schedule` to create recurring trackable reminders.
+- **Credit Card Bill (Variable Monthly)**:
+  - Accommodates differing monthly statement amounts linked to credit card masters.
+  - Due tracking with upcoming payment alerts.
+- **Utility / Other Bills (Outright Non-Returnable Expenses)**:
+  - Standard recurring utility bills (Electricity, Broadband, Water, Rent, Gas).
+  - **Core Rule**: Outright bills paid to vendors or service providers are **never considered as loan balances expected back**, ensuring personal loan ledgers remain completely isolated and accurate.
+- **Personal Loan / Transfer**:
+  - Peer-to-peer lending and borrowing with bidirectional settlement linking and nullification.
 
 ### 2. Bidirectional Transaction Linking & Nullified Status
 - **Link Given & Return Transactions**:
@@ -106,10 +107,10 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
 - Automatic logging of all **CREATE**, **UPDATE**, and **DELETE** actions.
 - Captures precise timestamps, entity modified, and human-readable diff details (e.g., *Amount changed from ₹2,000.00 to ₹2,500.00; Via: Cash -> UPI*).
 
-### 9. Exporting & Backup Options
-- **Export Filtered Results to PDF**: Clean document with title, summary metric cards, colored badges, and itemized table.
-- **Export Filtered Results to Excel (.xlsx)**: Formatted workbook with currency numbers, color-coded rows, and double-line totals.
-- **Export Filtered Results to CSV**: Standard comma-separated file.
+### 9. Enhanced Professional Reports & Exports
+- **Export Filtered Results to PDF**: Clean document with header metadata, active filter summary banner (Date range, Categories, Masters, Payment modes, Amount limits), 4 KPI summary cards, dedicated Master Entity column, colored badges, and itemized table via OpenPDF.
+- **Export Filtered Results to Excel (.xlsx)**: Professionally styled workbook with currency numbers, distinct Master Entity column, active filter summary, colored rows, and double-line totals via Apache POI.
+- **Export Filtered Results to CSV**: Standard RFC 4180 comma-separated file with full master entity attributes.
 - **Export All Database as CSV Files**: One-click dump of all database tables into individual CSV files.
 
 ### 10. Bulk CSV Import, Update & Deletion
@@ -118,9 +119,10 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
 - **Auto Validation & Color-Coded Preview**: Table validation showing row numbers, badge-coded actions (`CREATE` in Green, `UPDATE` in Blue, `DELETE` in Red), and instant validation feedback.
 - **Batch Execution**: Executes all valid lines in a single batch, updating person links, auto-registering novel payment modes, and logging audit events for each change.
 
-### 11. Dynamic Zoom In / Out & UI Scaling
+### 11. Dynamic Zoom In / Out & Overlap-Free UI Scaling
 - **Header Controls**: Magnify the UI using `🔍+` (Zoom In) and `🔍-` (Zoom Out), or click the percentage badge (e.g., `100%`) to reset.
 - **Scaling Range**: Scalable across `80%`, `90%`, `100%`, `115%`, `130%`, `150%`, and `175%`.
+- **Overlap Prevention**: Flow and wrap responsive layouts prevent clipping, overlapping buttons, or truncated date pickers on high-zoom displays (130%, 150%, 175%).
 - **Keyboard Shortcuts**:
   - `Ctrl` + `+` / `Ctrl` + `=`: Zoom In
   - `Ctrl` + `-`: Zoom Out
@@ -130,7 +132,35 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
 - **Specific Day of Month**: Configure recurring obligations on any day from `1` to `31` (e.g., *EMI of ₹20,000 on 5th of every month*).
 - **Fixed vs Variable Amounts**: Support for fixed commitments (EMIs, rent) and variable utility bills (electricity, water, credit cards).
 - **Due & Overdue Status Tracker**: Real-time KPI cards for **Overdue**, **Upcoming Due**, **Settled**, and **Auto vs Manual Ratio**.
-- **Interactive Settlement**: Prompts for exact amount and records expense entries directly into the ledger.
+- **Interactive Settlement**: Prompts for exact amount and records expense entries directly into the ledger, automatically linking the underlying Master entity.
+
+### 13. Entity & Category Tracking Dashboard (Track & Analyze 📊)
+- **Dedicated 2-Tab Transactions View**:
+  - **Tab 1 (All Transactions)**: Ledger with multi-criteria filters (including Master entity filter) and settlement tools.
+  - **Tab 2 (Track & Analyze)**: Interactive dashboard for deep-dive tracking of any **Person**, **Utility Bill**, **EMI Installment**, **Credit Card**, or **Category**.
+- **Multi-Granularity Time Bucketing**:
+  - View transactions and interactive visual graph grouped by **Days**, **Week**, **Months**, **Quarter**, or **Years**.
+  - Computed using pure Java calendar arithmetic (`java.time.LocalDate`), guaranteeing zero SQL dialect divergence across databases.
+- **4 Real-Time Metric Cards**: Total Inflow, Total Outflow, Net Balance, and Average volume per Period.
+- **Visual Trend Graph**: Dynamic anti-aliased dual-bar chart showing inflow vs outflow trends with period labels.
+- **Itemized Ledger & Statement Export**: Complete table of matched entries with one-click Excel and PDF statement export.
+- **One-Click Deep Links**:
+  - Click **Track & Graph 📊** directly in **Masters** (Persons, Bills, EMIs, Cards) or **Loans & Dues** to immediately inspect that entity's historical trend and visual graph.
+
+### 14. Multi-Database Architecture & Configuration in Settings
+- **Database Engine Agnostic**: Core business logic, queries, and filters are 100% decoupled from the underlying SQL engine.
+- **Supported Engines**:
+  - **H2 (Embedded - Default)**: Zero-configuration local database stored at `~user/nav-finance/navfinance_db.mv.db`.
+  - **MySQL 8.x**: Ideal for central servers or multi-device setups.
+  - **PostgreSQL 14+ / 16+**: Enterprise-grade relational storage.
+  - **MariaDB 10.x / 11.x**: High-performance open-source database.
+  - **SQLite**: Single-file standalone database.
+- **Settings Panel Management**:
+  - Configure Host, Port, Database Name, Username, Password, or Custom JDBC URL.
+  - Live Connection URL preview with connection timeout controls.
+  - **Test Connection** with millisecond diagnostic feedback before applying.
+  - **Live Switch**: Connects, executes automated schema DDL tables and indexes, seeds default payment modes, and migrates runtime queries seamlessly.
+  - **One-Click Reset**: Safely revert to default embedded H2 at any time.
 
 ---
 
@@ -318,7 +348,10 @@ nav-finance/
 │   │       ├── config/
 │   │       │   └── AppConfig.java               # Global paths, formatters, and currencies
 │   │       ├── database/
-│   │       │   └── DatabaseManager.java         # H2 schema DDL, foreign keys, CSV backup engine
+│   │       │   ├── DatabaseConfig.java              # Database configuration model & connection strings
+│   │       │   ├── DatabaseManager.java             # Connection pool, engine switching, CSV backup engine
+│   │       │   ├── DatabaseType.java                # H2, MYSQL, POSTGRESQL, MARIADB, SQLITE enum
+│   │       │   └── DbSchemaManager.java             # Dialect-specific DDL scripts & schema initializers
 │   │       ├── i18n/
 │   │       │   ├── AppLanguage.java             # ENGLISH, HINDI, HINGLISH enum
 │   │       │   └── I18n.java                    # Bundle manager, listeners, Nirmala UI font resolution
@@ -326,6 +359,7 @@ nav-finance/
 │   │       │   ├── AmountType.java              # FIXED vs VARIABLE amount enum
 │   │       │   ├── DuePayment.java              # Due payment entity
 │   │       │   ├── DueStatus.java               # PENDING, OVERDUE, SETTLED enum
+│   │       │   ├── EntityTrackerSummary.java        # Entity trend, inflow/outflow, and granular buckets
 │   │       │   ├── RecurringSchedule.java       # Recurring schedule rule entity
 │   │       │   ├── Transaction.java             # Transaction entity
 │   │       │   ├── TransactionType.java         # INCOME / EXPENSE enum
@@ -379,18 +413,26 @@ nav-finance/
 │   │           │   └── CreditCardDialog.java    # Credit card modal dialog
 │   │           └── panels/
 │   │               ├── DashboardPanel.java      # Executive KPI & visual trends panel
-│   │               ├── TransactionsPanel.java   # Search, filter, link, sort & export transactions
+│   │               ├── TransactionsPanel.java   # 2-Tab: All Transactions + Track & Analyze Dashboard
 │   │               ├── DuePaymentsPanel.java    # Due tracker & recurring rules manager
-│   │               ├── LoansDuesPanel.java      # Person-wise loan & dues ledger
-│   │               ├── MastersPanel.java        # Masters management tabs
+│   │               ├── LoansDuesPanel.java      # Person-wise loan & dues ledger with Track links
+│   │               ├── MastersPanel.java        # Masters management tabs with Track & Graph links
 │   │               ├── AuditLogPanel.java       # Audit trail viewer
 │   │               ├── UserGuidePanel.java      # Searchable in-app user guide
 │   │               ├── AboutUsPanel.java        # Runtime metrics & local-first specifications
-│   │               └── SettingsPanel.java       # Database details, CSV backup & themes
+│   │               └── SettingsPanel.java       # Multi-DB configuration, CSV backup & themes
 │   └── test/java/com/navfinance/
+│       ├── database/
+│       │   └── DatabaseConfigurationTest.java   # Multi-engine dialect & connection verification
+│       ├── service/
+│       │   ├── EntityTrackerTest.java           # Verifies Days-Years bucketing & non-returnable bill isolation
+│       │   ├── ExportReportTest.java            # Verifies PDF/Excel export with Master & Filter summary
+│       │   └── TransactionLinkTest.java         # Verifies bidirectional settlement math & nullification
+│       ├── ui/
+│       │   └── ResponsiveBarPanelTest.java      # Verifies zoom layout without component clipping
 │       ├── FontRenderingTest.java               # Verifies Devanagari glyph coverage without tofu
-│       └── service/
-│           └── TransactionLinkTest.java         # Verifies bidirectional transaction link calculations
+│       ├── WindowBoundsPersistenceTest.java     # Verifies window coordinate persistence
+│       └── ZoomPersistenceTest.java             # Verifies zoom level persistence
 ```
 
 ---

@@ -8,17 +8,19 @@ Welcome to **Nav Finance**, your personal finance companion for tracking househo
 1. [Starting the Application](#1-starting-the-application)
 2. [Navigating the Dashboard](#2-navigating-the-dashboard)
 3. [Recording Income Entries](#3-recording-income-entries)
-4. [Recording Expense Entries](#4-recording-expense-entries)
-5. [Managing Personal Loans & Dues](#5-managing-personal-loans--dues)
-6. [Managing Catalog Masters (Bills, EMIs, Persons)](#6-managing-catalog-masters)
-7. [Filtering, Searching & Sorting Transactions](#7-filtering-searching--sorting-transactions)
-8. [Exporting Reports (PDF, Excel, CSV)](#8-exporting-reports)
+4. [Recording Expense Entries & Specialized Transaction Natures](#4-recording-expense-entries--specialized-transaction-natures)
+5. [Managing Personal Loans & Dues (Lending & Borrowing)](#5-managing-personal-loans--dues)
+6. [Managing Catalog Masters (Bills, EMIs, Persons, Cards)](#6-managing-catalog-masters)
+7. [Filtering, Searching, Sorting & Settlement Linking](#7-filtering-searching--sorting-transactions)
+8. [Exporting Reports (PDF, Excel, CSV) with Master & Filter Metadata](#8-exporting-reports)
 9. [Full Database Backup (Export All as CSV)](#9-full-database-backup)
 10. [Reviewing Audit Logs](#10-reviewing-audit-logs)
 11. [Bulk CSV Import, Update & Deletion](#11-bulk-csv-import-update--deletion)
-12. [Zoom In, Zoom Out & UI Scaling](#12-zoom-in-zoom-out--ui-scaling)
+12. [Zoom In, Zoom Out & Overlap-Free UI Scaling](#12-zoom-in-zoom-out--ui-scaling)
 13. [In-App User Guide & About Us](#13-in-app-user-guide--about-us)
 14. [Recurring Schedules, Due & Overdue Payments](#14-recurring-schedules-due--overdue-payments)
+15. [Entity & Category Tracking Dashboard (Track & Analyze 📊)](#15-entity--category-tracking-dashboard)
+16. [Configuring External Databases (MySQL, PostgreSQL, MariaDB, SQLite, H2)](#16-configuring-external-databases)
 
 ---
 
@@ -99,44 +101,48 @@ Use the `◀ Prev` and `Next ▶` buttons to navigate back and forward through h
 
 ---
 
-## 4. Recording Expense Entries
+---
 
-1. Click **`- Add Expense`** (in the top header or transactions panel).
-2. The form opens configured for **Expense (Out)**:
-   - **Date / Planned Date (Date Picker + Manual Entry)**:
-     - **Manual Entry**: Type directly in `YYYY-MM-DD` format.
-     - **Date Picker**: Click **`📅`** to select from the interactive calendar.
-   - **Planned Checkbox**: Check if this is an upcoming bill or planned expense not yet paid.
-   - **Amount**: Enter the expense amount (e.g. `2450.00`).
-   - **Via (Payment Mode)**: Select from `Cash`, `Paytm`, `PhonePe`, `UPI`, `Credit Card`, `Debit Card`, `Net Banking`, or type a custom payment mode directly.
-   - **Category**: Choose the category:
-     - `Bill`
-     - `EMI Payment`
-     - `Credit Card`
-     - `Loan Given`
-     - `Special Expense`
-     - `Groceries & Food`
-     - `Shopping`
-     - `Fuel & Travel`
-   - **Sub-Category** *(Smart Auto-Populated)*:
-     - If Category is **Bill**, the sub-category dropdown automatically loads your bill list:
-       - *Airtel Bill*
-       - *Electricity (Khardoni)*
-       - *Electricity (Noida)*
-       - *Piped Gas (IGL)*
-       - *Water Bill*
-     - If Category is **Credit Card**, it automatically loads your cards:
-       - *HDFC Millennia (..4128)*
-       - *ICICI Amazon Pay (..9051)*
-       - *SBI SimplyCLICK (..6733)*
-     - If Category is **EMI Payment**, it automatically loads your EMIs:
-       - *Home Loan EMI*
-       - *Car Loan EMI*
-       - *Personal Loan*
-       - *Laptop EMI*
-     - If Category is **Loan Given**, it automatically lists registered persons.
-   - **Notes / Remarks**: Additional transaction comments.
-3. Click **Save Entry**.
+## 4. Recording Expense Entries & Specialized Transaction Natures
+
+Click **`- Add Expense`** (or **`+ Add Income`**) to open the redesigned **Transaction Entry Manager**.
+
+### Transaction Nature Selector
+At the top of the dialog, select from 6 specialized transaction natures:
+
+1. **One-Time Expense (Done vs Expected)**:
+   - For regular day-to-day purchases, shopping, fuel, dining, and grocery runs.
+   - **Realized (Done)**: Expense already paid out in cash, UPI, card, or net banking.
+   - **Planned (Expected)**: Anticipated future expense entry for budget planning.
+2. **One-Time Received (Done vs Expected)**:
+   - For irregular or periodic income receipts (freelance income, dividend, gift, annual bonus).
+   - Toggle between **Realized (Done)** and **Planned (Expected)**.
+3. **EMI Payment (Monthly Installment)**:
+   - Links to your registered **EMI Master** (Home Loan, Car Loan, Personal Loan, Laptop EMI).
+   - Auto-populates the monthly installment amount and bank lender.
+   - **Due Schedule Linkage**: Check `[x] Also manage in Due / Upcoming payments schedule` to automatically ensure this EMI appears in your upcoming monthly payment reminders.
+4. **Credit Card Bill (Variable Monthly)**:
+   - Select your issuing credit card from the **Credit Cards Master** (*HDFC Millennia*, *ICICI Amazon Pay*, *SBI SimplyCLICK*).
+   - Accommodates differing monthly statement amounts each month.
+   - Allows direct linkage to upcoming payment schedules.
+5. **Utility / Other Bills (Outright Non-Returnable Expenses)**:
+   - Links to your registered **Bills Master** (*Electricity*, *Airtel Broadband*, *Water*, *Piped Gas*, *Rent*).
+   - Pre-fills default expected amounts and provider account references.
+   - > **CRITICAL RULE — Non-Returnable Bill Principle**:  
+     > Bills, EMIs, and credit card payments are outright expenses paid to corporate utilities or financial institutions.  
+     > **They are NEVER considered as loan balances expected back like Given Money.**  
+     > In Nav Finance, bill payments will **never** alter your counterparty personal loan summaries, cannot be claimed as money someone owes you, and are strictly excluded from peer-to-peer loan settlement linking.
+6. **Personal Loan / Transfer (Peer-to-Peer)**:
+   - For informal lending (*Money Given*) and borrowing (*Money Taken*) with friends, family, or colleagues.
+   - Connects directly to the **Loans & Dues** ledger for bidirectional settlement linking.
+
+### Input Fields & Controls
+- **Date / Planned Date**: Dual-mode input with interactive **`📅` Calendar Popup** and manual format validation.
+- **Amount**: Numerical transaction amount in your active currency.
+- **Payment Via**: Select channel (`UPI`, `Paytm`, `PhonePe`, `Net Banking`, `Cash`, `Credit Card`, `Debit Card`) or enter a custom mode.
+- **Category & Dynamic Sub-Category**: Auto-adjusted based on selected nature.
+- **Notes / Remarks**: Additional transaction audit notes.
+- Click **Save Entry** to persist the transaction and log an audit event.
 
 ---
 
@@ -187,18 +193,19 @@ Click the **`🗂️ Masters`** tab to customize your entities:
 Open the **`💳 Transactions`** tab:
 
 ### Multi-Criteria Filters
+- **2-Tab Structure**:
+  - **Tab 1: All Transactions**: Full ledger view with multi-dimensional filtering, batch settlements, and direct statement exports.
+  - **Tab 2: Track & Analyze**: Deep-dive entity analytics with timeline graphs across Days, Week, Months, Quarter, and Years.
 - **Search Keyword**: Type any word to search across notes, categories, subcategories, or person names.
 - **Type**: Filter by `All`, `Income (In)`, or `Expense (Out)`.
 - **Category & Sub-Category**: Filter by specific category (e.g. *Bill*) and specific bill name.
+- **Master Entity Filter**:
+  - Filter across registered catalog masters: `All Masters`, `Person`, `Bill`, `EMI`, or `Credit Card`.
+  - Dynamically populates a secondary dropdown to select the target entity (e.g., *Airtel Bill*, *HDFC Millennia*, *Rahul Sharma*).
+  - Quick **`Track Entity 📊`** button jumps straight to the **Track & Analyze** tab with the selected entity pre-loaded.
 - **Date Range Preset**:
-  - `Today`
-  - `This Week`
-  - `This Month`
-  - `This Quarter`
-  - `This Year`
-  - `Custom` (choose via visual **`📅`** Date Picker or type manually in *From* and *To* boxes)
+  - `Today`, `This Week`, `This Month`, `This Quarter`, `This Year`, `All Time`, or `Custom` (choose via visual **`📅`** Date Picker or type manually in *From* and *To* boxes).
 - **Via (Mode)**: Filter transactions paid through *Paytm*, *PhonePe*, *UPI*, *Cash*, etc.
-- **Person**: Filter all transactions linked to a particular person.
 - **Amount Range**: Enter Minimum and/or Maximum amount.
 
 ### Sorting Options
@@ -227,15 +234,22 @@ Nav Finance provides an intelligent settlement linking mechanism between money g
 
 ---
 
-## 8. Exporting Reports
+## 8. Exporting Reports (PDF, Excel, CSV) with Master & Filter Metadata
 
-To export the filtered transactions:
+To export filtered transactions or custom entity statements:
 1. Apply your desired filters in the **Transactions** tab.
 2. Click the blue **`⬇ Export Report ▼`** button in the top right.
 3. Choose your format:
-   - **Export Filtered to PDF (.pdf)**: Generates an elegant landscape report with header details, summary statistics cards (Total In, Total Out, Balance), colored status badges, and itemized table.
-   - **Export Filtered to Excel (.xlsx)**: Generates a professionally styled Microsoft Excel spreadsheet with formatted numbers, colored rows, bold headers, and auto-adjusted column widths.
-   - **Export Filtered to CSV (.csv)**: Generates a standard RFC 4180 comma-separated file compatible with Google Sheets, Excel, or Python scripts.
+   - **Export Filtered to PDF (.pdf)**:
+     - Generates an executive landscape document formatted via OpenPDF.
+     - **Active Filter Summary Metadata Banner**: Prominently highlights the date range, category, master entity, payment mode, and amount boundaries applied to the report.
+     - **4 Summary KPI Cards**: Total Inflow, Total Outflow, Net Balance, and Transaction Count.
+     - **Dedicated Associated Entity / Master Column**: Explicitly shows whether the entry belongs to a Person, Bill, EMI, or Credit Card.
+     - Color-coded badges for Income (Green), Expense (Red), and Nullified settlements (Purple).
+   - **Export Filtered to Excel (.xlsx)**:
+     - Formatted spreadsheet created via Apache POI with bold navy headers, zebra striping, currency cells, distinct Master Entity column, filter summary header block, and double-underline accounting totals.
+   - **Export Filtered to CSV (.csv)**:
+     - Standard RFC 4180 comma-separated file with full master entity attributes and linked counterpart details.
 4. Choose the destination folder and filename, then click **Save**.
 
 ---
@@ -310,7 +324,7 @@ Nav Finance allows bulk operations via standard CSV files for initial data migra
 
 ---
 
-## 12. Zoom In, Zoom Out & UI Scaling
+## 12. Zoom In, Zoom Out & Overlap-Free UI Scaling
 
 To ensure comfortable readability across 1080p, 2K, 4K, and high-DPI laptop screens, Nav Finance features dynamic UI zooming:
 
@@ -321,6 +335,8 @@ To ensure comfortable readability across 1080p, 2K, 4K, and high-DPI laptop scre
   - **`🔍+` Button**: Zooms in, increasing font and UI component sizing.
 - **Magnification Levels Supported**:
   - `80%`, `90%`, `100%` (Default), `115%`, `130%`, `150%`, `175%`
+- **Overlap-Free Responsive Layout**:
+  - Automatically wraps and flows toolbars, filters, date pickers, and buttons to prevent visual clipping or overlapping elements even at high magnifications (130%, 150%, 175%).
 - **Global Keyboard Shortcuts**:
   - **Zoom In**: `Ctrl` + `+` (or `Ctrl` + `=`)
   - **Zoom Out**: `Ctrl` + `-`
@@ -385,6 +401,84 @@ In the **Due & Overdue Tracker** grid:
 ### Step 4: Reverting Settled Payments (Mark Unsettled)
 - If an entry was marked settled by mistake, select it and click **`↩ Mark Unsettled`**.
 - The app asks if you would also like to remove the linked transaction from your ledger. Confirming returns the item to `PENDING` (or `OVERDUE`) and keeps your ledger balanced.
+
+---
+
+## 15. Entity & Category Tracking Dashboard (Track & Analyze 📊)
+
+The **`Track & Analyze`** tab (accessible inside the **Transactions** view) provides a dedicated financial analytics workspace to track any entity over configurable time horizons:
+
+### Step 1: Select Entity Type & Target Entity
+- Choose the **Entity Type**:
+  - **Person**: Deep-dive into financial transactions with a specific friend, relative, landlord, or colleague.
+  - **Utility / Other Bill**: Track historical expenditures for a specific utility (e.g., *Airtel Fiber*, *Electricity Khardoni*, *IGL Gas*).
+  - **EMI Installment**: Monitor monthly loan repayments made against a specific bank loan (e.g., *Home Loan EMI*, *Car Loan*).
+  - **Credit Card**: Track statement payment history for a specific credit card (e.g., *HDFC Millennia*, *ICICI Amazon Pay*).
+  - **Category**: Analyze spending or earning trends across any category (e.g., *Groceries & Food*, *Fuel & Travel*, *Shopping*, *Salary*).
+- Select the **Target Entity** from the dynamic dropdown (automatically refreshed with all catalog records).
+
+### Step 2: Choose Time Granularity
+Click any of the segmented granularity buttons to aggregate data chronologically:
+- **`Days`**: Day-by-day continuous sequence showing exact daily cash flows.
+- **`Week`**: Monday-to-Sunday weekly rollup buckets.
+- **`Months`**: Standard month-by-month comparative analysis (e.g., *Jan 26*, *Feb 26*).
+- **`Quarter`**: Fiscal quarters (*Q1'26*, *Q2'26*, *Q3'26*, *Q4'26*).
+- **`Years`**: Multi-year annual progression (e.g., *2024*, *2025*, *2026*).
+
+### Step 3: Date Range Presets
+Filter the historical scope using quick presets:
+- **All Time**, **This Month**, **Last 90 Days**, **This Year**, or choose a custom **From / To** date range via the date picker.
+
+### Step 4: Key Insights & Visual Trends
+- **4 Real-Time Metric Cards**:
+  - **Total Inflow (Green)**: Total income/receipts associated with this entity.
+  - **Total Outflow (Red)**: Total expenses/payments made towards this entity.
+  - **Net Balance (Cyan)**: Net inflow minus outflow.
+  - **Average per Bucket (Violet)**: Average transaction volume per period bucket (day, week, month, quarter, or year).
+- **Interactive Trend Bar Graph**:
+  - Anti-aliased dual-bar chart comparing Inflow (Green) vs Outflow (Red) for each discrete period label.
+- **Itemized Ledger Table**:
+  - Displays every matching transaction with ID, Date, Type, Amount, Mode, Category, Sub-Category, and Notes.
+- **Statement Export**:
+  - Click **Export Statement (Excel)** or **Export Statement (PDF)** to produce a branded statement report for that specific entity.
+
+### Step 5: Direct Deep Links ("Track & Graph 📊")
+You can jump directly into the Entity Tracker from anywhere in the app:
+- In **`🗂️ Masters`**: Select any row in the **Persons**, **Bills**, **EMIs**, or **Cards** tabs and click **`Track & Graph 📊`**.
+- In **`🤝 Loans & Dues`**: Select any person in the loan ledger and click **`Track History & Graph 📊`**.
+- The app automatically switches to the **Transactions** panel, activates the **Track & Analyze** tab, selects the entity, and immediately plots the graph.
+
+---
+
+## 16. Configuring External Databases (MySQL, PostgreSQL, MariaDB, SQLite, H2)
+
+Nav Finance uses a clean, engine-agnostic database architecture. By default, it operates with zero setup using an embedded H2 database, but you can effortlessly switch to external or local production databases.
+
+### Supported Database Engines
+| Engine | Default Port | Storage Type | Recommended Use Case |
+| :--- | :--- | :--- | :--- |
+| **H2 (Embedded - Default)** | Embedded | Local file (`~user/nav-finance/navfinance_db.mv.db`) | Single-user, zero-configuration local desktop usage. |
+| **MySQL 8.x** | 3306 | Network / Localhost | Multi-machine shared setup, existing MySQL home server. |
+| **PostgreSQL 14+ / 16+** | 5432 | Network / Localhost | Enterprise self-hosted environments with ACID guarantees. |
+| **MariaDB 10.x / 11.x** | 3306 | Network / Localhost | High-performance open-source relational setups. |
+| **SQLite** | Local file | Single `.db` file | Lightweight file-based alternative to H2. |
+
+### Switching Databases in Settings
+1. Click the **`⚙️ Settings & Database`** tab.
+2. In the **Relational Database Engine** section:
+   - Select your target engine from the **Database Engine** dropdown.
+   - Enter your connection parameters:
+     - **Host**: Server IP or hostname (e.g., `localhost` or `192.168.1.100`).
+     - **Port**: Database port (defaults: MySQL `3306`, Postgres `5432`, MariaDB `3306`).
+     - **Database Name**: Schema name (e.g., `navfinance`).
+     - **Username & Password**: Database user credentials.
+   - For SQLite, click **Browse...** to pick the local SQLite file location.
+3. Review the **Connection URL Preview** (e.g., `jdbc:mysql://localhost:3306/navfinance?...`).
+4. Click **`Test Connection`**:
+   - Tests connectivity and measures response latency in milliseconds.
+5. Click **`Save & Connect`**:
+   - Verifies the connection, automatically runs all DDL schema scripts (creating tables, indexes, constraints), seeds default payment modes, and activates the engine live without losing application state!
+6. Click **`Reset to Default H2`** anytime to instantly revert back to embedded local storage.
 
 ---
 

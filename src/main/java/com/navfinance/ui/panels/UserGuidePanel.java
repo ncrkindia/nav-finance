@@ -38,6 +38,8 @@ import java.util.Map;
  *   <li>9. Database Storage &amp; Full Backup (H2 embedded storage, directory export).</li>
  *   <li>10. UI Zooming &amp; Theme Customization (FlatLaf Light/Dark, font magnification).</li>
  *   <li>11. Recurring Schedules &amp; Due/Overdue Tracker (fixed vs variable bills, auto-pay).</li>
+ *   <li>12. Entity &amp; Category Tracker (Days, Week, Months, Quarter, Years trends &amp; graphs).</li>
+ *   <li>13. Multi-Database Engines (MySQL, PostgreSQL, MariaDB, SQLite, embedded H2).</li>
  * </ul>
  */
 public class UserGuidePanel extends JPanel {
@@ -103,22 +105,21 @@ public class UserGuidePanel extends JPanel {
             </ul>
         """);
 
-        topicContent.put("3. Recording Expenses & Bills", """
-            <h2>3. Recording Expenses & Bills</h2>
-            <p>Click the <b>- Add Expense</b> button:</p>
+        topicContent.put("3. Recording Expenses, Bills & Specialized Natures", """
+            <h2>3. Recording Expenses, Bills & Specialized Transaction Natures</h2>
+            <p>Click <b>- Add Expense</b> (or <b>+ Add Income</b>) to open the dynamic transaction entry dialog:</p>
+            <h3>Transaction Nature Selector</h3>
             <ul>
-                <li><b>Date / Planned Date:</b> Type manually or click the calendar button for the picker.</li>
-                <li><b>Planned Checkbox:</b> Check if this is an upcoming bill or planned expense not yet paid.</li>
-                <li><b>Amount:</b> Enter the expense amount.</li>
-                <li><b>Via:</b> Select from <i>Cash, Paytm, PhonePe, UPI, Credit Card, Debit Card, Net Banking</i>, or type a custom payment mode.</li>
-                <li><b>Category & Smart Sub-Category:</b>
-                    <ul>
-                        <li><b>Bill:</b> Sub-category dynamically suggests your bills (<i>Airtel Bill, Electricity (Khardoni), Electricity (Noida)</i>).</li>
-                        <li><b>Credit Card:</b> Sub-category dynamically suggests your cards (<i>HDFC Millennia, ICICI Amazon Pay</i>).</li>
-                        <li><b>EMI Payment:</b> Sub-category dynamically suggests your EMIs (<i>Home Loan EMI, Car Loan EMI</i>).</li>
-                        <li><b>Loan Given:</b> Sub-category dynamically suggests registered persons.</li>
-                    </ul>
+                <li><b>One-Time Expense (Done vs Expected):</b> For regular day-to-day shopping, fuel, dining. Toggle between <i>Realized (Done)</i> and <i>Planned (Expected)</i>.</li>
+                <li><b>One-Time Received (Done vs Expected):</b> For one-off receipts, bonus, or freelance income. Toggle between <i>Realized (Done)</i> and <i>Planned (Expected)</i>.</li>
+                <li><b>EMI Payment (Monthly Installment):</b> Selects loan from EMI master, auto-fills monthly amount, and optionally enables <code>[x] Also manage in Due / Upcoming payments schedule</code>.</li>
+                <li><b>Credit Card Bill (Variable Monthly):</b> Links to Credit Cards master, accommodating varying monthly statement amounts and due reminders.</li>
+                <li><b>Utility / Other Bills (Outright Expenses):</b> Links to Bills master (Electricity, Broadband, Water, Rent).
+                    <p style='background:#fef2f2; border-left:4px solid #ef4444; padding:6px 10px; margin:6px 0; color:#991b1b;'>
+                    <b>Non-Returnable Bill Principle:</b> Bills, EMIs, and credit cards are outright expenses. <b>They are NEVER considered as loan balances expected back like Given Money</b>, and cannot be nullified or matched in personal loan settlement candidates.
+                    </p>
                 </li>
+                <li><b>Personal Loan / Transfer:</b> Peer-to-peer lending and borrowing linked to contacts with bidirectional settlement tracking.</li>
             </ul>
         """);
 
@@ -171,12 +172,14 @@ public class UserGuidePanel extends JPanel {
         """);
 
         topicContent.put("7. PDF, Excel & CSV Reports", """
-            <h2>7. Exporting Reports (PDF, Excel, CSV)</h2>
+            <h2>7. Exporting Reports (PDF, Excel, CSV) with Master & Filter Metadata</h2>
             <p>In the Transactions tab, click <b>Export Report</b>:</p>
             <ul>
-                <li><b>Export Filtered to PDF (.pdf):</b> Generates a landscape document featuring title header, KPI summary boxes (Total In, Total Out, Balance), colored badges, and itemized data table via OpenPDF.</li>
-                <li><b>Export Filtered to Excel (.xlsx):</b> Generates a Microsoft Excel workbook with colored headers, formatted currency values, and double-line totals via Apache POI.</li>
-                <li><b>Export Filtered to CSV (.csv):</b> Standard RFC 4180 comma-separated file for spreadsheets or data analysis.</li>
+                <li><b>Active Filter Summary Metadata Banner:</b> Clearly records the active filter parameters (Date Range, Categories, Master Entities, Payment Modes, and Amount Limits) at the top of exported reports.</li>
+                <li><b>Dedicated Associated Entity / Master Column:</b> Shows exactly which Person, Bill, EMI, or Credit Card is tagged for every transaction.</li>
+                <li><b>Export Filtered to PDF (.pdf):</b> Generates an executive landscape document featuring title header, filter summary, 4 KPI summary cards (Total In, Total Out, Balance, Count), colored badges, and itemized data table via OpenPDF.</li>
+                <li><b>Export Filtered to Excel (.xlsx):</b> Generates a Microsoft Excel workbook with colored headers, formatted currency values, filter summary block, and double-line totals via Apache POI.</li>
+                <li><b>Export Filtered to CSV (.csv):</b> Standard RFC 4180 comma-separated file with full master entity attributes.</li>
             </ul>
         """);
 
@@ -259,6 +262,44 @@ public class UserGuidePanel extends JPanel {
             <ul>
                 <li><b>Settle / Pay Selected:</b> Select any row and click Settle (or double-click). For variable bills, enter the exact amount from your bill statement. Check <i>Record as transaction</i> to automatically insert the expense into your ledger!</li>
                 <li><b>Mark Unsettled:</b> If marked settled by mistake, click Mark Unsettled to revert the status back to pending, with option to delete the linked transaction.</li>
+            </ul>
+        """);
+
+        topicContent.put("12. Entity Tracker & Time Graphs (Days, Week, Months, Quarter, Years)", """
+            <h2>12. Entity & Category Tracking Dashboard (Track & Analyze 📊)</h2>
+            <p>Access the <b>Track & Analyze</b> tab inside the Transactions view to track financial patterns with timeline graphs:</p>
+            <h3>Selecting Entities & Scope</h3>
+            <ul>
+                <li><b>Entity Type:</b> Track a <i>Person, Utility / Other Bill, EMI Installment, Credit Card, or Category</i>.</li>
+                <li><b>Target Entity Dropdown:</b> Select the specific entity to evaluate (e.g., <i>Airtel Fiber, HDFC Millennia, Home Loan EMI, Rahul Sharma</i>).</li>
+                <li><b>Time Granularity:</b> Switch instantly between <b>Days</b>, <b>Week</b>, <b>Months</b>, <b>Quarter</b>, and <b>Years</b>. Java-computed chronological aggregation ensures 100% database engine independence!</li>
+                <li><b>Date Presets:</b> Quick presets for <i>All Time, This Month, Last 90 Days, This Year</i>, or custom date ranges.</li>
+            </ul>
+            <h3>Visual Trends & Statement Exports</h3>
+            <ul>
+                <li><b>4 Real-Time KPI Cards:</b> Total Inflow, Total Outflow, Net Balance, and Average volume per Period.</li>
+                <li><b>Visual Dual-Bar Trend Chart:</b> Displays green (Inflow) and red (Outflow) comparison bars for each discrete time period.</li>
+                <li><b>Itemized Ledger:</b> View all matching entries with quick export to Excel or PDF statements.</li>
+                <li><b>One-Click Deep Links:</b> Click <b>Track & Graph 📊</b> from the Masters tables (Persons, Bills, EMIs, Cards) or Loans & Dues ledger to view that entity's graph immediately.</li>
+            </ul>
+        """);
+
+        topicContent.put("13. Multi-Database Engines (MySQL, Postgres, MariaDB, SQLite, H2)", """
+            <h2>13. Multi-Database Engines & Configuration</h2>
+            <p>Nav Finance is built on a clean, engine-agnostic architecture. Switch between popular relational databases directly from the <b>Settings & Database</b> tab:</p>
+            <ul>
+                <li><b>Supported Engines:</b>
+                    <ul>
+                        <li><b>H2 (Embedded - Default):</b> Zero-config embedded database stored in your user profile.</li>
+                        <li><b>MySQL 8.x:</b> Standard port <code>3306</code> for networked or local multi-device installations.</li>
+                        <li><b>PostgreSQL 14+ / 16+:</b> Standard port <code>5432</code> for robust enterprise-grade environments.</li>
+                        <li><b>MariaDB 10.x / 11.x:</b> Standard port <code>3306</code> for open-source high-throughput setups.</li>
+                        <li><b>SQLite:</b> Standalone file-based relational storage.</li>
+                    </ul>
+                </li>
+                <li><b>Connection Testing:</b> Click <b>Test Connection</b> to verify database host, port, database name, and credentials with latency feedback.</li>
+                <li><b>Automated Schema DDL:</b> Clicking <b>Save & Connect</b> automatically verifies tables, creates primary/foreign keys and indexes, seeds default payment modes, and migrates runtime queries live.</li>
+                <li><b>One-Click Reset:</b> Click <b>Reset to Default H2</b> anytime to return to local embedded storage safely.</li>
             </ul>
         """);
     }
