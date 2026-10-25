@@ -105,6 +105,8 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
     private JLabel lblAppName;
     private JLabel lblAppSub;
     private JLabel lblZoom;
+    private JLabel lblDbStatus;
+    private JLabel lblVersion;
     private JButton btnZoomReset;
     private JButton btnQuickIncome;
     private JButton btnQuickExpense;
@@ -127,6 +129,8 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
         setupKeyBindings();
         I18n.addListener(this);
         onLanguageChanged(I18n.getCurrentLanguage());
+        com.navfinance.database.DatabaseManager.getInstance().addDatabaseChangeListener(this::onDatabaseChanged);
+        updateDbStatus();
         if (ZoomManager.getCurrentScale() != 1.0f) {
             ZoomManager.applyZoom(this);
         }
@@ -184,8 +188,6 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
         titleBlock.add(lblAppName, BorderLayout.NORTH);
         titleBlock.add(lblAppSub, BorderLayout.SOUTH);
         brandPanel.add(titleBlock);
-
-        headerPanel.add(brandPanel, BorderLayout.WEST);
 
         // Header Action Buttons + Zoom Controls
         JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
@@ -268,7 +270,10 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
         headerActions.add(btnQuickExpense);
         headerActions.add(btnRefreshAll);
 
-        headerPanel.add(headerActions, BorderLayout.EAST);
+        // Responsive header prevents collision between brand title and action controls
+        com.navfinance.ui.components.ResponsiveBarPanel responsiveHeader =
+                new com.navfinance.ui.components.ResponsiveBarPanel(brandPanel, headerActions, 16, 8, true);
+        headerPanel.add(responsiveHeader, BorderLayout.CENTER);
         add(headerPanel, BorderLayout.NORTH);
 
         // MAIN CONTENT: Tabbed Navigation
@@ -318,15 +323,17 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
                 BorderFactory.createEmptyBorder(6, 16, 6, 16)
         ));
 
-        JLabel lblDbStatus = new JLabel("● Database: Connected | " + AppConfig.APP_DATA_DIR.getAbsolutePath() + " | Multi-User Ready");
+        lblDbStatus = new JLabel("● Database: Initializing...");
         lblDbStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lblDbStatus.setForeground(new Color(15, 118, 110)); // Teal green dot
-        statusBar.add(lblDbStatus, BorderLayout.WEST);
 
-        JLabel lblVersion = new JLabel(AppConfig.APP_NAME + " v" + AppConfig.APP_VERSION + " | Windows Java 21");
+        lblVersion = new JLabel(AppConfig.APP_NAME + " v" + AppConfig.APP_VERSION + " | Windows Java 21");
         lblVersion.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lblVersion.setForeground(UiUtils.COLOR_TEXT_MUTED);
-        statusBar.add(lblVersion, BorderLayout.EAST);
+
+        com.navfinance.ui.components.ResponsiveBarPanel responsiveStatus =
+                new com.navfinance.ui.components.ResponsiveBarPanel(lblDbStatus, lblVersion, 12, 4, true);
+        statusBar.add(responsiveStatus, BorderLayout.CENTER);
 
         add(statusBar, BorderLayout.SOUTH);
     }
@@ -370,6 +377,27 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
                 ZoomManager.resetZoom(MainFrame.this);
             }
         });
+    }
+
+    /**
+     * Refreshes the active database connection indicator label in the status bar.
+     */
+    private void updateDbStatus() {
+        if (lblDbStatus == null) return;
+        com.navfinance.database.DatabaseConfig cfg = AppConfig.getActiveDatabaseConfig();
+        String typeName = cfg.getType().getDisplayName();
+        String location = cfg.getType().isEmbeddedOrLocal() ?
+                (cfg.getLocalPath().isBlank() ? AppConfig.DB_PATH : cfg.getLocalPath()) :
+                (cfg.getHost() + ":" + cfg.getPort() + "/" + cfg.getDatabaseName());
+        lblDbStatus.setText("● Database: " + typeName + " (" + location + ") | Connected");
+    }
+
+    /**
+     * Responds to database switch events.
+     */
+    private void onDatabaseChanged() {
+        updateDbStatus();
+        refreshAllViews();
     }
 
     /**

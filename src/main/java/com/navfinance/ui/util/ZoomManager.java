@@ -155,11 +155,11 @@ public final class ZoomManager {
         int newFontSize = Math.round(BASE_FONT_SIZE * scale);
         String fontFamily = I18n.getFontFamily();
 
-        Font defaultFont = new Font(fontFamily, Font.PLAIN, newFontSize);
-        Font boldFont = new Font(fontFamily, Font.BOLD, newFontSize);
-        Font titleFont = new Font(fontFamily, Font.BOLD, Math.round(18.0f * scale));
+        javax.swing.plaf.FontUIResource defaultFont = new javax.swing.plaf.FontUIResource(fontFamily, Font.PLAIN, newFontSize);
+        javax.swing.plaf.FontUIResource boldFont = new javax.swing.plaf.FontUIResource(fontFamily, Font.BOLD, newFontSize);
+        javax.swing.plaf.FontUIResource titleFont = new javax.swing.plaf.FontUIResource(fontFamily, Font.BOLD, Math.round(18.0f * scale));
 
-        // Update global Swing UIManager font keys
+        // Update global Swing UIManager font keys with FontUIResource
         UIManager.put("defaultFont", defaultFont);
         UIManager.put("Button.font", boldFont);
         UIManager.put("Label.font", defaultFont);
@@ -173,12 +173,19 @@ public final class ZoomManager {
         UIManager.put("RootPane.titlePane.font", titleFont);
         UIManager.put("InternalFrame.titleFont", titleFont);
 
+        // Dynamically scale table row height globally
+        int scaledRowHeight = Math.max(26, Math.round(28.0f * scale));
+        UIManager.put("Table.rowHeight", scaledRowHeight);
+
         // Update centralized UiUtils static font caches
         UiUtils.refreshFonts();
 
-        // Propagate UI font updates to all currently realized windows and dialogs
+        // Propagate UI updates and scale table row heights across all realized windows
         for (Window window : Window.getWindows()) {
             SwingUtilities.updateComponentTreeUI(window);
+            updateComponentTreeRecursively(window, scale, scaledRowHeight);
+            window.revalidate();
+            window.repaint();
         }
 
         // Notify FlatLaf rendering engine
@@ -193,6 +200,27 @@ public final class ZoomManager {
         // Fire registered callback listeners
         for (Runnable r : zoomListeners) {
             r.run();
+        }
+    }
+
+    /**
+     * Recursively scales custom component dimensions (such as JTable row heights) across window trees.
+     */
+    private static void updateComponentTreeRecursively(java.awt.Component comp, float scale, int rowHeight) {
+        if (comp instanceof javax.swing.JTable table) {
+            table.setRowHeight(rowHeight);
+            table.setFont(UiUtils.regularFont());
+            if (table.getTableHeader() != null) {
+                table.getTableHeader().setFont(UiUtils.boldFont());
+            }
+        } else if (comp instanceof com.navfinance.ui.components.KpiCard kpi) {
+            kpi.refreshZoom(scale);
+        }
+
+        if (comp instanceof java.awt.Container container) {
+            for (java.awt.Component child : container.getComponents()) {
+                updateComponentTreeRecursively(child, scale, rowHeight);
+            }
         }
     }
 }

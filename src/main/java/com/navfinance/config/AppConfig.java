@@ -82,6 +82,10 @@ public final class AppConfig {
     /** Persisted window maximized state (default: true for full size). */
     private static boolean windowMaximized = true;
 
+    /** Active database configuration instance. */
+    private static com.navfinance.database.DatabaseConfig activeDatabaseConfig =
+            com.navfinance.database.DatabaseConfig.createDefaultH2(DB_PATH);
+
     /** Settings file in user data directory. */
     private static final File SETTINGS_FILE = new File(APP_DATA_DIR, "settings.properties");
 
@@ -134,6 +138,32 @@ public final class AppConfig {
             if (wm != null && !wm.trim().isEmpty()) {
                 windowMaximized = Boolean.parseBoolean(wm.trim());
             }
+
+            // Database configuration properties
+            String dbTypeStr = props.getProperty("db.type");
+            com.navfinance.database.DatabaseType dbType = com.navfinance.database.DatabaseType.fromString(dbTypeStr);
+            String dbHost = props.getProperty("db.host", "localhost");
+            String dbPortStr = props.getProperty("db.port");
+            int dbPort = dbType.getDefaultPort();
+            if (dbPortStr != null && !dbPortStr.isBlank()) {
+                try { dbPort = Integer.parseInt(dbPortStr.trim()); } catch (NumberFormatException ignored) {}
+            }
+            String dbName = props.getProperty("db.name", "navfinance");
+            String dbUser = props.getProperty("db.user", dbType.getDefaultUser());
+            String dbPass = props.getProperty("db.password", "");
+            String dbLocalPath = props.getProperty("db.localPath", DB_PATH);
+            String dbCustomUrl = props.getProperty("db.customUrl", "");
+
+            com.navfinance.database.DatabaseConfig cfg = new com.navfinance.database.DatabaseConfig();
+            cfg.setType(dbType);
+            cfg.setHost(dbHost);
+            cfg.setPort(dbPort);
+            cfg.setDatabaseName(dbName);
+            cfg.setUsername(dbUser);
+            cfg.setPassword(dbPass);
+            cfg.setLocalPath(dbLocalPath);
+            cfg.setCustomJdbcUrl(dbCustomUrl);
+            activeDatabaseConfig = cfg;
         } catch (Exception ignored) {}
     }
 
@@ -161,10 +191,67 @@ public final class AppConfig {
             props.setProperty("windowWidth", String.valueOf(windowWidth));
             props.setProperty("windowHeight", String.valueOf(windowHeight));
             props.setProperty("windowMaximized", String.valueOf(windowMaximized));
+
+            if (activeDatabaseConfig != null) {
+                props.setProperty("db.type", activeDatabaseConfig.getType().name());
+                props.setProperty("db.host", activeDatabaseConfig.getHost());
+                props.setProperty("db.port", String.valueOf(activeDatabaseConfig.getPort()));
+                props.setProperty("db.name", activeDatabaseConfig.getDatabaseName());
+                props.setProperty("db.user", activeDatabaseConfig.getUsername());
+                props.setProperty("db.password", activeDatabaseConfig.getPassword());
+                props.setProperty("db.localPath", activeDatabaseConfig.getLocalPath());
+                props.setProperty("db.customUrl", activeDatabaseConfig.getCustomJdbcUrl());
+            }
+
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(SETTINGS_FILE)) {
                 props.store(fos, "Nav Finance User Settings");
             }
         } catch (Exception ignored) {}
+    }
+
+    /**
+     * Gets a copy of the active database configuration.
+     */
+    public static synchronized com.navfinance.database.DatabaseConfig getActiveDatabaseConfig() {
+        return new com.navfinance.database.DatabaseConfig(activeDatabaseConfig);
+    }
+
+    /**
+     * Updates the active database configuration and persists to settings.
+     */
+    public static synchronized void setActiveDatabaseConfig(com.navfinance.database.DatabaseConfig config) {
+        if (config != null) {
+            activeDatabaseConfig = new com.navfinance.database.DatabaseConfig(config);
+            saveSettings();
+        }
+    }
+
+    /**
+     * Resolves the current live JDBC connection URL.
+     */
+    public static String getEffectiveJdbcUrl() {
+        return activeDatabaseConfig != null ? activeDatabaseConfig.getEffectiveJdbcUrl() : JDBC_URL;
+    }
+
+    /**
+     * Resolves the current live database username.
+     */
+    public static String getEffectiveDbUser() {
+        return activeDatabaseConfig != null ? activeDatabaseConfig.getUsername() : DB_USER;
+    }
+
+    /**
+     * Resolves the current live database password.
+     */
+    public static String getEffectiveDbPassword() {
+        return activeDatabaseConfig != null ? activeDatabaseConfig.getPassword() : DB_PASSWORD;
+    }
+
+    /**
+     * Resolves the active database type.
+     */
+    public static com.navfinance.database.DatabaseType getEffectiveDbType() {
+        return activeDatabaseConfig != null ? activeDatabaseConfig.getType() : com.navfinance.database.DatabaseType.H2;
     }
 
     /**

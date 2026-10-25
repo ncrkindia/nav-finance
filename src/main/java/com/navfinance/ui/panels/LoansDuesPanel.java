@@ -91,8 +91,6 @@ public class LoansDuesPanel extends JPanel implements LanguageChangeListener {
         JLabel lblTitle = new JLabel(I18n.get("loans.title"));
         lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
-        topPanel.add(lblTitle, BorderLayout.WEST);
-
         JPanel btnGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnGroup.setOpaque(false);
 
@@ -111,7 +109,11 @@ public class LoansDuesPanel extends JPanel implements LanguageChangeListener {
         btnGroup.add(btnAddPerson);
         btnGroup.add(btnLendMoney);
         btnGroup.add(btnBorrowMoney);
-        topPanel.add(btnGroup, BorderLayout.EAST);
+
+        // Responsive header prevents collision between title and buttons
+        com.navfinance.ui.components.ResponsiveBarPanel responsiveHeader =
+                new com.navfinance.ui.components.ResponsiveBarPanel(lblTitle, btnGroup, 14, 8, true);
+        topPanel.add(responsiveHeader, BorderLayout.CENTER);
 
         add(topPanel, BorderLayout.NORTH);
 

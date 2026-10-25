@@ -2,11 +2,13 @@ package com.navfinance.ui.components;
 
 import com.navfinance.model.DashboardSummary;
 import com.navfinance.ui.util.UiUtils;
+import com.navfinance.ui.util.ZoomManager;
 
 import javax.swing.JPanel;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -18,9 +20,12 @@ import java.util.List;
  * Custom 2D graphical Bar Chart component plotting temporal cash flow comparisons
  * between cumulative Income inflows and Expense outflows.
  * <p>
- * Supports dynamic scaling, zero-suppression, subtle horizontal guideline grids,
- * side-by-side comparative green/red bars, and centered temporal axis labels.
+ * Features responsive dynamic legend positioning, non-overlapping axis labels,
+ * zero-suppression, and smooth anti-aliased rendering.
  * </p>
+ *
+ * @author Nav Finance Team
+ * @version 1.0.0
  */
 public class TrendChartPanel extends JPanel {
 
@@ -39,6 +44,7 @@ public class TrendChartPanel extends JPanel {
         this.title = title;
         setBackground(Color.WHITE);
         setPreferredSize(new Dimension(540, 300));
+        ZoomManager.addZoomListener(this::repaint);
     }
 
     /**
@@ -66,6 +72,7 @@ public class TrendChartPanel extends JPanel {
 
         int w = getWidth();
         int h = getHeight();
+        float scale = ZoomManager.getCurrentScale();
 
         // 1. Background container with rounded border
         g2.setColor(getBackground());
@@ -73,22 +80,57 @@ public class TrendChartPanel extends JPanel {
         g2.setColor(UiUtils.COLOR_BORDER);
         g2.drawRoundRect(0, 0, w - 1, h - 1, 12, 12);
 
-        // 2. Title
-        g2.setFont(UiUtils.boldFont());
+        // 2. Measure fonts and header elements dynamically
+        Font titleFont = UiUtils.boldFont();
+        Font legFont = UiUtils.subtitleFont();
+
+        g2.setFont(titleFont);
+        FontMetrics fmTitle = g2.getFontMetrics(titleFont);
+        int titleWidth = fmTitle.stringWidth(title);
+
+        g2.setFont(legFont);
+        FontMetrics fmLeg = g2.getFontMetrics(legFont);
+
+        String inLabel = "Income (In)";
+        String exLabel = "Expense (Out)";
+        int inWidth = fmLeg.stringWidth(inLabel);
+        int exWidth = fmLeg.stringWidth(exLabel);
+        int boxSize = Math.max(10, Math.round(11 * scale));
+        int boxGap = 5;
+        int itemGap = 16;
+        int totalLegWidth = boxSize + boxGap + inWidth + itemGap + boxSize + boxGap + exWidth;
+
+        boolean twoRowHeader = (18 + titleWidth + 24 + totalLegWidth) > (w - 20);
+
+        // Draw Title
+        int titleY = Math.max(22, Math.round(24 * scale));
+        g2.setFont(titleFont);
         g2.setColor(new Color(30, 41, 59));
-        g2.drawString(title, 18, 26);
+        g2.drawString(title, 18, titleY);
 
-        // 3. Legend (Income vs Expense)
-        int legendX = w - 210;
+        // Draw Legend dynamically without overlap
+        int legendX;
+        int legendY;
+        if (twoRowHeader) {
+            legendX = 18;
+            legendY = titleY + fmTitle.getHeight() + 4;
+        } else {
+            legendX = Math.max(18 + titleWidth + 20, w - totalLegWidth - 20);
+            legendY = titleY;
+        }
+
+        // Inflow Legend Box & Label
         g2.setColor(UiUtils.COLOR_INCOME);
-        g2.fillRect(legendX, 16, 12, 12);
-        g2.setFont(UiUtils.subtitleFont());
+        g2.fillRect(legendX, legendY - boxSize + 1, boxSize, boxSize);
+        g2.setFont(legFont);
         g2.setColor(UiUtils.COLOR_TEXT_MUTED);
-        g2.drawString("Income (In)", legendX + 18, 26);
+        g2.drawString(inLabel, legendX + boxSize + boxGap, legendY);
 
+        // Outflow Legend Box & Label
+        int legExX = legendX + boxSize + boxGap + inWidth + itemGap;
         g2.setColor(UiUtils.COLOR_EXPENSE);
-        g2.fillRect(legendX + 100, 16, 12, 12);
-        g2.drawString("Expense (Out)", legendX + 118, 26);
+        g2.fillRect(legExX, legendY - boxSize + 1, boxSize, boxSize);
+        g2.drawString(exLabel, legExX + boxSize + boxGap, legendY);
 
         if (points.isEmpty()) {
             g2.setFont(UiUtils.regularFont());
@@ -98,23 +140,23 @@ public class TrendChartPanel extends JPanel {
             return;
         }
 
-        // 4. Plot Dimensions and Margins
-        int padLeft = 45;
+        // 3. Plot Dimensions and Margins
+        int padLeft = Math.max(45, Math.round(48 * scale));
         int padRight = 20;
-        int padTop = 50;
-        int padBottom = 40;
-        int plotW = w - padLeft - padRight;
-        int plotH = h - padTop - padBottom;
+        int padTop = twoRowHeader ? Math.max(60, Math.round(66 * scale)) : Math.max(44, Math.round(48 * scale));
+        int padBottom = Math.max(34, Math.round(38 * scale));
+        int plotW = Math.max(10, w - padLeft - padRight);
+        int plotH = Math.max(10, h - padTop - padBottom);
 
-        // 5. Calculate dynamic upper ceiling for vertical scaling
+        // 4. Calculate dynamic upper ceiling for vertical scaling
         double maxVal = 1000.0;
         for (DashboardSummary.TrendPoint tp : points) {
             if (tp.getIncome() > maxVal) maxVal = tp.getIncome();
             if (tp.getExpense() > maxVal) maxVal = tp.getExpense();
         }
-        maxVal = Math.ceil(maxVal * 1.15); // Add 15% headroom for aesthetic spacing
+        maxVal = Math.ceil(maxVal * 1.15); // Add 15% headroom
 
-        // 6. Draw horizontal guideline grid steps and y-axis metric markers
+        // 5. Draw horizontal guideline grid steps and y-axis metric markers
         g2.setColor(new Color(241, 245, 249));
         g2.setStroke(new BasicStroke(1.0f));
         int gridSteps = 4;
@@ -124,15 +166,26 @@ public class TrendChartPanel extends JPanel {
 
             double v = (maxVal * i) / gridSteps;
             String vLabel = v >= 1000 ? String.format("%.0fk", v / 1000) : String.format("%.0f", v);
-            g2.setFont(UiUtils.regularFont().deriveFont(10f));
+            g2.setFont(UiUtils.regularFont().deriveFont(Math.max(9f, 10f * scale)));
             g2.setColor(new Color(148, 163, 184));
-            g2.drawString(vLabel, 8, y + 4);
+            g2.drawString(vLabel, 6, y + 4);
         }
 
-        // 7. Draw side-by-side comparative bars for each time slot
+        // 6. Draw side-by-side comparative bars for each time slot
         int count = points.size();
         int slotW = plotW / Math.max(count, 1);
-        int barW = Math.max(6, Math.min(22, (slotW - 16) / 2));
+        int barW = Math.max(4, Math.min(22, (slotW - 14) / 2));
+
+        Font xFont = UiUtils.regularFont().deriveFont(Math.max(9f, 10f * scale));
+        g2.setFont(xFont);
+        FontMetrics fmX = g2.getFontMetrics(xFont);
+
+        // Calculate label skip interval to prevent horizontal label collision
+        int approxStrW = count > 0 ? fmX.stringWidth(points.get(0).getLabel()) : 30;
+        int labelSkip = 1;
+        if (slotW < approxStrW + 6) {
+            labelSkip = (int) Math.ceil((double) (approxStrW + 8) / Math.max(1, slotW));
+        }
 
         for (int i = 0; i < count; i++) {
             DashboardSummary.TrendPoint tp = points.get(i);
@@ -159,12 +212,12 @@ public class TrendChartPanel extends JPanel {
                 g2.fillRoundRect(exX, exY, barW, exH, 4, 4);
             }
 
-            // X-Axis centered date/label
-            g2.setFont(UiUtils.regularFont().deriveFont(10f));
-            g2.setColor(UiUtils.COLOR_TEXT_MUTED);
-            FontMetrics fm = g2.getFontMetrics();
-            int strW = fm.stringWidth(tp.getLabel());
-            g2.drawString(tp.getLabel(), slotCenterX - (strW / 2), padTop + plotH + 16);
+            // X-Axis centered date/label with collision prevention
+            if (i % labelSkip == 0 || i == count - 1) {
+                g2.setColor(UiUtils.COLOR_TEXT_MUTED);
+                int strW = fmX.stringWidth(tp.getLabel());
+                g2.drawString(tp.getLabel(), slotCenterX - (strW / 2), padTop + plotH + Math.round(14 * scale));
+            }
         }
 
         g2.dispose();

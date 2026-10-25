@@ -158,8 +158,6 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
         navPanel.add(btnNext);
         navPanel.add(btnToday);
 
-        topBar.add(navPanel, BorderLayout.WEST);
-
         // Right: Fast Action Buttons
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actionPanel.setOpaque(false);
@@ -172,7 +170,11 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
 
         actionPanel.add(btnAddIncome);
         actionPanel.add(btnAddExpense);
-        topBar.add(actionPanel, BorderLayout.EAST);
+
+        // Responsive TopBar prevents period switcher from colliding with fast action buttons
+        com.navfinance.ui.components.ResponsiveBarPanel responsiveTopBar =
+                new com.navfinance.ui.components.ResponsiveBarPanel(navPanel, actionPanel, 14, 8, true);
+        topBar.add(responsiveTopBar, BorderLayout.CENTER);
 
         add(topBar, BorderLayout.NORTH);
 
@@ -198,7 +200,8 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
         // 2. Charts Row (Trend Chart + Category Donut Chart)
         JPanel chartsRow = new JPanel(new BorderLayout(14, 0));
         chartsRow.setOpaque(false);
-        chartsRow.setPreferredSize(new Dimension(900, 310));
+        int chartsH = Math.max(300, Math.round(310 * com.navfinance.ui.util.ZoomManager.getCurrentScale()));
+        chartsRow.setPreferredSize(new Dimension(900, chartsH));
 
         trendChart = new TrendChartPanel(I18n.get("report.title"));
         categoryPieChart = new CategoryPieChartPanel(I18n.get("dashboard.categoryBreakdown"));
@@ -304,7 +307,13 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
         middleStack.add(lowerPanel, BorderLayout.CENTER);
 
         centerPanel.add(middleStack, BorderLayout.CENTER);
-        add(centerPanel, BorderLayout.CENTER);
+
+        JScrollPane scrollPane = new JScrollPane(centerPanel);
+        scrollPane.setBorder(null);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        add(scrollPane, BorderLayout.CENTER);
     }
 
     /**

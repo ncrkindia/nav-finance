@@ -2,10 +2,12 @@ package com.navfinance.ui.components;
 
 import com.navfinance.config.AppConfig;
 import com.navfinance.ui.util.UiUtils;
+import com.navfinance.ui.util.ZoomManager;
 
 import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -19,8 +21,11 @@ import java.util.Map;
  * Custom graphical Donut/Pie Chart component illustrating expense distributions across categories.
  * <p>
  * Features anti-aliased 2D rendering, modern color-coded sectors, a center summary hole cutout,
- * and an aligned legend with formatted percentages.
+ * and an aligned legend with formatted percentages that automatically scales during UI zoom.
  * </p>
+ *
+ * @author Nav Finance Team
+ * @version 1.0.0
  */
 public class CategoryPieChartPanel extends JPanel {
 
@@ -52,6 +57,7 @@ public class CategoryPieChartPanel extends JPanel {
         this.title = title;
         setBackground(Color.WHITE);
         setPreferredSize(new Dimension(380, 300));
+        ZoomManager.addZoomListener(this::repaint);
     }
 
     /**
@@ -79,6 +85,7 @@ public class CategoryPieChartPanel extends JPanel {
 
         int w = getWidth();
         int h = getHeight();
+        float scale = ZoomManager.getCurrentScale();
 
         // 1. Background container with modern rounded border
         g2.setColor(getBackground());
@@ -87,9 +94,11 @@ public class CategoryPieChartPanel extends JPanel {
         g2.drawRoundRect(0, 0, w - 1, h - 1, 12, 12);
 
         // 2. Title header
-        g2.setFont(UiUtils.boldFont());
+        Font titleFont = UiUtils.boldFont();
+        g2.setFont(titleFont);
         g2.setColor(new Color(30, 41, 59));
-        g2.drawString(title, 18, 26);
+        int titleY = Math.max(22, Math.round(24 * scale));
+        g2.drawString(title, 18, titleY);
 
         // Empty state check
         if (data.isEmpty()) {
@@ -113,9 +122,11 @@ public class CategoryPieChartPanel extends JPanel {
         }
 
         // 3. Donut Chart Positioning and Geometric bounds
-        int donutDiameter = Math.min(160, Math.min(w / 2 - 20, h - 70));
-        int donutX = 25;
-        int donutY = 45 + (h - 70 - donutDiameter) / 2;
+        int topMargin = titleY + 12;
+        int donutDiameter = Math.min(160, Math.min(w / 2 - 20, h - topMargin - 20));
+        donutDiameter = Math.max(80, donutDiameter);
+        int donutX = 20;
+        int donutY = topMargin + (h - topMargin - donutDiameter) / 2;
 
         // Draw individual arc wedges starting from top (90 degrees)
         double currentAngle = 90.0;
@@ -141,34 +152,40 @@ public class CategoryPieChartPanel extends JPanel {
         g2.fill(new Ellipse2D.Double(holeX, holeY, holeDiameter, holeDiameter));
 
         // 5. Center metric label inside donut hole
-        g2.setFont(UiUtils.boldFont().deriveFont(11f));
+        Font holeFont = UiUtils.boldFont().deriveFont(Math.max(9f, Math.min(13f, 10f * scale)));
+        g2.setFont(holeFont);
         g2.setColor(new Color(30, 41, 59));
-        FontMetrics fm = g2.getFontMetrics();
+        FontMetrics fmHole = g2.getFontMetrics(holeFont);
         String totalStr = AppConfig.formatCurrencyPlain(total);
-        if (totalStr.length() > 10) totalStr = String.format("%.1fk", total / 1000);
-        int tw = fm.stringWidth(totalStr);
-        g2.drawString(totalStr, holeX + (holeDiameter - tw) / 2, holeY + (holeDiameter / 2) + 4);
+        if (totalStr.length() > 9) totalStr = String.format("%.1fk", total / 1000);
+        int tw = fmHole.stringWidth(totalStr);
+        g2.drawString(totalStr, holeX + (holeDiameter - tw) / 2, holeY + (holeDiameter / 2) + (fmHole.getAscent() / 2) - 1);
 
         // 6. Right-hand Legend listing with percentage shares
-        int legendX = donutX + donutDiameter + 20;
-        int legendY = 55;
+        int legendX = donutX + donutDiameter + 16;
+        int legendY = topMargin + 10;
         colorIdx = 0;
 
-        g2.setFont(UiUtils.regularFont().deriveFont(11f));
+        Font legFont = UiUtils.regularFont().deriveFont(Math.max(9f, 10f * scale));
+        g2.setFont(legFont);
+        FontMetrics fmLeg = g2.getFontMetrics(legFont);
+        int stepY = Math.max(16, fmLeg.getHeight() + 4);
+        int boxSize = Math.max(8, Math.round(9 * scale));
+
         for (Map.Entry<String, Double> entry : data.entrySet()) {
-            if (legendY > h - 15) break; // Restrict legend within vertical boundary
+            if (legendY > h - 12) break; // Restrict legend within vertical boundary
 
             Color sliceColor = SLICE_COLORS[colorIdx % SLICE_COLORS.length];
             g2.setColor(sliceColor);
-            g2.fillRoundRect(legendX, legendY - 8, 10, 10, 3, 3);
+            g2.fillRoundRect(legendX, legendY - boxSize + 1, boxSize, boxSize, 3, 3);
 
             g2.setColor(new Color(51, 65, 85));
             double pct = (entry.getValue() / total) * 100.0;
             String text = String.format("%s (%.0f%%)", entry.getKey(), pct);
-            if (text.length() > 22) text = text.substring(0, 19) + "...";
-            g2.drawString(text, legendX + 16, legendY);
+            if (text.length() > 20) text = text.substring(0, 17) + "...";
+            g2.drawString(text, legendX + boxSize + 6, legendY);
 
-            legendY += 18;
+            legendY += stepY;
             colorIdx++;
         }
 

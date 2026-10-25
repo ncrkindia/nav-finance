@@ -147,14 +147,9 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         JPanel topContainer = new JPanel(new BorderLayout(0, 10));
         topContainer.setOpaque(false);
 
-        // 1. Action Header Row
-        JPanel actionHeader = new JPanel(new BorderLayout());
-        actionHeader.setOpaque(false);
-
         JLabel lblTitle = new JLabel(I18n.get("transactions.title"));
         lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
-        actionHeader.add(lblTitle, BorderLayout.WEST);
 
         JPanel btnGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnGroup.setOpaque(false);
@@ -176,11 +171,11 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
 
         // Export Menu Button with Dropdown Popup
         JButton btnExport = UiUtils.createPrimaryButton(I18n.get("btn.export"), NavIcons.export(13, Color.WHITE));
-        JPopupMenu exportMenu = new JPopupMenu();
-        JMenuItem itemPdf = new JMenuItem(I18n.get("transactions.export.pdf"), NavIcons.export(12, UiUtils.COLOR_PRIMARY));
-        JMenuItem itemExcel = new JMenuItem(I18n.get("transactions.export.excel"), NavIcons.export(12, UiUtils.COLOR_INCOME));
-        JMenuItem itemCsv = new JMenuItem(I18n.get("transactions.export.csv"), NavIcons.export(12, UiUtils.COLOR_AMBER));
-        JMenuItem itemTemplate = new JMenuItem(I18n.get("transactions.export.template"), NavIcons.importIcon(12, UiUtils.COLOR_PRIMARY));
+        javax.swing.JPopupMenu exportMenu = new javax.swing.JPopupMenu();
+        javax.swing.JMenuItem itemPdf = new javax.swing.JMenuItem(I18n.get("transactions.export.pdf"), NavIcons.export(12, UiUtils.COLOR_PRIMARY));
+        javax.swing.JMenuItem itemExcel = new javax.swing.JMenuItem(I18n.get("transactions.export.excel"), NavIcons.export(12, UiUtils.COLOR_INCOME));
+        javax.swing.JMenuItem itemCsv = new javax.swing.JMenuItem(I18n.get("transactions.export.csv"), NavIcons.export(12, UiUtils.COLOR_AMBER));
+        javax.swing.JMenuItem itemTemplate = new javax.swing.JMenuItem(I18n.get("transactions.export.template"), NavIcons.importIcon(12, UiUtils.COLOR_PRIMARY));
 
         itemPdf.addActionListener(e -> exportCurrentView("PDF"));
         itemExcel.addActionListener(e -> exportCurrentView("EXCEL"));
@@ -206,7 +201,9 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         btnGroup.add(btnImportCsv);
         btnGroup.add(btnExport);
 
-        actionHeader.add(btnGroup, BorderLayout.EAST);
+        // Responsive action header wraps buttons to second row on zoom in to prevent collision with title
+        com.navfinance.ui.components.ResponsiveBarPanel actionHeader =
+                new com.navfinance.ui.components.ResponsiveBarPanel(lblTitle, btnGroup, 14, 8, true);
         topContainer.add(actionHeader, BorderLayout.NORTH);
 
         // 2. Filters Card Panel
@@ -573,12 +570,14 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
 
         lblSummaryTotal = new JLabel("Loading totals...");
         lblSummaryTotal.setFont(UiUtils.boldFont());
-        bottomBar.add(lblSummaryTotal, BorderLayout.WEST);
 
         JLabel lblHelp = new JLabel(I18n.get("transactions.hint.doubleClick"), NavIcons.userGuide(14, UiUtils.COLOR_TEXT_MUTED), JLabel.LEFT);
         lblHelp.setFont(UiUtils.subtitleFont());
         lblHelp.setForeground(UiUtils.COLOR_TEXT_MUTED);
-        bottomBar.add(lblHelp, BorderLayout.EAST);
+
+        com.navfinance.ui.components.ResponsiveBarPanel responsiveFooter =
+                new com.navfinance.ui.components.ResponsiveBarPanel(lblSummaryTotal, lblHelp, 14, 4, true);
+        bottomBar.add(responsiveFooter, BorderLayout.CENTER);
 
         add(bottomBar, BorderLayout.SOUTH);
 

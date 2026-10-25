@@ -84,7 +84,6 @@ public class AuditLogPanel extends JPanel implements LanguageChangeListener {
 
         titlePanel.add(lblTitle, BorderLayout.NORTH);
         titlePanel.add(lblSub, BorderLayout.SOUTH);
-        topPanel.add(titlePanel, BorderLayout.WEST);
 
         // Filter / Search bar on the right
         JPanel searchBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
@@ -127,7 +126,10 @@ public class AuditLogPanel extends JPanel implements LanguageChangeListener {
         });
         searchBar.add(btnRefresh);
 
-        topPanel.add(searchBar, BorderLayout.EAST);
+        // Responsive bar prevents search filters from colliding with header title on zoom
+        com.navfinance.ui.components.ResponsiveBarPanel responsiveTop =
+                new com.navfinance.ui.components.ResponsiveBarPanel(titlePanel, searchBar, 14, 8, true);
+        topPanel.add(responsiveTop, BorderLayout.CENTER);
         add(topPanel, BorderLayout.NORTH);
 
         // 2. CENTER: Audit Table
