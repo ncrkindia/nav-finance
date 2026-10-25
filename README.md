@@ -80,16 +80,26 @@ Managing daily household finances, recurring bills, EMIs, credit cards, and info
   - **Total Repaid** (money paid back by you)
   - **Net Balance** (clearly indicates *Owes You* in Green or *You Owe* in Red)
 
-### 6. Interactive UI & Analytics Dashboard
+### 6. Highly Interactive Analytics & Dynamic Charts
 - **Period Breakdown**: Switch seamlessly between **Weekly**, **Monthly**, **Quarterly**, and **Annually** with `< Prev` and `Next >` timeline navigation.
 - **KPI Summary Cards**:
   - **Total Income (In)** in **Green**
   - **Total Expense (Out)** in **Red**
   - **Net Balance / Savings** in **Blue**
   - **Loan Position** in **Amber**
-- **Trend Chart**: Dual-colored Bar Chart comparing In (Green) vs Out (Red) over time.
-- **Category Donut Chart**: Visual distribution of expenses by category with percentages and legends.
-- **Recent Activity**: Quick view of latest 10 transactions.
+- **Interactive Cash Flow Dual-Bar Trend Chart**:
+  - **Spotlight Focus & Sheen**: Translucent vertical column card highlights the hovered time bucket with glowing emerald and rose-red bar elevations.
+  - **Dynamic Numerical Badges**: Formatted currency badges automatically appear directly above hovered bars for instant at-a-glance figures.
+  - **Floating Glassmorphic Tooltip**: Sleek dark card displays exact currency figures, net surplus/deficit, and % savings rate.
+  - **Interactive Legend Isolation**: Click "Income" or "Expense" pills in the legend to isolate that series.
+  - **Drilldown Navigation**: Click any bar or column slot to instantly filter and display all itemized ledger entries for that exact time period.
+- **Interactive Category Donut Chart**:
+  - **Dynamic Geometry**: Large scalable donut (up to 260px) with outward radial slice explosion on hover.
+  - **Inflow / Outflow Dataset Toggle**: Click **[Expenses 🔻]** or **[Income 🔺]** pill buttons to toggle between expense and earning source distributions.
+  - **Dynamic Center Hero**: Displays total period volume when idle, and immediately reveals category name, exact currency amount, and % share when hovering any slice or legend item.
+  - **Interactive Legend**: Synchronized row highlights, color swatches, amounts, and percentage badges.
+  - **Click Drilldown**: Clicking any slice or legend item directly navigates to the Entity Tracker for that category.
+- **Recent Activity**: Quick view of latest 10 transactions with one-click edit and link workflows.
 
 ### 7. Multi-Criteria Filtering & Sorting
 - **Filter By**:
