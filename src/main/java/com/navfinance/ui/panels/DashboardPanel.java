@@ -197,17 +197,17 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
         kpiRow.add(kpiLoans);
         centerPanel.add(kpiRow, BorderLayout.NORTH);
 
-        // 2. Charts Row (Trend Chart + Category Donut Chart)
-        JPanel chartsRow = new JPanel(new BorderLayout(14, 0));
+        // 2. Charts Row (Trend Chart + Category Donut Chart - balanced 50/50 layout)
+        JPanel chartsRow = new JPanel(new GridLayout(1, 2, 16, 0));
         chartsRow.setOpaque(false);
-        int chartsH = Math.max(300, Math.round(310 * com.navfinance.ui.util.ZoomManager.getCurrentScale()));
+        int chartsH = Math.max(340, Math.round(360 * com.navfinance.ui.util.ZoomManager.getCurrentScale()));
         chartsRow.setPreferredSize(new Dimension(900, chartsH));
 
         trendChart = new TrendChartPanel(I18n.get("report.title"));
         categoryPieChart = new CategoryPieChartPanel(I18n.get("dashboard.categoryBreakdown"));
 
-        chartsRow.add(trendChart, BorderLayout.CENTER);
-        chartsRow.add(categoryPieChart, BorderLayout.EAST);
+        chartsRow.add(trendChart);
+        chartsRow.add(categoryPieChart);
 
         // 3. Lower Section: Recent Transactions
         JPanel lowerPanel = new JPanel(new BorderLayout(0, 8));
