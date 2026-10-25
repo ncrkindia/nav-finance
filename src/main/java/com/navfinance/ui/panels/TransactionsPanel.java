@@ -661,6 +661,14 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
 
         trackerChartPanel = new TrendChartPanel("Temporal Cash Flow Comparison");
         trackerChartPanel.setPreferredSize(new Dimension(540, 220));
+        trackerChartPanel.setSlotClickListener((tp, idx) -> {
+            if (tp != null && tp.getStartDate() != null && tp.getEndDate() != null) {
+                txtTrackerStartDate.setDate(tp.getStartDate());
+                txtTrackerEndDate.setDate(tp.getEndDate());
+                cmbTrackerDatePreset.setSelectedItem("Custom");
+                loadEntityTrackerData();
+            }
+        });
         pnlCenter.add(trackerChartPanel, BorderLayout.NORTH);
 
         // Itemized table for tracker
@@ -1028,6 +1036,29 @@ public class TransactionsPanel extends JPanel implements LanguageChangeListener 
         }
 
         loadEntityTrackerData();
+    }
+
+    /**
+     * Programmatically switches to the All Transactions ledger view and filters
+     * records by the specified inclusive date window.
+     *
+     * @param start start date
+     * @param end end date
+     */
+    public void filterByDateRange(LocalDate start, LocalDate end) {
+        if (tabbedPane != null) {
+            tabbedPane.setSelectedIndex(0);
+        }
+        if (cmbDatePreset != null) {
+            cmbDatePreset.setSelectedItem("Custom");
+        }
+        if (txtStartDate != null) {
+            txtStartDate.setDate(start);
+        }
+        if (txtEndDate != null) {
+            txtEndDate.setDate(end);
+        }
+        applyFilters();
     }
 
     // =========================================================================

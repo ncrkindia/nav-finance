@@ -75,7 +75,8 @@ public class AnalyticsService {
                 LocalDate wEnd = wBase.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
                 double in = transactionDao.sumAmountByTypeAndDateRange(TransactionType.INCOME, wStart, wEnd);
                 double out = transactionDao.sumAmountByTypeAndDateRange(TransactionType.EXPENSE, wStart, wEnd);
-                trendPoints.add(new DashboardSummary.TrendPoint(wStart.format(DateTimeFormatter.ofPattern("dd/MM")), in, out));
+                String fullTitle = "Week of " + wStart.format(DateTimeFormatter.ofPattern("dd MMM")) + " - " + wEnd.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
+                trendPoints.add(new DashboardSummary.TrendPoint(wStart.format(DateTimeFormatter.ofPattern("dd/MM")), in, out, wStart, wEnd, fullTitle));
             }
 
         } else if ("Quarterly".equalsIgnoreCase(periodType)) {
@@ -94,7 +95,8 @@ public class AnalyticsService {
                 LocalDate qEnd = qStart.plusMonths(3).minusDays(1);
                 double in = transactionDao.sumAmountByTypeAndDateRange(TransactionType.INCOME, qStart, qEnd);
                 double out = transactionDao.sumAmountByTypeAndDateRange(TransactionType.EXPENSE, qStart, qEnd);
-                trendPoints.add(new DashboardSummary.TrendPoint("Q" + q + "'" + String.valueOf(qBase.getYear()).substring(2), in, out));
+                String fullTitle = "Quarter " + q + " " + qBase.getYear() + " (" + qStart.format(DateTimeFormatter.ofPattern("MMM")) + " - " + qEnd.format(DateTimeFormatter.ofPattern("MMM yyyy")) + ")";
+                trendPoints.add(new DashboardSummary.TrendPoint("Q" + q + "'" + String.valueOf(qBase.getYear()).substring(2), in, out, qStart, qEnd, fullTitle));
             }
 
         } else if ("Annually".equalsIgnoreCase(periodType)) {
@@ -109,7 +111,8 @@ public class AnalyticsService {
                 LocalDate mEnd = mStart.with(TemporalAdjusters.lastDayOfMonth());
                 double in = transactionDao.sumAmountByTypeAndDateRange(TransactionType.INCOME, mStart, mEnd);
                 double out = transactionDao.sumAmountByTypeAndDateRange(TransactionType.EXPENSE, mStart, mEnd);
-                trendPoints.add(new DashboardSummary.TrendPoint(mStart.format(DateTimeFormatter.ofPattern("MMM")), in, out));
+                String fullTitle = mStart.format(DateTimeFormatter.ofPattern("MMMM yyyy"));
+                trendPoints.add(new DashboardSummary.TrendPoint(mStart.format(DateTimeFormatter.ofPattern("MMM")), in, out, mStart, mEnd, fullTitle));
             }
 
         } else {
@@ -127,7 +130,8 @@ public class AnalyticsService {
                 LocalDate mEnd = mBase.with(TemporalAdjusters.lastDayOfMonth());
                 double in = transactionDao.sumAmountByTypeAndDateRange(TransactionType.INCOME, mStart, mEnd);
                 double out = transactionDao.sumAmountByTypeAndDateRange(TransactionType.EXPENSE, mStart, mEnd);
-                trendPoints.add(new DashboardSummary.TrendPoint(mStart.format(DateTimeFormatter.ofPattern("MMM yy")), in, out));
+                String fullTitle = mStart.format(DateTimeFormatter.ofPattern("MMMM yyyy"));
+                trendPoints.add(new DashboardSummary.TrendPoint(mStart.format(DateTimeFormatter.ofPattern("MMM yy")), in, out, mStart, mEnd, fullTitle));
             }
         }
 
@@ -331,7 +335,7 @@ public class AnalyticsService {
                             else if (tx.getType() == TransactionType.EXPENSE) out += tx.getAmount();
                         }
                     }
-                    points.add(new DashboardSummary.TrendPoint(d.format(dayFmt), in, out));
+                    points.add(new DashboardSummary.TrendPoint(d.format(dayFmt), in, out, d, d, d.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy"))));
                 }
             } else {
                 // Group by active transaction dates to prevent overcrowding
@@ -343,7 +347,8 @@ public class AnalyticsService {
                     else if (tx.getType() == TransactionType.EXPENSE) vals[1] += tx.getAmount();
                 }
                 for (java.util.Map.Entry<LocalDate, double[]> entry : map.entrySet()) {
-                    points.add(new DashboardSummary.TrendPoint(entry.getKey().format(dayFmt), entry.getValue()[0], entry.getValue()[1]));
+                    points.add(new DashboardSummary.TrendPoint(entry.getKey().format(dayFmt), entry.getValue()[0], entry.getValue()[1],
+                            entry.getKey(), entry.getKey(), entry.getKey().format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy"))));
                 }
             }
 
@@ -361,7 +366,8 @@ public class AnalyticsService {
                         else if (tx.getType() == TransactionType.EXPENSE) out += tx.getAmount();
                     }
                 }
-                points.add(new DashboardSummary.TrendPoint("Wk " + wStart.format(dayFmt), in, out));
+                String wTitle = "Week of " + wStart.format(dayFmt) + " - " + wEnd.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
+                points.add(new DashboardSummary.TrendPoint("Wk " + wStart.format(dayFmt), in, out, wStart, wEnd, wTitle));
                 wStart = wStart.plusWeeks(1);
             }
 
@@ -386,7 +392,8 @@ public class AnalyticsService {
                         else if (tx.getType() == TransactionType.EXPENSE) out += tx.getAmount();
                     }
                 }
-                points.add(new DashboardSummary.TrendPoint("Q" + currQ + "'" + String.valueOf(currYear).substring(2), in, out));
+                String qTitle = "Quarter " + currQ + " " + currYear + " (" + qStart.format(DateTimeFormatter.ofPattern("MMM")) + " - " + qEnd.format(DateTimeFormatter.ofPattern("MMM yyyy")) + ")";
+                points.add(new DashboardSummary.TrendPoint("Q" + currQ + "'" + String.valueOf(currYear).substring(2), in, out, qStart, qEnd, qTitle));
 
                 currQ++;
                 if (currQ > 4) {
@@ -408,7 +415,7 @@ public class AnalyticsService {
                         else if (tx.getType() == TransactionType.EXPENSE) out += tx.getAmount();
                     }
                 }
-                points.add(new DashboardSummary.TrendPoint(String.valueOf(y), in, out));
+                points.add(new DashboardSummary.TrendPoint(String.valueOf(y), in, out, yStart, yEnd, "Year " + y));
             }
 
         } else {
@@ -428,7 +435,8 @@ public class AnalyticsService {
                         else if (tx.getType() == TransactionType.EXPENSE) out += tx.getAmount();
                     }
                 }
-                points.add(new DashboardSummary.TrendPoint(curr.format(monthFmt), in, out));
+                String mTitle = curr.format(DateTimeFormatter.ofPattern("MMMM yyyy"));
+                points.add(new DashboardSummary.TrendPoint(curr.format(monthFmt), in, out, mStart, mEnd, mTitle));
                 curr = curr.plusMonths(1);
             }
         }

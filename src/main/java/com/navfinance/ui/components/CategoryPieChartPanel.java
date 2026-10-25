@@ -93,6 +93,11 @@ public class CategoryPieChartPanel extends JPanel {
     private final List<SliceItem> displayItems = new ArrayList<>();
     private final List<Rectangle> legendItemBounds = new ArrayList<>();
     private final Rectangle headerBadgeBounds = new Rectangle();
+    private final Rectangle expenseToggleBounds = new Rectangle();
+    private final Rectangle incomeToggleBounds = new Rectangle();
+    private Map<String, Double> expenseData = new LinkedHashMap<>();
+    private Map<String, Double> incomeData = new LinkedHashMap<>();
+    private boolean showingIncome = false;
 
     /** Index of the actively hovered slice or legend item (-1 if none). */
     private int hoveredIndex = -1;
@@ -145,12 +150,30 @@ public class CategoryPieChartPanel extends JPanel {
     }
 
     /**
-     * Updates the chart dataset, aggregates top categories, and requests an immediate repaint.
+     * Updates the chart dataset with expense values (default mode).
      *
      * @param rawData map of category names to aggregated spending values
      */
     public void setData(Map<String, Double> rawData) {
-        this.data = rawData != null ? rawData : new LinkedHashMap<>();
+        this.expenseData = rawData != null ? rawData : new LinkedHashMap<>();
+        if (!showingIncome) {
+            this.data = this.expenseData;
+            rebuildDisplayItems();
+        }
+        hoveredIndex = -1;
+        repaint();
+    }
+
+    /**
+     * Supplies both expense and income datasets, enabling interactive toggle switching.
+     *
+     * @param expenses category map of expenses
+     * @param incomes category map of incomes
+     */
+    public void setDatasets(Map<String, Double> expenses, Map<String, Double> incomes) {
+        this.expenseData = expenses != null ? expenses : new LinkedHashMap<>();
+        this.incomeData = incomes != null ? incomes : new LinkedHashMap<>();
+        this.data = showingIncome ? this.incomeData : this.expenseData;
         rebuildDisplayItems();
         hoveredIndex = -1;
         repaint();
@@ -220,8 +243,8 @@ public class CategoryPieChartPanel extends JPanel {
         mousePoint = p;
         int newHovered = -1;
 
-        // 1. Check Header Badge
-        if (headerBadgeBounds.contains(p)) {
+        // 1. Check Header Badge & Toggles
+        if (headerBadgeBounds.contains(p) || expenseToggleBounds.contains(p) || incomeToggleBounds.contains(p)) {
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             if (hoveredIndex != -1) {
                 hoveredIndex = -1;
@@ -285,6 +308,28 @@ public class CategoryPieChartPanel extends JPanel {
         MainFrame mainFrame = MainFrame.getInstance();
         if (mainFrame == null) return;
 
+        if (expenseToggleBounds.contains(p)) {
+            if (showingIncome) {
+                showingIncome = false;
+                this.data = expenseData;
+                rebuildDisplayItems();
+                hoveredIndex = -1;
+                repaint();
+            }
+            return;
+        }
+
+        if (incomeToggleBounds.contains(p)) {
+            if (!showingIncome) {
+                showingIncome = true;
+                this.data = incomeData;
+                rebuildDisplayItems();
+                hoveredIndex = -1;
+                repaint();
+            }
+            return;
+        }
+
         if (headerBadgeBounds.contains(p)) {
             mainFrame.switchToEntityTracker("CATEGORY", null, "", "MONTHS");
             return;
@@ -324,12 +369,12 @@ public class CategoryPieChartPanel extends JPanel {
         g2.setColor(new Color(15, 23, 42));
         g2.drawString(title, 20, titleY);
 
-        // Header interactive badge: "Track & Analyze 📊"
+        // Header interactive badges: "Outflow 🔻", "Inflow 🔺", "Analyze 📊"
         String badgeText = "Analyze 📊";
         Font badgeFont = UiUtils.boldFont().deriveFont(Math.max(9.5f, 10f * scale));
         g2.setFont(badgeFont);
         FontMetrics fmBadge = g2.getFontMetrics(badgeFont);
-        int badgeW = fmBadge.stringWidth(badgeText) + 16;
+        int badgeW = fmBadge.stringWidth(badgeText) + 14;
         int badgeH = Math.max(20, fmBadge.getHeight() + 4);
         int badgeX = w - badgeW - 16;
         int badgeY = titleY - badgeH + 4;
@@ -337,17 +382,64 @@ public class CategoryPieChartPanel extends JPanel {
 
         boolean badgeHovered = mousePoint != null && headerBadgeBounds.contains(mousePoint);
         g2.setColor(badgeHovered ? new Color(238, 242, 255) : new Color(248, 250, 252));
-        g2.fillRoundRect(badgeX, badgeY, badgeW, badgeH, 10, 10);
+        g2.fillRoundRect(badgeX, badgeY, badgeW, badgeH, 8, 8);
         g2.setColor(badgeHovered ? UiUtils.COLOR_PRIMARY : UiUtils.COLOR_BORDER);
-        g2.drawRoundRect(badgeX, badgeY, badgeW, badgeH, 10, 10);
+        g2.drawRoundRect(badgeX, badgeY, badgeW, badgeH, 8, 8);
         g2.setColor(badgeHovered ? UiUtils.COLOR_PRIMARY : UiUtils.COLOR_TEXT_MUTED);
-        g2.drawString(badgeText, badgeX + 8, badgeY + fmBadge.getAscent() + 2);
+        g2.drawString(badgeText, badgeX + 7, badgeY + fmBadge.getAscent() + 2);
+
+        // Toggle Buttons: Outflow & Inflow
+        String exText = "Expenses 🔻";
+        String inText = "Income 🔺";
+        int inBtnW = fmBadge.stringWidth(inText) + 12;
+        int exBtnW = fmBadge.stringWidth(exText) + 12;
+
+        int inBtnX = badgeX - inBtnW - 6;
+        int exBtnX = inBtnX - exBtnW - 4;
+
+        incomeToggleBounds.setBounds(inBtnX, badgeY, inBtnW, badgeH);
+        expenseToggleBounds.setBounds(exBtnX, badgeY, exBtnW, badgeH);
+
+        boolean inHover = mousePoint != null && incomeToggleBounds.contains(mousePoint);
+        boolean exHover = mousePoint != null && expenseToggleBounds.contains(mousePoint);
+
+        // Render Outflow (Expenses) Button
+        if (!showingIncome) {
+            g2.setColor(new Color(254, 226, 226));
+            g2.fillRoundRect(exBtnX, badgeY, exBtnW, badgeH, 8, 8);
+            g2.setColor(new Color(239, 68, 68));
+            g2.drawRoundRect(exBtnX, badgeY, exBtnW, badgeH, 8, 8);
+            g2.setColor(new Color(185, 28, 28));
+        } else {
+            g2.setColor(exHover ? new Color(241, 245, 249) : new Color(248, 250, 252));
+            g2.fillRoundRect(exBtnX, badgeY, exBtnW, badgeH, 8, 8);
+            g2.setColor(exHover ? new Color(203, 213, 225) : UiUtils.COLOR_BORDER);
+            g2.drawRoundRect(exBtnX, badgeY, exBtnW, badgeH, 8, 8);
+            g2.setColor(exHover ? UiUtils.COLOR_TEXT_PRIMARY : UiUtils.COLOR_TEXT_MUTED);
+        }
+        g2.drawString(exText, exBtnX + 6, badgeY + fmBadge.getAscent() + 2);
+
+        // Render Inflow (Income) Button
+        if (showingIncome) {
+            g2.setColor(new Color(209, 250, 229));
+            g2.fillRoundRect(inBtnX, badgeY, inBtnW, badgeH, 8, 8);
+            g2.setColor(new Color(16, 185, 129));
+            g2.drawRoundRect(inBtnX, badgeY, inBtnW, badgeH, 8, 8);
+            g2.setColor(new Color(4, 120, 87));
+        } else {
+            g2.setColor(inHover ? new Color(241, 245, 249) : new Color(248, 250, 252));
+            g2.fillRoundRect(inBtnX, badgeY, inBtnW, badgeH, 8, 8);
+            g2.setColor(inHover ? new Color(203, 213, 225) : UiUtils.COLOR_BORDER);
+            g2.drawRoundRect(inBtnX, badgeY, inBtnW, badgeH, 8, 8);
+            g2.setColor(inHover ? UiUtils.COLOR_TEXT_PRIMARY : UiUtils.COLOR_TEXT_MUTED);
+        }
+        g2.drawString(inText, inBtnX + 6, badgeY + fmBadge.getAscent() + 2);
 
         // Empty state check
         if (displayItems.isEmpty()) {
             g2.setFont(UiUtils.regularFont().deriveFont(Math.max(12f, 12f * scale)));
             g2.setColor(UiUtils.COLOR_TEXT_MUTED);
-            String emptyMsg = "No expense data recorded in this period.";
+            String emptyMsg = showingIncome ? "No income recorded in this period." : "No expense data recorded in this period.";
             FontMetrics fmEmpty = g2.getFontMetrics();
             g2.drawString(emptyMsg, (w - fmEmpty.stringWidth(emptyMsg)) / 2, h / 2);
             g2.dispose();
@@ -485,11 +577,11 @@ public class CategoryPieChartPanel extends JPanel {
             g2.drawString(pctStr, cx - fmPct.stringWidth(pctStr) / 2, cy + 20);
 
         } else {
-            // Idle State: Total Expenses
+            // Idle State: Total Expenses or Total Inflow
             Font subFont = UiUtils.boldFont().deriveFont(Math.max(8.5f, 9f * scale));
             g2.setFont(subFont);
             FontMetrics fmSub = g2.getFontMetrics(subFont);
-            String sub = "TOTAL EXPENSES";
+            String sub = showingIncome ? "TOTAL INFLOW" : "TOTAL EXPENSES";
             g2.setColor(new Color(100, 116, 139));
             g2.drawString(sub, cx - fmSub.stringWidth(sub) / 2, cy - 14);
 
@@ -508,7 +600,7 @@ public class CategoryPieChartPanel extends JPanel {
             Font countFont = UiUtils.regularFont().deriveFont(Math.max(8.5f, 9f * scale));
             g2.setFont(countFont);
             FontMetrics fmCount = g2.getFontMetrics(countFont);
-            String countStr = data.size() + " Categories";
+            String countStr = data.size() + (showingIncome ? " Inflow Sources" : " Categories");
             g2.setColor(new Color(148, 163, 184));
             g2.drawString(countStr, cx - fmCount.stringWidth(countStr) / 2, cy + 20);
         }

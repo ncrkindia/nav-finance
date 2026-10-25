@@ -19,6 +19,7 @@ import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
 import com.navfinance.ui.util.ZoomManager;
 
+import java.time.LocalDate;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -597,6 +598,21 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
             mainTabs.setSelectedIndex(1);
             if (transactionsPanel != null) {
                 transactionsPanel.openEntityTracker(entityType, entityId, categoryName, granularity);
+            }
+        }
+    }
+
+    /**
+     * Programmatically routes navigation to the Transactions ledger filtered by a specified date range.
+     *
+     * @param start inclusive start date
+     * @param end inclusive end date
+     */
+    public void switchToTransactionsWithDateRange(LocalDate start, LocalDate end) {
+        if (mainTabs != null) {
+            mainTabs.setSelectedIndex(1);
+            if (transactionsPanel != null) {
+                transactionsPanel.filterByDateRange(start, end);
             }
         }
     }

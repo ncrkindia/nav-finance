@@ -342,7 +342,7 @@ public class DashboardPanel extends JPanel implements LanguageChangeListener {
 
         // Update Charts
         trendChart.setTrendPoints(summary.getTrendPoints());
-        categoryPieChart.setData(summary.getExpenseByCategory());
+        categoryPieChart.setDatasets(summary.getExpenseByCategory(), summary.getIncomeByCategory());
 
         // Update Recent Transactions Table
         recentTableModel.setRowCount(0);

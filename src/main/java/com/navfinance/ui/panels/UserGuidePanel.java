@@ -87,8 +87,25 @@ public class UserGuidePanel extends JPanel {
             </ul>
             <h3>Time Periods</h3>
             <p>Use the time selector to view your finances by <b>Weekly</b>, <b>Monthly</b>, <b>Quarterly</b>, or <b>Annually</b>. Click <b>◀ Prev</b> or <b>Next ▶</b> to jump across past and future periods.</p>
-            <h3>Visual Charts</h3>
-            <p>The anti-aliased <b>Trend Bar Chart</b> compares Income vs Expense over time. The <b>Category Donut Chart</b> shows where your money is going by percentage.</p>
+            <h3>Interactive Visual Charts</h3>
+            <p>Nav Finance features pro-grade interactive visual charts with smooth anti-aliased rendering:</p>
+            <ul>
+                <li><b>Cash Flow Dual-Bar Trend Chart:</b>
+                    <ul>
+                        <li><b>Hover Focus & Badges:</b> Hovering any period highlights the slot with a translucent spotlight card and displays exact numerical currency badges right above the bars.</li>
+                        <li><b>Floating Glassmorphic Tooltip:</b> Shows detailed income, expense, net balance/deficit, and % savings rate near your cursor.</li>
+                        <li><b>Click Drilldown:</b> Click any bar or slot to instantly open the Transactions ledger filtered to that exact time period.</li>
+                        <li><b>Series Isolation:</b> Click <i>Income (In)</i> or <i>Expense (Out)</i> pills in the legend to isolate that series.</li>
+                    </ul>
+                </li>
+                <li><b>Category Donut Chart:</b>
+                    <ul>
+                        <li><b>Dataset Toggle:</b> Switch between <b>[Expenses 🔻]</b> and <b>[Income 🔺]</b> to view spending or inflow distributions.</li>
+                        <li><b>Radial Slice Explosion:</b> Slices pop outward with interactive center hero readouts and itemized legends.</li>
+                        <li><b>Click Drilldown:</b> Click any slice or legend item to open the deep analytical Entity Tracker for that category.</li>
+                    </ul>
+                </li>
+            </ul>
         """);
 
         topicContent.put("2. Recording Income Entries", """
@@ -278,7 +295,7 @@ public class UserGuidePanel extends JPanel {
             <h3>Visual Trends & Statement Exports</h3>
             <ul>
                 <li><b>4 Real-Time KPI Cards:</b> Total Inflow, Total Outflow, Net Balance, and Average volume per Period.</li>
-                <li><b>Visual Dual-Bar Trend Chart:</b> Displays green (Inflow) and red (Outflow) comparison bars for each discrete time period.</li>
+                <li><b>Visual Dual-Bar Trend Chart:</b> Displays green (Inflow) and red (Outflow) comparison bars with hover spotlight cards and value badges. Clicking any bar instantly filters the itemized ledger table below to that exact time bucket!</li>
                 <li><b>Itemized Ledger:</b> View all matching entries with quick export to Excel or PDF statements.</li>
                 <li><b>One-Click Deep Links:</b> Click <b>Track & Graph 📊</b> from the Masters tables (Persons, Bills, EMIs, Cards) or Loans & Dues ledger to view that entity's graph immediately.</li>
             </ul>

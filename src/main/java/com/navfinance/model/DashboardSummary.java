@@ -34,24 +34,44 @@ public class DashboardSummary {
     private List<Transaction> recentTransactions = new ArrayList<>();
 
     /**
-     * Immutable value object holding dual income and expense data points for chart bars.
+     * Value object holding dual income and expense data points for chart bars with date bounds.
      */
     public static class TrendPoint {
         private final String label;
         private final double income;
         private final double expense;
+        private LocalDate startDate;
+        private LocalDate endDate;
+        private String fullTitle;
 
         /**
-         * Constructs a chart trend point.
+         * Constructs a basic chart trend point.
          *
          * @param label Category or temporal step label (e.g., "May 2026").
          * @param income Total income amount.
          * @param expense Total expense amount.
          */
         public TrendPoint(String label, double income, double expense) {
+            this(label, income, expense, null, null, label);
+        }
+
+        /**
+         * Constructs a fully qualified trend point with temporal boundaries and detailed title.
+         *
+         * @param label Short step label for axis
+         * @param income Total income amount
+         * @param expense Total expense amount
+         * @param startDate Inclusive start date
+         * @param endDate Inclusive end date
+         * @param fullTitle Detailed title for tooltips and headers
+         */
+        public TrendPoint(String label, double income, double expense, LocalDate startDate, LocalDate endDate, String fullTitle) {
             this.label = label;
             this.income = income;
             this.expense = expense;
+            this.startDate = startDate;
+            this.endDate = endDate;
+            this.fullTitle = fullTitle != null ? fullTitle : label;
         }
 
         /** @return Step label */
@@ -60,6 +80,18 @@ public class DashboardSummary {
         public double getIncome() { return income; }
         /** @return Expense figure */
         public double getExpense() { return expense; }
+        /** @return Inclusive start date or null */
+        public LocalDate getStartDate() { return startDate; }
+        /** @param startDate Inclusive start date */
+        public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+        /** @return Inclusive end date or null */
+        public LocalDate getEndDate() { return endDate; }
+        /** @param endDate Inclusive end date */
+        public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+        /** @return Formatted title for display in tooltips and drilldowns */
+        public String getFullTitle() { return fullTitle != null ? fullTitle : label; }
+        /** @param fullTitle Formatted title */
+        public void setFullTitle(String fullTitle) { this.fullTitle = fullTitle; }
     }
 
     /** Default constructor. */
