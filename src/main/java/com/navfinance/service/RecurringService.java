@@ -162,6 +162,7 @@ public class RecurringService {
     private RecurringService() {
         // Automatically ensure due instances are generated up to next 2 months
         try {
+            cleanupInvalidDuePayments();
             generateDuePayments(2);
         } catch (Exception ignored) {
             // Silently continue if database initialization is still concluding
@@ -265,6 +266,7 @@ public class RecurringService {
      * @param monthsAhead number of months ahead of the current month to project
      */
     public final synchronized void generateDuePayments(int monthsAhead) {
+        cleanupInvalidDuePayments();
         List<RecurringSchedule> activeSchedules = scheduleDao.findActive();
         for (RecurringSchedule s : activeSchedules) {
             generateDueForSchedule(s, monthsAhead);
@@ -283,7 +285,7 @@ public class RecurringService {
      * @param monthsAhead projection horizon in months from today
      */
     public final synchronized void generateDueForSchedule(RecurringSchedule s, int monthsAhead) {
-        if (s == null || !s.isActive() || s.getStartDate() == null) return;
+        if (s == null || !s.isActive() || s.getStartDate() == null || s.getType() != TransactionType.EXPENSE) return;
 
         LocalDate today = LocalDate.now();
         // Compute the outer projection boundary at the end of the future month
@@ -499,6 +501,56 @@ public class RecurringService {
         return ok;
     }
 
+    /**
+     * Purges invalid due payment records with type != 'EXPENSE' (e.g. income schedules erroneously projected).
+     *
+     * @return Number of purged invalid records
+     */
+    public final int cleanupInvalidDuePayments() {
+        return duePaymentDao.deleteInvalidIncomeDuePayments();
+    }
+
+    /**
+     * Settles a due payment on its exact scheduled due date ("on time").
+     *
+     * @param duePaymentId ID of the due payment to settle
+     * @param createTransaction {@code true} to record matching ledger transaction
+     * @return {@code true} if successfully settled
+     */
+    public boolean settlePaymentOnTime(Long duePaymentId, boolean createTransaction) {
+        DuePayment p = duePaymentDao.findById(duePaymentId);
+        if (p == null || p.isSettled()) return false;
+
+        LocalDate onTimeDate = p.getDueDate() != null ? p.getDueDate() : LocalDate.now();
+        double amount = p.getExpectedAmount();
+        String paymentVia = "Net Banking";
+        if (p.getNotes() != null && p.getNotes().toUpperCase().contains("UPI")) {
+            paymentVia = "UPI";
+        }
+
+        return settlePayment(duePaymentId, amount, onTimeDate, paymentVia, createTransaction, "Settled on time");
+    }
+
+    /**
+     * Settles all unsettled due payments within the specified calendar month on time.
+     *
+     * @param ym target YearMonth
+     * @param createTransactions {@code true} to generate matching transactions
+     * @return count of payments successfully settled
+     */
+    public int settleAllForMonthOnTime(java.time.YearMonth ym, boolean createTransactions) {
+        LocalDate start = ym.atDay(1);
+        LocalDate end = ym.atEndOfMonth();
+        List<DuePayment> list = duePaymentDao.findUnsettledByPeriod(start, end);
+        int count = 0;
+        for (DuePayment p : list) {
+            if (settlePaymentOnTime(p.getId(), createTransactions)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     // =========================================================================
     // Summary & Metrics
     // =========================================================================
@@ -514,6 +566,11 @@ public class RecurringService {
         LocalDate today = LocalDate.now();
 
         for (DuePayment p : list) {
+            // Only expense liabilities count towards dues and overdue totals
+            if (p.getType() != null && p.getType() != TransactionType.EXPENSE) {
+                continue;
+            }
+
             // Tally payment execution mode
             if (p.isAutoPay()) summary.autoPayCount++;
             else summary.manualPayCount++;

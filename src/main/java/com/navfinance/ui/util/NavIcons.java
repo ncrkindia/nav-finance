@@ -1229,4 +1229,118 @@ public final class NavIcons {
             g2.draw(new java.awt.geom.Arc2D.Float(x, s * 0.67f, w, hDisc, 180, 180, java.awt.geom.Arc2D.OPEN));
         });
     }
+
+    /**
+     * Creates a padlock security icon.
+     *
+     * @param size dimension in pixels
+     * @param color stroke and fill color
+     * @return vector {@link Icon}
+     */
+    public static Icon lock(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            float strokeW = Math.max(1.4f, s * 0.09f);
+            g2.setStroke(new BasicStroke(strokeW, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            // Shackle
+            float shackleW = s * 0.44f;
+            float shackleH = s * 0.38f;
+            float shackleX = (s - shackleW) / 2f;
+            float shackleY = s * 0.12f;
+            g2.draw(new java.awt.geom.RoundRectangle2D.Float(shackleX, shackleY, shackleW, shackleH, shackleW * 0.6f, shackleW * 0.6f));
+            // Body
+            float bodyW = s * 0.68f;
+            float bodyH = s * 0.46f;
+            float bodyX = (s - bodyW) / 2f;
+            float bodyY = s * 0.44f;
+            g2.fill(new RoundRectangle2D.Float(bodyX, bodyY, bodyW, bodyH, s * 0.12f, s * 0.12f));
+            // Keyhole
+            g2.setColor(Color.WHITE);
+            float holeSize = s * 0.12f;
+            g2.fill(new Ellipse2D.Float(s * 0.5f - holeSize / 2f, bodyY + bodyH * 0.28f, holeSize, holeSize));
+            g2.setStroke(new BasicStroke(Math.max(1.2f, s * 0.07f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.draw(new Line2D.Float(s * 0.5f, bodyY + bodyH * 0.40f, s * 0.5f, bodyY + bodyH * 0.65f));
+        });
+    }
+
+    /**
+     * Creates an unlocked padlock security icon.
+     *
+     * @param size dimension in pixels
+     * @param color stroke and fill color
+     * @return vector {@link Icon}
+     */
+    public static Icon unlock(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            float strokeW = Math.max(1.4f, s * 0.09f);
+            g2.setStroke(new BasicStroke(strokeW, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            // Open Shackle
+            float shackleW = s * 0.44f;
+            float shackleH = s * 0.38f;
+            float shackleX = s * 0.18f;
+            float shackleY = s * 0.08f;
+            g2.draw(new java.awt.geom.Arc2D.Float(shackleX, shackleY, shackleW, shackleH, 0, 180, java.awt.geom.Arc2D.OPEN));
+            g2.draw(new Line2D.Float(shackleX + shackleW, shackleY + shackleH * 0.5f, shackleX + shackleW, s * 0.44f));
+            // Body
+            float bodyW = s * 0.68f;
+            float bodyH = s * 0.46f;
+            float bodyX = (s - bodyW) / 2f;
+            float bodyY = s * 0.44f;
+            g2.fill(new RoundRectangle2D.Float(bodyX, bodyY, bodyW, bodyH, s * 0.12f, s * 0.12f));
+            // Keyhole
+            g2.setColor(Color.WHITE);
+            float holeSize = s * 0.12f;
+            g2.fill(new Ellipse2D.Float(s * 0.5f - holeSize / 2f, bodyY + bodyH * 0.28f, holeSize, holeSize));
+            g2.setStroke(new BasicStroke(Math.max(1.2f, s * 0.07f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.draw(new Line2D.Float(s * 0.5f, bodyY + bodyH * 0.40f, s * 0.5f, bodyY + bodyH * 0.65f));
+        });
+    }
+
+    /**
+     * Creates a security shield icon.
+     *
+     * @param size dimension in pixels
+     * @param color stroke and fill color
+     * @return vector {@link Icon}
+     */
+    public static Icon shield(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            GeneralPath p = new GeneralPath();
+            p.moveTo(s * 0.5f, s * 0.10f);
+            p.lineTo(s * 0.85f, s * 0.22f);
+            p.curveTo(s * 0.85f, s * 0.55f, s * 0.70f, s * 0.82f, s * 0.5f, s * 0.92f);
+            p.curveTo(s * 0.30f, s * 0.82f, s * 0.15f, s * 0.55f, s * 0.15f, s * 0.22f);
+            p.closePath();
+            g2.setStroke(new BasicStroke(Math.max(1.3f, s * 0.09f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.draw(p);
+        });
+    }
+
+    /**
+     * Creates a user key icon.
+     *
+     * @param size dimension in pixels
+     * @param color stroke and fill color
+     * @return vector {@link Icon}
+     */
+    public static Icon key(int size, Color color) {
+        return new VectorIcon(size, g2 -> {
+            g2.setColor(color);
+            float s = size;
+            g2.setStroke(new BasicStroke(Math.max(1.3f, s * 0.09f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            // Bow (ring)
+            float ringSize = s * 0.36f;
+            g2.draw(new Ellipse2D.Float(s * 0.12f, s * 0.12f, ringSize, ringSize));
+            // Blade
+            g2.draw(new Line2D.Float(s * 0.40f, s * 0.40f, s * 0.85f, s * 0.85f));
+            // Bits
+            g2.draw(new Line2D.Float(s * 0.68f, s * 0.68f, s * 0.80f, s * 0.56f));
+            g2.draw(new Line2D.Float(s * 0.80f, s * 0.80f, s * 0.90f, s * 0.70f));
+        });
+    }
 }

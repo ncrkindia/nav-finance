@@ -276,6 +276,9 @@ public class DbSchemaManager {
 
         // Seed default categories and associated sub-categories
         seedDefaultCategories(conn, dbType);
+
+        // Auto-sanitize due payments (remove income entries) and settle September 2026 on time
+        sanitizeDuePaymentsAndSettleSept2026(conn);
     }
 
     /**
@@ -546,6 +549,106 @@ public class DbSchemaManager {
             }
         } catch (SQLException e) {
             // Ignore if recurring_schedules is empty or missing
+        }
+    }
+
+    /**
+     * Cleanses invalid due payments (such as income schedules) and marks any unsettled
+     * September 2026 due/recurring records as settled on time with linked transactions.
+     *
+     * @param conn active JDBC connection
+     */
+    public static void sanitizeDuePaymentsAndSettleSept2026(Connection conn) {
+        if (conn == null) return;
+        try (Statement stmt = conn.createStatement()) {
+            // 1. Purge any due payments generated for income or transfers
+            stmt.executeUpdate("DELETE FROM due_payments WHERE type = 'INCOME' OR type = 'TRANSFER'");
+
+            // 2. Query unsettled due payments for September 2026
+            String selectUnsettled = "SELECT id, title, type, category, sub_category, due_date, expected_amount, notes "
+                    + "FROM due_payments "
+                    + "WHERE status != 'SETTLED' AND due_date >= '2026-09-01' AND due_date <= '2026-09-30' "
+                    + "ORDER BY due_date ASC";
+
+            try (ResultSet rs = stmt.executeQuery(selectUnsettled)) {
+                List<Object[]> rowsToSettle = new ArrayList<>();
+                while (rs.next()) {
+                    rowsToSettle.add(new Object[]{
+                            rs.getLong("id"),
+                            rs.getString("title"),
+                            rs.getString("type"),
+                            rs.getString("category"),
+                            rs.getString("sub_category"),
+                            rs.getDate("due_date"),
+                            rs.getDouble("expected_amount"),
+                            rs.getString("notes")
+                    });
+                }
+
+                for (Object[] row : rowsToSettle) {
+                    long dueId = (Long) row[0];
+                    String title = (String) row[1];
+                    String category = (String) row[3];
+                    String subCategory = (String) row[4];
+                    java.sql.Date dueDate = (java.sql.Date) row[5];
+                    double expectedAmount = (Double) row[6];
+                    String notes = (String) row[7];
+
+                    String paymentVia = "Net Banking";
+                    if (notes != null && notes.toUpperCase().contains("UPI")) {
+                        paymentVia = "UPI";
+                    }
+
+                    // Check if matching transaction already exists on that date
+                    Long txId = null;
+                    String findTx = "SELECT id FROM transactions WHERE tx_date = ? AND ABS(amount - ?) < 0.01 AND type = 'EXPENSE'";
+                    try (PreparedStatement psFind = conn.prepareStatement(findTx)) {
+                        psFind.setDate(1, dueDate);
+                        psFind.setDouble(2, expectedAmount);
+                        try (ResultSet rsTx = psFind.executeQuery()) {
+                            if (rsTx.next()) {
+                                txId = rsTx.getLong("id");
+                            }
+                        }
+                    }
+
+                    if (txId == null) {
+                        String insTx = "INSERT INTO transactions (type, amount, tx_date, category, sub_category, payment_via, notes, expected) "
+                                + "VALUES ('EXPENSE', ?, ?, ?, ?, ?, ?, FALSE)";
+                        try (PreparedStatement psIns = conn.prepareStatement(insTx, Statement.RETURN_GENERATED_KEYS)) {
+                            psIns.setDouble(1, expectedAmount);
+                            psIns.setDate(2, dueDate);
+                            psIns.setString(3, category != null ? category : "Bills & Utilities");
+                            psIns.setString(4, subCategory);
+                            psIns.setString(5, paymentVia);
+                            psIns.setString(6, "Settled on time: " + title);
+                            psIns.executeUpdate();
+                            try (ResultSet gk = psIns.getGeneratedKeys()) {
+                                if (gk.next()) txId = gk.getLong(1);
+                            }
+                        }
+                    }
+
+                    // Mark due_payment SETTLED on time
+                    String updDue = "UPDATE due_payments SET status = 'SETTLED', settled_date = ?, settled_amount = ?, "
+                            + "settled_via = ?, transaction_id = ?, notes = CASE WHEN notes IS NULL OR notes = '' THEN 'Settled on time' "
+                            + "ELSE notes || ' (Settled on time)' END WHERE id = ?";
+                    try (PreparedStatement psUpd = conn.prepareStatement(updDue)) {
+                        psUpd.setDate(1, dueDate);
+                        psUpd.setDouble(2, expectedAmount);
+                        psUpd.setString(3, paymentVia);
+                        if (txId != null) {
+                            psUpd.setLong(4, txId);
+                        } else {
+                            psUpd.setNull(4, java.sql.Types.BIGINT);
+                        }
+                        psUpd.setLong(5, dueId);
+                        psUpd.executeUpdate();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Auto-sanitization of due payments encountered non-fatal variance: " + e.getMessage());
         }
     }
 }

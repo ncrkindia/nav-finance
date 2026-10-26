@@ -98,6 +98,18 @@ public final class AppConfig {
     private static com.navfinance.database.DatabaseConfig activeDatabaseConfig =
             com.navfinance.database.DatabaseConfig.createDefaultH2(DB_PATH);
 
+    /** Flag indicating whether startup login security is enabled (default: false). */
+    private static boolean loginEnabled = false;
+
+    /** Persisted administrator/user login username (default: "admin"). */
+    private static String loginUsername = "admin";
+
+    /** Persisted cryptographic SHA-256 hash of user password. */
+    private static String loginPasswordHash = "";
+
+    /** Persisted cryptographic salt for password hashing. */
+    private static String loginSalt = "";
+
     /** Flag indicating whether the application is running under test execution to protect user database. */
     private static boolean testMode = false;
 
@@ -196,6 +208,24 @@ public final class AppConfig {
             cfg.setLocalPath(dbLocalPath);
             cfg.setCustomJdbcUrl(dbCustomUrl);
             activeDatabaseConfig = cfg;
+
+            // Security & Login properties
+            String le = props.getProperty("login.enabled");
+            if (le != null && !le.trim().isEmpty()) {
+                loginEnabled = Boolean.parseBoolean(le.trim());
+            }
+            String lu = props.getProperty("login.username");
+            if (lu != null && !lu.trim().isEmpty()) {
+                loginUsername = lu.trim();
+            }
+            String lph = props.getProperty("login.passwordHash");
+            if (lph != null) {
+                loginPasswordHash = lph.trim();
+            }
+            String ls = props.getProperty("login.salt");
+            if (ls != null) {
+                loginSalt = ls.trim();
+            }
         } catch (Exception ignored) {}
     }
 
@@ -241,6 +271,11 @@ public final class AppConfig {
                 props.setProperty("db.localPath", activeDatabaseConfig.getLocalPath());
                 props.setProperty("db.customUrl", activeDatabaseConfig.getCustomJdbcUrl());
             }
+
+            props.setProperty("login.enabled", String.valueOf(loginEnabled));
+            props.setProperty("login.username", loginUsername != null ? loginUsername : "admin");
+            props.setProperty("login.passwordHash", loginPasswordHash != null ? loginPasswordHash : "");
+            props.setProperty("login.salt", loginSalt != null ? loginSalt : "");
 
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(SETTINGS_FILE)) {
                 props.store(fos, "Nav Finance User Settings");
@@ -468,4 +503,13 @@ public final class AppConfig {
         DecimalFormat df = new DecimalFormat("#,##,##0.00");
         return df.format(amount);
     }
+
+    public static synchronized boolean isLoginEnabled() { return loginEnabled; }
+    public static synchronized void setLoginEnabled(boolean enabled) { loginEnabled = enabled; }
+    public static synchronized String getLoginUsername() { return loginUsername != null ? loginUsername : "admin"; }
+    public static synchronized void setLoginUsername(String username) { loginUsername = username; }
+    public static synchronized String getLoginPasswordHash() { return loginPasswordHash; }
+    public static synchronized void setLoginPasswordHash(String hash) { loginPasswordHash = hash; }
+    public static synchronized String getLoginSalt() { return loginSalt; }
+    public static synchronized void setLoginSalt(String salt) { loginSalt = salt; }
 }

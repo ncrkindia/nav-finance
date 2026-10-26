@@ -294,6 +294,47 @@ public class DuePaymentDao {
     }
 
     /**
+     * Purges invalid due payment records with type = 'INCOME' (since due payments represent outgoing liabilities).
+     *
+     * @return Number of purged invalid records
+     */
+    public int deleteInvalidIncomeDuePayments() {
+        String sql = "DELETE FROM due_payments WHERE type = 'INCOME'";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             Statement stmt = conn.createStatement()) {
+            return stmt.executeUpdate(sql);
+        } catch (SQLException e) {
+            System.err.println("Failed to delete income due payments: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Retrieves all unsettled payments within a specified date window.
+     *
+     * @param from Start date boundary (inclusive)
+     * @param to End date boundary (inclusive)
+     * @return List of unsettled {@link DuePayment} records
+     */
+    public List<DuePayment> findUnsettledByPeriod(LocalDate from, LocalDate to) {
+        List<DuePayment> list = new ArrayList<>();
+        String sql = "SELECT * FROM due_payments WHERE status != 'SETTLED' AND due_date BETWEEN ? AND ? ORDER BY due_date ASC";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(from));
+            ps.setDate(2, Date.valueOf(to));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Failed to fetch unsettled due payments by period: " + e.getMessage());
+        }
+        return list;
+    }
+
+    /**
      * Maps an active result set row to a {@link DuePayment} entity.
      *
      * @param rs Active result set

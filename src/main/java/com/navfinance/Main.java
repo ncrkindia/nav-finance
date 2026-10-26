@@ -60,6 +60,14 @@ public class Main {
         // Step 3: Launch UI on Swing Event Dispatch Thread (EDT)
         SwingUtilities.invokeLater(() -> {
             try {
+                if (com.navfinance.security.SecurityService.getInstance().isLoginEnabled()) {
+                    com.navfinance.ui.dialogs.LoginDialog loginDialog = new com.navfinance.ui.dialogs.LoginDialog(null);
+                    loginDialog.setVisible(true);
+                    if (!loginDialog.isAuthenticated()) {
+                        System.exit(0);
+                        return;
+                    }
+                }
                 MainFrame frame = new MainFrame();
                 frame.setVisible(true);
             } catch (Exception e) {

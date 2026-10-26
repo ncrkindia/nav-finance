@@ -10,7 +10,9 @@ import com.navfinance.i18n.AppLanguage;
 import com.navfinance.i18n.I18n;
 import com.navfinance.i18n.LanguageChangeListener;
 import com.navfinance.service.ExportService;
+import com.navfinance.security.SecurityService;
 import com.navfinance.ui.components.ResponsiveBarPanel;
+import com.navfinance.ui.dialogs.LoginDialog;
 import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
 import com.navfinance.ui.util.ZoomManager;
@@ -18,6 +20,7 @@ import com.navfinance.ui.util.ZoomManager;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -27,6 +30,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -65,7 +69,7 @@ public class SettingsPanel extends JPanel implements LanguageChangeListener {
 
     private JLabel lblTitle;
     private JLabel lblSub;
-    private JPanel centerPanel;
+    private JTabbedPane settingsTabs;
 
     // --- Database Card Components ---
     private JComboBox<DatabaseType> cmbDbType;
@@ -135,9 +139,39 @@ public class SettingsPanel extends JPanel implements LanguageChangeListener {
 
         add(header, BorderLayout.NORTH);
 
-        // CENTER: Stacked configuration cards inside a smooth vertical scroll pane
-        centerPanel = new JPanel(new GridBagLayout());
-        centerPanel.setOpaque(false);
+        // CENTER: Tabbed Navigation for Settings Sections
+        settingsTabs = new JTabbedPane();
+        settingsTabs.setFont(UiUtils.boldFont());
+
+        settingsTabs.addTab(I18n.get("settings.tab.general"), NavIcons.language(15, UiUtils.COLOR_PRIMARY), wrapInScroll(createGeneralTab()));
+        settingsTabs.addTab(I18n.get("settings.tab.database"), NavIcons.database(15, UiUtils.COLOR_PRIMARY), wrapInScroll(createDatabaseTab()));
+        settingsTabs.addTab(I18n.get("settings.tab.security"), NavIcons.lock(15, UiUtils.COLOR_PRIMARY), wrapInScroll(createSecurityTab()));
+        settingsTabs.addTab(I18n.get("settings.tab.backup"), NavIcons.export(15, UiUtils.COLOR_PRIMARY), wrapInScroll(createBackupTab()));
+
+        add(settingsTabs, BorderLayout.CENTER);
+        revalidate();
+        repaint();
+    }
+
+    /**
+     * Wraps a configuration panel inside a smooth vertical scroll pane.
+     */
+    private JScrollPane wrapInScroll(JPanel content) {
+        JScrollPane scrollPane = new JScrollPane(content);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        return scrollPane;
+    }
+
+    /**
+     * Builds the General tab hosting Multi-Language, Look & Feel Theme, and Currency Preferences.
+     */
+    private JPanel createGeneralTab() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 0, 10, 0);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -145,40 +179,275 @@ public class SettingsPanel extends JPanel implements LanguageChangeListener {
         gbc.gridx = 0;
 
         int row = 0;
-
-        // Card 1: Multi-Language & Regional Script Settings
         gbc.gridy = row++;
-        centerPanel.add(createLanguageCard(), gbc);
+        panel.add(createLanguageCard(), gbc);
 
-        // Card 2: Interactive Database Configuration & Connection Management
         gbc.gridy = row++;
-        centerPanel.add(createDatabaseCard(), gbc);
+        panel.add(createPreferencesCard(), gbc);
 
-        // Card 3: Full Database CSV Export / Backup
-        gbc.gridy = row++;
-        centerPanel.add(createBackupCard(), gbc);
-
-        // Card 4: Display Preferences (Currency Symbol, Look & Feel Theme)
-        gbc.gridy = row++;
-        centerPanel.add(createPreferencesCard(), gbc);
-
-        // Vertical space filler at bottom so cards remain compact at the top
         gbc.gridy = row++;
         gbc.weighty = 1.0;
         JPanel filler = new JPanel();
         filler.setOpaque(false);
-        centerPanel.add(filler, gbc);
+        panel.add(filler, gbc);
 
-        JScrollPane scrollPane = new JScrollPane(centerPanel);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        return panel;
+    }
 
-        add(scrollPane, BorderLayout.CENTER);
-        revalidate();
-        repaint();
+    /**
+     * Builds the Database tab hosting interactive database engine and connection controls.
+     */
+    private JPanel createDatabaseTab() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 0, 10, 0);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+
+        int row = 0;
+        gbc.gridy = row++;
+        panel.add(createDatabaseCard(), gbc);
+
+        gbc.gridy = row++;
+        gbc.weighty = 1.0;
+        JPanel filler = new JPanel();
+        filler.setOpaque(false);
+        panel.add(filler, gbc);
+
+        return panel;
+    }
+
+    /**
+     * Builds the Security tab hosting startup login protection and credentials settings.
+     */
+    private JPanel createSecurityTab() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 0, 10, 0);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+
+        int row = 0;
+        gbc.gridy = row++;
+        panel.add(createSecurityCard(), gbc);
+
+        gbc.gridy = row++;
+        gbc.weighty = 1.0;
+        JPanel filler = new JPanel();
+        filler.setOpaque(false);
+        panel.add(filler, gbc);
+
+        return panel;
+    }
+
+    /**
+     * Builds the Data Backup tab hosting automated full database CSV export tools.
+     */
+    private JPanel createBackupTab() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 0, 10, 0);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+
+        int row = 0;
+        gbc.gridy = row++;
+        panel.add(createBackupCard(), gbc);
+
+        gbc.gridy = row++;
+        gbc.weighty = 1.0;
+        JPanel filler = new JPanel();
+        filler.setOpaque(false);
+        panel.add(filler, gbc);
+
+        return panel;
+    }
+
+    /**
+     * Builds the card managing the Optional Login System (Enable/Disable toggle,
+     * administrator username, password modification, and manual lock action).
+     */
+    private JPanel createSecurityCard() {
+        JPanel card = new JPanel(new BorderLayout(14, 14));
+        card.setBackground(Color.WHITE);
+        card.setBorder(UiUtils.createCardBorder());
+
+        JLabel lblCardTitle = new JLabel(I18n.get("settings.security.title"), NavIcons.lock(18, UiUtils.COLOR_PRIMARY), JLabel.LEFT);
+        lblCardTitle.setFont(UiUtils.headerFont());
+        card.add(lblCardTitle, BorderLayout.NORTH);
+
+        JPanel content = new JPanel(new GridBagLayout());
+        content.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+
+        int row = 0;
+
+        // Toggle: Enable/Disable Login
+        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2;
+        JCheckBox chkEnableLogin = new JCheckBox(I18n.get("settings.security.enableLogin"));
+        chkEnableLogin.setFont(UiUtils.boldFont());
+        chkEnableLogin.setForeground(UiUtils.COLOR_PRIMARY);
+        chkEnableLogin.setSelected(SecurityService.getInstance().isLoginEnabled());
+        chkEnableLogin.setOpaque(false);
+        content.add(chkEnableLogin, gbc);
+
+        // Status Badge
+        gbc.gridy = row++;
+        JLabel lblStatusBadge = new JLabel();
+        lblStatusBadge.setFont(UiUtils.regularFont());
+        Runnable updateBadge = () -> {
+            if (chkEnableLogin.isSelected()) {
+                lblStatusBadge.setText(" " + I18n.get("settings.security.badge.secured"));
+                lblStatusBadge.setIcon(NavIcons.lock(14, UiUtils.COLOR_INCOME));
+                lblStatusBadge.setForeground(UiUtils.COLOR_INCOME);
+            } else {
+                lblStatusBadge.setText(" " + I18n.get("settings.security.badge.disabled"));
+                lblStatusBadge.setIcon(NavIcons.unlock(14, UiUtils.COLOR_TEXT_MUTED));
+                lblStatusBadge.setForeground(UiUtils.COLOR_TEXT_MUTED);
+            }
+        };
+        updateBadge.run();
+        chkEnableLogin.addActionListener(e -> updateBadge.run());
+        content.add(lblStatusBadge, gbc);
+
+        // Explanation note
+        gbc.gridy = row++;
+        JLabel lblSecNote = new JLabel("<html><span style='color:#64748b; font-size:12px;'>"
+                + I18n.get("settings.security.desc")
+                + "</span></html>");
+        content.add(lblSecNote, gbc);
+
+        // Row: Username
+        gbc.gridwidth = 1;
+        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0.0;
+        JLabel lblUser = new JLabel(I18n.get("settings.security.username") + ":");
+        lblUser.setFont(UiUtils.boldFont());
+        content.add(lblUser, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++; gbc.weightx = 1.0;
+        JTextField txtSecUsername = new JTextField(SecurityService.getInstance().getUsername(), 18);
+        txtSecUsername.setFont(UiUtils.regularFont());
+        content.add(txtSecUsername, gbc);
+
+        // Row: Current Password (if set)
+        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0.0;
+        JLabel lblCurPass = new JLabel(I18n.get("settings.security.currentPassword") + ":");
+        lblCurPass.setFont(UiUtils.boldFont());
+        content.add(lblCurPass, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++; gbc.weightx = 1.0;
+        JPasswordField txtCurPass = new JPasswordField(18);
+        txtCurPass.setFont(UiUtils.regularFont());
+        content.add(txtCurPass, gbc);
+
+        // Row: New Password
+        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0.0;
+        JLabel lblNewPass = new JLabel(I18n.get("settings.security.newPassword") + ":");
+        lblNewPass.setFont(UiUtils.boldFont());
+        content.add(lblNewPass, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++; gbc.weightx = 1.0;
+        JPasswordField txtNewPass = new JPasswordField(18);
+        txtNewPass.setFont(UiUtils.regularFont());
+        content.add(txtNewPass, gbc);
+
+        // Row: Confirm New Password
+        gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0.0;
+        JLabel lblConfirmPass = new JLabel(I18n.get("settings.security.confirmPassword") + ":");
+        lblConfirmPass.setFont(UiUtils.boldFont());
+        content.add(lblConfirmPass, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++; gbc.weightx = 1.0;
+        JPasswordField txtConfirmPass = new JPasswordField(18);
+        txtConfirmPass.setFont(UiUtils.regularFont());
+        content.add(txtConfirmPass, gbc);
+
+        // Row: Show Password Checkbox
+        gbc.gridx = 1; gbc.gridy = row++;
+        JCheckBox chkShowPasswords = new JCheckBox(I18n.get("login.showPassword"));
+        chkShowPasswords.setFont(UiUtils.regularFont());
+        chkShowPasswords.setOpaque(false);
+        chkShowPasswords.addActionListener(e -> {
+            char echo = chkShowPasswords.isSelected() ? (char) 0 : '•';
+            txtCurPass.setEchoChar(echo);
+            txtNewPass.setEchoChar(echo);
+            txtConfirmPass.setEchoChar(echo);
+        });
+        content.add(chkShowPasswords, gbc);
+
+        // Row: Password hint
+        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2;
+        JLabel lblHint = new JLabel("<html><span style='color:#64748b; font-size:11px;'>"
+                + "• " + I18n.get("settings.security.hint")
+                + "</span></html>");
+        content.add(lblHint, gbc);
+
+        card.add(content, BorderLayout.CENTER);
+
+        // Bottom Action Buttons
+        ResponsiveBarPanel btnBar = new ResponsiveBarPanel(8, 8);
+
+        JButton btnSaveSec = UiUtils.createPrimaryButton(I18n.get("settings.security.btnSave"), NavIcons.check(13, Color.WHITE));
+        btnSaveSec.addActionListener(e -> {
+            String newU = txtSecUsername.getText().trim();
+            String curP = new String(txtCurPass.getPassword());
+            String newP = new String(txtNewPass.getPassword());
+            String confP = new String(txtConfirmPass.getPassword());
+
+            if (newU.isEmpty()) {
+                UiUtils.showError(this, I18n.get("login.error.emptyUsername"));
+                txtSecUsername.requestFocusInWindow();
+                return;
+            }
+
+            if (!newP.isEmpty() || !confP.isEmpty()) {
+                if (!newP.equals(confP)) {
+                    UiUtils.showError(this, I18n.get("settings.security.error.mismatch"));
+                    txtConfirmPass.requestFocusInWindow();
+                    return;
+                }
+            }
+
+            boolean ok = SecurityService.getInstance().updateCredentials(curP, newU, newP);
+            if (!ok) {
+                UiUtils.showError(this, I18n.get("settings.security.error.wrongCurrent"));
+                txtCurPass.requestFocusInWindow();
+                return;
+            }
+
+            SecurityService.getInstance().setLoginEnabled(chkEnableLogin.isSelected());
+            updateBadge.run();
+            txtCurPass.setText("");
+            txtNewPass.setText("");
+            txtConfirmPass.setText("");
+
+            UiUtils.showSuccess(this, I18n.get("settings.security.saveSuccess"));
+            if (onDataUpdated != null) {
+                onDataUpdated.run();
+            }
+        });
+
+        JButton btnLock = UiUtils.createSecondaryButton(I18n.get("settings.security.btnLockNow"), NavIcons.lock(13, UiUtils.COLOR_PRIMARY));
+        btnLock.addActionListener(e -> {
+            JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
+            LoginDialog dlg = new LoginDialog(frame);
+            dlg.setVisible(true);
+        });
+
+        btnBar.addLeft(btnSaveSec);
+        btnBar.addRight(btnLock);
+        card.add(btnBar, BorderLayout.SOUTH);
+
+        return card;
     }
 
     /**

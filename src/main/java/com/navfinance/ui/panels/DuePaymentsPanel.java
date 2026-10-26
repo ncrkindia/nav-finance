@@ -19,7 +19,10 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
@@ -241,10 +244,14 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
         JButton btnSettle = UiUtils.createSuccessButton(I18n.get("due.btn.settleSelected"), NavIcons.check(13, Color.WHITE));
         btnSettle.addActionListener(e -> onSettleSelected());
 
+        JButton btnSettleOnTime = UiUtils.createPrimaryButton(I18n.get("due.btn.settleOnTime"), NavIcons.check(13, Color.WHITE));
+        btnSettleOnTime.setToolTipText("Settle selected payments (or all September 2026 dues) on their scheduled due dates");
+        btnSettleOnTime.addActionListener(e -> onSettleOnTime());
+
         JButton btnUnsettle = UiUtils.createSecondaryButton(I18n.get("due.btn.markUnsettled"), NavIcons.refresh(13, UiUtils.COLOR_TEXT_PRIMARY));
         btnUnsettle.addActionListener(e -> onMarkUnsettled());
 
-        JButton btnNewSchedule = UiUtils.createPrimaryButton(I18n.get("due.btn.newSchedule"), NavIcons.plus(13, Color.WHITE));
+        JButton btnNewSchedule = UiUtils.createSecondaryButton(I18n.get("due.btn.newSchedule"), NavIcons.plus(13, UiUtils.COLOR_PRIMARY));
         btnNewSchedule.addActionListener(e -> onNewSchedule());
 
         JButton btnScan = UiUtils.createSecondaryButton(I18n.get("due.btn.scan"), NavIcons.calendar(13, UiUtils.COLOR_PRIMARY));
@@ -258,6 +265,7 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
         btnDelete.addActionListener(e -> onDeleteSelectedDue());
 
         btnBar.add(btnSettle);
+        btnBar.add(btnSettleOnTime);
         btnBar.add(btnUnsettle);
         btnBar.add(btnNewSchedule);
         btnBar.add(btnScan);
@@ -413,8 +421,35 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
             }
         });
 
-        // Double-click row: Prompt settlement dialog directly
+        // Double-click row: Prompt settlement dialog directly; Right-click: context menu
+        JPopupMenu popupDue = new JPopupMenu();
+        JMenuItem miSettleCustom = new JMenuItem(I18n.get("due.menu.settleCustom"), NavIcons.check(13, UiUtils.COLOR_INCOME));
+        miSettleCustom.addActionListener(e -> onSettleSelected());
+        JMenuItem miSettleOnTime = new JMenuItem(I18n.get("due.btn.settleOnTime"), NavIcons.check(13, UiUtils.COLOR_PRIMARY));
+        miSettleOnTime.addActionListener(e -> onSettleOnTime());
+        JMenuItem miUnsettle = new JMenuItem(I18n.get("due.btn.markUnsettled"), NavIcons.refresh(13, UiUtils.COLOR_TEXT_PRIMARY));
+        miUnsettle.addActionListener(e -> onMarkUnsettled());
+        JMenuItem miDelete = new JMenuItem(I18n.get("due.btn.deleteEntry"), NavIcons.trash(13, UiUtils.COLOR_EXPENSE));
+        miDelete.addActionListener(e -> onDeleteSelectedDue());
+
+        popupDue.add(miSettleCustom);
+        popupDue.add(miSettleOnTime);
+        popupDue.addSeparator();
+        popupDue.add(miUnsettle);
+        popupDue.addSeparator();
+        popupDue.add(miDelete);
+        tblDue.setComponentPopupMenu(popupDue);
+
         tblDue.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    int r = tblDue.rowAtPoint(e.getPoint());
+                    if (r >= 0 && !tblDue.isRowSelected(r)) {
+                        tblDue.setRowSelectionInterval(r, r);
+                    }
+                }
+            }
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
@@ -745,6 +780,46 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
 
         if (dlg.isSaved()) {
             refreshAll();
+        }
+    }
+
+    /**
+     * Handles fast "on-time" payment settlements directly on the scheduled due date.
+     * If rows are selected, marks selected rows settled on their due dates.
+     * If no rows are selected, prompts to settle all pending/overdue dues for September 2026.
+     */
+    private void onSettleOnTime() {
+        int[] selectedRows = tblDue.getSelectedRows();
+        if (selectedRows != null && selectedRows.length > 0) {
+            String prompt = java.text.MessageFormat.format(I18n.get("due.confirm.settleOnTime"), selectedRows.length);
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    prompt,
+                    "Settle On Time Confirmation",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+            if (confirm != JOptionPane.YES_OPTION) return;
+
+            int count = 0;
+            for (int r : selectedRows) {
+                Long id = (Long) modelDue.getValueAt(r, 0);
+                if (recurringService.settlePaymentOnTime(id, true)) {
+                    count++;
+                }
+            }
+            refreshAll();
+            String msg = java.text.MessageFormat.format(I18n.get("due.msg.settledOnTimeCount"), count);
+            UiUtils.showSuccess(this, msg);
+        } else {
+            // Prompt to settle all pending/overdue dues for September 2026
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    I18n.get("due.confirm.settleMonthOnTime"),
+                    "Settle All September 2026 On Time",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                int settled = recurringService.settleAllForMonthOnTime(java.time.YearMonth.of(2026, 9), true);
+                refreshAll();
+                String msg = java.text.MessageFormat.format(I18n.get("due.msg.settledOnTimeCount"), settled);
+                UiUtils.showSuccess(this, msg);
+            }
         }
     }
 

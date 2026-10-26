@@ -114,6 +114,7 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
     private JButton btnQuickIncome;
     private JButton btnQuickExpense;
     private JButton btnRefreshAll;
+    private JButton btnLock;
     private JComboBox<AppLanguage> cmbLanguage;
     private boolean updatingLanguageCombo = false;
 
@@ -270,9 +271,14 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
         btnRefreshAll = UiUtils.createSecondaryButton(I18n.get("action.refresh"), NavIcons.refresh(13, UiUtils.COLOR_PRIMARY));
         btnRefreshAll.addActionListener(e -> refreshAllViews());
 
+        btnLock = UiUtils.createSecondaryButton(I18n.get("action.lock"), NavIcons.lock(13, UiUtils.COLOR_TEXT_PRIMARY));
+        btnLock.setToolTipText("Lock application session");
+        btnLock.addActionListener(e -> onLockSession());
+
         headerActions.add(btnQuickIncome);
         headerActions.add(btnQuickExpense);
         headerActions.add(btnRefreshAll);
+        headerActions.add(btnLock);
 
         // Responsive header prevents collision between brand title and action controls
         com.navfinance.ui.components.ResponsiveBarPanel responsiveHeader =
@@ -456,6 +462,10 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
             btnRefreshAll.setText(I18n.get("action.refresh"));
             btnRefreshAll.setFont(UiUtils.boldFont());
         }
+        if (btnLock != null) {
+            btnLock.setText(I18n.get("action.lock"));
+            btnLock.setFont(UiUtils.boldFont());
+        }
 
         if (mainTabs != null && mainTabs.getTabCount() >= 9) {
             mainTabs.setFont(UiUtils.boldFont());
@@ -625,6 +635,20 @@ public class MainFrame extends JFrame implements LanguageChangeListener {
             if (transactionsPanel != null) {
                 transactionsPanel.filterByDateRange(start, end);
             }
+        }
+    }
+
+    /**
+     * Locks the active session and presents the authentication dialog.
+     */
+    public void onLockSession() {
+        setVisible(false);
+        com.navfinance.ui.dialogs.LoginDialog dlg = new com.navfinance.ui.dialogs.LoginDialog(this);
+        dlg.setVisible(true);
+        if (dlg.isAuthenticated()) {
+            setVisible(true);
+        } else {
+            System.exit(0);
         }
     }
 }
