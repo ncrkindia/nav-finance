@@ -76,6 +76,12 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
     /** Table model backing the Bill master grid. */
     private DefaultTableModel modelBills;
 
+    // KPI summary indicators for Utility Bills
+    private KpiCard kpiBillTotalCommitment;
+    private KpiCard kpiBillFixed;
+    private KpiCard kpiBillVariable;
+    private KpiCard kpiBillTotal;
+
     /** Table displaying registered EMI loan schedules. */
     private JTable tblEmis;
 
@@ -249,6 +255,46 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        JPanel topContainer = new JPanel(new BorderLayout(0, 8));
+        topContainer.setOpaque(false);
+
+        JPanel kpiRow = new JPanel(new GridLayout(1, 4, 10, 0));
+        kpiRow.setOpaque(false);
+        kpiBillTotalCommitment = new KpiCard(
+                I18n.get("masters.kpi.totalBillCommitment"),
+                AppConfig.formatCurrency(0.0),
+                "Fixed + Variables",
+                UiUtils.COLOR_PRIMARY,
+                NavIcons.bill(18, UiUtils.COLOR_PRIMARY)
+        );
+        kpiBillFixed = new KpiCard(
+                I18n.get("masters.kpi.fixedBills"),
+                AppConfig.formatCurrency(0.0),
+                "Fixed commitments",
+                UiUtils.COLOR_INCOME,
+                NavIcons.check(18, UiUtils.COLOR_INCOME)
+        );
+        Color colorPurple = new Color(147, 51, 234);
+        kpiBillVariable = new KpiCard(
+                I18n.get("masters.kpi.variableBills"),
+                AppConfig.formatCurrency(0.0),
+                "Usage-based (est.)",
+                colorPurple,
+                NavIcons.calendar(18, colorPurple)
+        );
+        kpiBillTotal = new KpiCard(
+                I18n.get("masters.kpi.totalBills"),
+                "0",
+                "Active utility accounts",
+                UiUtils.COLOR_INCOME,
+                NavIcons.check(18, UiUtils.COLOR_INCOME)
+        );
+        kpiRow.add(kpiBillTotalCommitment);
+        kpiRow.add(kpiBillFixed);
+        kpiRow.add(kpiBillVariable);
+        kpiRow.add(kpiBillTotal);
+        topContainer.add(kpiRow, BorderLayout.NORTH);
+
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         topBar.setOpaque(false);
 
@@ -273,13 +319,17 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
         topBar.add(btnEdit);
         topBar.add(btnDelete);
         topBar.add(btnTrack);
-        panel.add(topBar, BorderLayout.NORTH);
+        topContainer.add(topBar, BorderLayout.SOUTH);
+        panel.add(topContainer, BorderLayout.NORTH);
 
         String[] cols = {
                 "ID",
                 I18n.get("masters.table.name"),
                 I18n.get("masters.table.provider"),
+                I18n.get("masters.table.billType"),
                 I18n.get("masters.table.defaultAmount"),
+                I18n.get("masters.table.dueDay"),
+                I18n.get("masters.table.dueAmount"),
                 I18n.get("masters.table.notes")
         };
         modelBills = new DefaultTableModel(cols, 0) {
@@ -1139,14 +1189,56 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
     private void refreshBills() {
         modelBills.setRowCount(0);
         List<Bill> list = financeService.getAllBills();
+        double totalFixed = 0.0;
+        double totalVariable = 0.0;
+        double totalDue = 0.0;
+        int countFixed = 0;
+        int countVariable = 0;
+
         for (Bill b : list) {
+            double amt = b.getDefaultAmount() != null ? b.getDefaultAmount() : 0.0;
+            double due = b.getDueAmount() != null ? b.getDueAmount() : 0.0;
+            totalDue += due;
+
+            boolean isVar = b.isVariable();
+            if (isVar) {
+                totalVariable += amt;
+                countVariable++;
+            } else {
+                totalFixed += amt;
+                countFixed++;
+            }
+
+            String typeStr = isVar ? "Variable" : "Fixed";
+            String dueDayStr = b.getDueDay() != null && b.getDueDay() > 0 ? b.getDueDay() + "th" : "-";
+
             modelBills.addRow(new Object[]{
                     b.getId(),
                     b.getBillName(),
-                    b.getProvider(),
-                    b.getDefaultAmount() != null ? AppConfig.formatCurrency(b.getDefaultAmount()) : "-",
-                    b.getNotes()
+                    b.getProvider() != null ? b.getProvider() : "-",
+                    typeStr,
+                    amt > 0 ? AppConfig.formatCurrency(amt) : "-",
+                    dueDayStr,
+                    due > 0 ? AppConfig.formatCurrency(due) : "-",
+                    b.getNotes() != null ? b.getNotes() : "-"
             });
+        }
+
+        double totalCommitments = totalFixed + totalVariable;
+        if (kpiBillTotalCommitment != null) {
+            kpiBillTotalCommitment.updateValue(
+                    AppConfig.formatCurrency(totalCommitments),
+                    "Fixed: " + AppConfig.formatCurrency(totalFixed) + " + Var: " + AppConfig.formatCurrency(totalVariable)
+            );
+        }
+        if (kpiBillFixed != null) {
+            kpiBillFixed.updateValue(AppConfig.formatCurrency(totalFixed), countFixed + " fixed utility bills");
+        }
+        if (kpiBillVariable != null) {
+            kpiBillVariable.updateValue(AppConfig.formatCurrency(totalVariable), countVariable + " usage-based bills (est.)");
+        }
+        if (kpiBillTotal != null) {
+            kpiBillTotal.updateValue(String.valueOf(list.size()), "Total Due: " + AppConfig.formatCurrency(totalDue));
         }
     }
 
@@ -1334,5 +1426,9 @@ public class MastersPanel extends JPanel implements LanguageChangeListener {
     public JTable getTblModes() { return tblModes; }
     public JTable getTblCategories() { return tblCategories; }
     public JTable getTblSubCategories() { return tblSubCategories; }
+    public KpiCard getKpiBillTotalCommitment() { return kpiBillTotalCommitment; }
+    public KpiCard getKpiBillFixed() { return kpiBillFixed; }
+    public KpiCard getKpiBillVariable() { return kpiBillVariable; }
+    public KpiCard getKpiBillTotal() { return kpiBillTotal; }
 }
 

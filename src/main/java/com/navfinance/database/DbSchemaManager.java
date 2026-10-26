@@ -73,6 +73,9 @@ public class DbSchemaManager {
                 + "bill_name VARCHAR(150) NOT NULL, "
                 + "provider VARCHAR(100), "
                 + "default_amount DECIMAL(15,2), "
+                + "amount_type VARCHAR(20) DEFAULT 'FIXED', "
+                + "due_day INT DEFAULT 0, "
+                + "due_amount DECIMAL(15,2) DEFAULT 0.0, "
                 + "notes VARCHAR(500), "
                 + "created_at " + tsDef + ", "
                 + "updated_at " + tsDef + ")");
@@ -263,6 +266,10 @@ public class DbSchemaManager {
         addColumnSafely(conn, "emis", "due_day", "INT DEFAULT 0");
         addColumnSafely(conn, "emis", "is_credit_card_emi", (dbType == DatabaseType.SQLITE ? "INTEGER DEFAULT 0" : "BOOLEAN DEFAULT FALSE"));
         addColumnSafely(conn, "emis", "credit_card_id", "BIGINT");
+
+        addColumnSafely(conn, "bills", "amount_type", "VARCHAR(20) DEFAULT 'FIXED'");
+        addColumnSafely(conn, "bills", "due_day", "INT DEFAULT 0");
+        addColumnSafely(conn, "bills", "due_amount", "DECIMAL(15,2) DEFAULT 0.0");
 
         // Seed default payment modes across all databases
         seedDefaultPaymentModes(conn, dbType);

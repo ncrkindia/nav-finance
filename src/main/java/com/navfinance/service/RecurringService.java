@@ -10,6 +10,7 @@ import com.navfinance.model.DuePayment;
 import com.navfinance.model.DueStatus;
 import com.navfinance.model.RecurringSchedule;
 import com.navfinance.model.Transaction;
+import com.navfinance.model.TransactionType;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -116,6 +117,42 @@ public class RecurringService {
          * @return manual pay count
          */
         public int getManualPayCount() { return manualPayCount; }
+    }
+
+    /**
+     * Data Transfer Object aggregating recurring monthly commitment totals
+     * across EMIs, Fixed Utility Bills, Variable Utility Bills, and other obligations.
+     */
+    public static class ScheduleCommitmentSummary {
+        private double emiTotal = 0.0;
+        private int emiCount = 0;
+        private double fixedBillsTotal = 0.0;
+        private int fixedBillsCount = 0;
+        private double variableBillsTotal = 0.0;
+        private int variableBillsCount = 0;
+        private double totalBillsCommitment = 0.0;
+        private int totalBillsCount = 0;
+        private double creditCardTotal = 0.0;
+        private int creditCardCount = 0;
+        private double otherExpenseTotal = 0.0;
+        private int otherExpenseCount = 0;
+        private double totalCommitment = 0.0;
+        private int totalActiveRulesCount = 0;
+
+        public double getEmiTotal() { return emiTotal; }
+        public int getEmiCount() { return emiCount; }
+        public double getFixedBillsTotal() { return fixedBillsTotal; }
+        public int getFixedBillsCount() { return fixedBillsCount; }
+        public double getVariableBillsTotal() { return variableBillsTotal; }
+        public int getVariableBillsCount() { return variableBillsCount; }
+        public double getTotalBillsCommitment() { return totalBillsCommitment; }
+        public int getTotalBillsCount() { return totalBillsCount; }
+        public double getCreditCardTotal() { return creditCardTotal; }
+        public int getCreditCardCount() { return creditCardCount; }
+        public double getOtherExpenseTotal() { return otherExpenseTotal; }
+        public int getOtherExpenseCount() { return otherExpenseCount; }
+        public double getTotalCommitment() { return totalCommitment; }
+        public int getTotalActiveRulesCount() { return totalActiveRulesCount; }
     }
 
     /**
@@ -492,6 +529,107 @@ public class RecurringService {
                 summary.duePendingCount++;
                 summary.duePendingTotal += p.getExpectedAmount();
             }
+        }
+        return summary;
+    }
+
+    /**
+     * Identifies whether a recurring schedule rule corresponds to an EMI loan installment.
+     *
+     * @param s Recurring schedule
+     * @return {@code true} if categorized as an EMI
+     */
+    public boolean isEmiSchedule(RecurringSchedule s) {
+        if (s == null) return false;
+        String cat = s.getCategory() != null ? s.getCategory().toLowerCase().trim() : "";
+        String name = s.getName() != null ? s.getName().toLowerCase().trim() : "";
+        String sub = s.getSubCategory() != null ? s.getSubCategory().toLowerCase().trim() : "";
+        return cat.contains("emi") || cat.contains("loan") || name.contains("emi") || name.contains("loan") || sub.contains("emi");
+    }
+
+    /**
+     * Identifies whether a recurring schedule rule corresponds to a Credit Card statement payment.
+     *
+     * @param s Recurring schedule
+     * @return {@code true} if categorized as a Credit Card bill
+     */
+    public boolean isCreditCardSchedule(RecurringSchedule s) {
+        if (s == null) return false;
+        String cat = s.getCategory() != null ? s.getCategory().toLowerCase().trim() : "";
+        String name = s.getName() != null ? s.getName().toLowerCase().trim() : "";
+        String sub = s.getSubCategory() != null ? s.getSubCategory().toLowerCase().trim() : "";
+        return cat.contains("credit card") || cat.contains("card") || name.contains("credit card") || sub.contains("credit card");
+    }
+
+    /**
+     * Identifies whether a recurring schedule rule corresponds to a utility or recurring household bill.
+     *
+     * @param s Recurring schedule
+     * @return {@code true} if categorized as a utility bill
+     */
+    public boolean isBillSchedule(RecurringSchedule s) {
+        if (s == null || s.getType() != TransactionType.EXPENSE) return false;
+        if (isEmiSchedule(s) || isCreditCardSchedule(s)) return false;
+        String cat = s.getCategory() != null ? s.getCategory().toLowerCase().trim() : "";
+        String name = s.getName() != null ? s.getName().toLowerCase().trim() : "";
+        String sub = s.getSubCategory() != null ? s.getSubCategory().toLowerCase().trim() : "";
+        if (cat.contains("bill") || cat.contains("utilit") || cat.contains("rent") || cat.contains("postpaid")
+                || cat.contains("broadband") || cat.contains("wifi") || cat.contains("insurance") || cat.contains("subscription")
+                || name.contains("bill") || name.contains("rent") || sub.contains("bill") || sub.contains("rent")) {
+            return true;
+        }
+        for (com.navfinance.model.Bill b : financeService.getAllBills()) {
+            if (b.getBillName() != null && !b.getBillName().isBlank()) {
+                String bName = b.getBillName().toLowerCase().trim();
+                if (name.contains(bName) || sub.contains(bName)) {
+                    return true;
+                }
+            }
+        }
+        return !cat.contains("invest") && !cat.contains("saving");
+    }
+
+    /**
+     * Computes recurring monthly financial commitments across active schedules, breaking them down
+     * into EMIs, Fixed Utility Bills, Variable Utility Bills, Credit Cards, and combined totals.
+     *
+     * @param schedules List of recurring schedules to analyze
+     * @return Populated {@link ScheduleCommitmentSummary}
+     */
+    public ScheduleCommitmentSummary computeCommitmentSummary(List<RecurringSchedule> schedules) {
+        ScheduleCommitmentSummary summary = new ScheduleCommitmentSummary();
+        if (schedules == null) return summary;
+
+        for (RecurringSchedule s : schedules) {
+            if (s == null || !s.isActive()) continue;
+            if (s.getType() != TransactionType.EXPENSE) continue;
+
+            double amt = s.getDefaultAmount() > 0 ? s.getDefaultAmount() : 0.0;
+            boolean isVariable = s.getAmountType() == AmountType.VARIABLE;
+
+            if (isEmiSchedule(s)) {
+                summary.emiTotal += amt;
+                summary.emiCount++;
+            } else if (isCreditCardSchedule(s)) {
+                summary.creditCardTotal += amt;
+                summary.creditCardCount++;
+            } else if (isBillSchedule(s)) {
+                if (isVariable) {
+                    summary.variableBillsTotal += amt;
+                    summary.variableBillsCount++;
+                } else {
+                    summary.fixedBillsTotal += amt;
+                    summary.fixedBillsCount++;
+                }
+                summary.totalBillsCommitment += amt;
+                summary.totalBillsCount++;
+            } else {
+                summary.otherExpenseTotal += amt;
+                summary.otherExpenseCount++;
+            }
+
+            summary.totalCommitment += amt;
+            summary.totalActiveRulesCount++;
         }
         return summary;
     }

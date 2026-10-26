@@ -28,6 +28,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
@@ -61,6 +62,12 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
     /** Singleton business service managing recurring schedules and due payment state transitions. */
     private final RecurringService recurringService = RecurringService.getInstance();
 
+    /** CardLayout for swapping top KPI metrics between Tracker dues and Recurring commitments. */
+    private CardLayout kpiCardLayout;
+
+    /** Top container panel hosting Tracker KPIs deck and Rules Commitment KPIs deck. */
+    private JPanel pnlKpiContainer;
+
     /** KPI metric card displaying aggregated overdue payments and count. */
     private KpiCard kpiOverdue;
 
@@ -72,6 +79,21 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
 
     /** KPI metric card displaying breakdown of auto-debit vs manual payments. */
     private KpiCard kpiAutoPay;
+
+    /** KPI metric card displaying active monthly loan EMI commitments. */
+    private KpiCard kpiRuleEmi;
+
+    /** KPI metric card displaying total recurring commitments of Fixed Utility Bills + Variables. */
+    private KpiCard kpiRuleTotalBills;
+
+    /** KPI metric card displaying recurring commitment total for fixed-amount utility bills. */
+    private KpiCard kpiRuleFixedBills;
+
+    /** KPI metric card displaying estimated recurring commitment total for variable utility bills. */
+    private KpiCard kpiRuleVariableBills;
+
+    /** Summary label in recurring rules tab reporting total active rules and grand recurring commitment. */
+    private JLabel lblRulesCommitmentSummary;
 
     /** Swing table displaying active due payment records. */
     private JTable tblDue;
@@ -128,20 +150,38 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
      * panes in the center workspace.
      */
     private void initComponents() {
-        // TOP: Four-column KPI metrics row
-        JPanel kpiRow = new JPanel(new GridLayout(1, 4, 12, 0));
-        kpiRow.setOpaque(false);
+        // TOP: Two-deck CardLayout KPI metrics row (Tracker dues vs Rules commitments)
+        kpiCardLayout = new CardLayout();
+        pnlKpiContainer = new JPanel(kpiCardLayout);
+        pnlKpiContainer.setOpaque(false);
 
+        // Deck 1: Tracker Due/Overdue KPIs
+        JPanel kpiRowTracker = new JPanel(new GridLayout(1, 4, 12, 0));
+        kpiRowTracker.setOpaque(false);
         kpiOverdue = new KpiCard(I18n.get("due.kpi.overdue"), "₹ 0.00", "0 past due date", UiUtils.COLOR_EXPENSE, NavIcons.cross(22, UiUtils.COLOR_EXPENSE));
         kpiDuePending = new KpiCard(I18n.get("due.kpi.dueThisMonth"), "₹ 0.00", "0 awaiting payment", UiUtils.COLOR_AMBER, NavIcons.calendar(22, UiUtils.COLOR_AMBER));
         kpiSettled = new KpiCard(I18n.get("due.kpi.settledThisMonth"), "₹ 0.00", "0 successfully paid", UiUtils.COLOR_INCOME, NavIcons.check(22, UiUtils.COLOR_INCOME));
         kpiAutoPay = new KpiCard(I18n.get("due.kpi.autoVsManual"), "0 / 0", "Auto-debited vs user paid", UiUtils.COLOR_PRIMARY, NavIcons.autoPay(22, UiUtils.COLOR_PRIMARY));
+        kpiRowTracker.add(kpiOverdue);
+        kpiRowTracker.add(kpiDuePending);
+        kpiRowTracker.add(kpiSettled);
+        kpiRowTracker.add(kpiAutoPay);
+        pnlKpiContainer.add(kpiRowTracker, "TRACKER");
 
-        kpiRow.add(kpiOverdue);
-        kpiRow.add(kpiDuePending);
-        kpiRow.add(kpiSettled);
-        kpiRow.add(kpiAutoPay);
-        add(kpiRow, BorderLayout.NORTH);
+        // Deck 2: Recurring Rules Commitments KPIs (EMIs + Fixed Utility Bills + Variables)
+        JPanel kpiRowRules = new JPanel(new GridLayout(1, 4, 12, 0));
+        kpiRowRules.setOpaque(false);
+        kpiRuleEmi = new KpiCard(I18n.get("due.kpi.emiCommitment"), AppConfig.formatCurrency(0.0), "Active loan EMIs", UiUtils.COLOR_AMBER, NavIcons.emi(22, UiUtils.COLOR_AMBER));
+        kpiRuleTotalBills = new KpiCard(I18n.get("due.kpi.totalBillCommitment"), AppConfig.formatCurrency(0.0), "Fixed + Variable Utility Bills", UiUtils.COLOR_PRIMARY, NavIcons.bill(22, UiUtils.COLOR_PRIMARY));
+        kpiRuleFixedBills = new KpiCard(I18n.get("due.kpi.fixedBills"), AppConfig.formatCurrency(0.0), "Fixed utility bills", UiUtils.COLOR_INCOME, NavIcons.check(22, UiUtils.COLOR_INCOME));
+        kpiRuleVariableBills = new KpiCard(I18n.get("due.kpi.variableBills"), AppConfig.formatCurrency(0.0), "Variable bills (estimated)", new Color(147, 51, 234), NavIcons.calendar(22, new Color(147, 51, 234)));
+        kpiRowRules.add(kpiRuleEmi);
+        kpiRowRules.add(kpiRuleTotalBills);
+        kpiRowRules.add(kpiRuleFixedBills);
+        kpiRowRules.add(kpiRuleVariableBills);
+        pnlKpiContainer.add(kpiRowRules, "RULES");
+
+        add(pnlKpiContainer, BorderLayout.NORTH);
 
         // CENTER: Tabbed View (Due Payments Tracker + Recurring Rules Manager)
         JTabbedPane subTabs = new JTabbedPane();
@@ -152,8 +192,14 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
 
         subTabs.addChangeListener(e -> {
             if (subTabs.getSelectedIndex() == 0) {
+                if (kpiCardLayout != null && pnlKpiContainer != null) {
+                    kpiCardLayout.show(pnlKpiContainer, "TRACKER");
+                }
                 applyDueFilters();
             } else {
+                if (kpiCardLayout != null && pnlKpiContainer != null) {
+                    kpiCardLayout.show(pnlKpiContainer, "RULES");
+                }
                 refreshRulesTable();
             }
         });
@@ -411,10 +457,20 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setOpaque(false);
 
+        JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        titlePanel.setOpaque(false);
+
         JLabel lblTitle = new JLabel(I18n.get("due.tab.rules"));
         lblTitle.setFont(UiUtils.titleFont());
         lblTitle.setForeground(new Color(15, 23, 42));
-        topBar.add(lblTitle, BorderLayout.WEST);
+        titlePanel.add(lblTitle);
+
+        lblRulesCommitmentSummary = new JLabel();
+        lblRulesCommitmentSummary.setFont(UiUtils.regularFont());
+        lblRulesCommitmentSummary.setForeground(UiUtils.COLOR_TEXT_MUTED);
+        titlePanel.add(lblRulesCommitmentSummary);
+
+        topBar.add(titlePanel, BorderLayout.WEST);
 
         JPanel btnBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnBar.setOpaque(false);
@@ -632,6 +688,29 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
                     s.isActive() ? "Active" : "Paused"
             });
         }
+
+        // Recompute commitment KPI cards for recurring rules
+        RecurringService.ScheduleCommitmentSummary cs = recurringService.computeCommitmentSummary(currentRulesList);
+        if (kpiRuleEmi != null) {
+            kpiRuleEmi.updateValue(AppConfig.formatCurrency(cs.getEmiTotal()),
+                    cs.getEmiCount() + " active loan EMIs");
+        }
+        if (kpiRuleTotalBills != null) {
+            kpiRuleTotalBills.updateValue(AppConfig.formatCurrency(cs.getTotalBillsCommitment()),
+                    cs.getTotalBillsCount() + " bills (" + AppConfig.formatCurrency(cs.getFixedBillsTotal()) + " fixed, " + AppConfig.formatCurrency(cs.getVariableBillsTotal()) + " var)");
+        }
+        if (kpiRuleFixedBills != null) {
+            kpiRuleFixedBills.updateValue(AppConfig.formatCurrency(cs.getFixedBillsTotal()),
+                    cs.getFixedBillsCount() + " fixed recurring bills");
+        }
+        if (kpiRuleVariableBills != null) {
+            kpiRuleVariableBills.updateValue(AppConfig.formatCurrency(cs.getVariableBillsTotal()),
+                    cs.getVariableBillsCount() + " variable / estimated bills");
+        }
+        if (lblRulesCommitmentSummary != null) {
+            lblRulesCommitmentSummary.setText(String.format("• %d active rules • Total Monthly Commitment: %s",
+                    cs.getTotalActiveRulesCount(), AppConfig.formatCurrency(cs.getTotalCommitment())));
+        }
     }
 
     // =========================================================================
@@ -808,5 +887,18 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
         repaint();
         refreshAll();
     }
+
+    // Public getters for testing and component inspection
+    public KpiCard getKpiOverdue() { return kpiOverdue; }
+    public KpiCard getKpiDuePending() { return kpiDuePending; }
+    public KpiCard getKpiSettled() { return kpiSettled; }
+    public KpiCard getKpiAutoPay() { return kpiAutoPay; }
+    public KpiCard getKpiRuleEmi() { return kpiRuleEmi; }
+    public KpiCard getKpiRuleTotalBills() { return kpiRuleTotalBills; }
+    public KpiCard getKpiRuleFixedBills() { return kpiRuleFixedBills; }
+    public KpiCard getKpiRuleVariableBills() { return kpiRuleVariableBills; }
+    public JTable getTblDue() { return tblDue; }
+    public JTable getTblRules() { return tblRules; }
+    public JLabel getLblRulesCommitmentSummary() { return lblRulesCommitmentSummary; }
 }
 

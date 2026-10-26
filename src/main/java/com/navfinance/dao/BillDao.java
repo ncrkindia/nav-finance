@@ -69,7 +69,7 @@ public class BillDao {
      * @return The persisted bill with generated primary key and timestamps
      */
     public Bill insert(Bill bill) {
-        String sql = "INSERT INTO bills (bill_name, provider, default_amount, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO bills (bill_name, provider, default_amount, amount_type, due_day, due_amount, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             LocalDateTime now = LocalDateTime.now();
@@ -77,9 +77,12 @@ public class BillDao {
             ps.setString(2, bill.getProvider());
             if (bill.getDefaultAmount() != null) ps.setDouble(3, bill.getDefaultAmount());
             else ps.setNull(3, java.sql.Types.DECIMAL);
-            ps.setString(4, bill.getNotes());
-            ps.setTimestamp(5, Timestamp.valueOf(now));
-            ps.setTimestamp(6, Timestamp.valueOf(now));
+            ps.setString(4, bill.getAmountType() != null ? bill.getAmountType().name() : "FIXED");
+            ps.setInt(5, bill.getDueDay() != null ? bill.getDueDay().intValue() : 0);
+            ps.setDouble(6, bill.getDueAmount() != null ? bill.getDueAmount().doubleValue() : 0.0);
+            ps.setString(7, bill.getNotes());
+            ps.setTimestamp(8, Timestamp.valueOf(now));
+            ps.setTimestamp(9, Timestamp.valueOf(now));
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) {
@@ -101,7 +104,7 @@ public class BillDao {
      * @return {@code true} if updated successfully, {@code false} otherwise
      */
     public boolean update(Bill bill) {
-        String sql = "UPDATE bills SET bill_name = ?, provider = ?, default_amount = ?, notes = ?, updated_at = ? WHERE id = ?";
+        String sql = "UPDATE bills SET bill_name = ?, provider = ?, default_amount = ?, amount_type = ?, due_day = ?, due_amount = ?, notes = ?, updated_at = ? WHERE id = ?";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             LocalDateTime now = LocalDateTime.now();
@@ -109,9 +112,12 @@ public class BillDao {
             ps.setString(2, bill.getProvider());
             if (bill.getDefaultAmount() != null) ps.setDouble(3, bill.getDefaultAmount());
             else ps.setNull(3, java.sql.Types.DECIMAL);
-            ps.setString(4, bill.getNotes());
-            ps.setTimestamp(5, Timestamp.valueOf(now));
-            ps.setLong(6, bill.getId());
+            ps.setString(4, bill.getAmountType() != null ? bill.getAmountType().name() : "FIXED");
+            ps.setInt(5, bill.getDueDay() != null ? bill.getDueDay().intValue() : 0);
+            ps.setDouble(6, bill.getDueAmount() != null ? bill.getDueAmount().doubleValue() : 0.0);
+            ps.setString(7, bill.getNotes());
+            ps.setTimestamp(8, Timestamp.valueOf(now));
+            ps.setLong(9, bill.getId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Failed to update bill: " + e.getMessage());
@@ -151,6 +157,20 @@ public class BillDao {
         b.setProvider(rs.getString("provider"));
         double amt = rs.getDouble("default_amount");
         if (!rs.wasNull()) b.setDefaultAmount(amt);
+        try {
+            String at = rs.getString("amount_type");
+            if (at != null && !at.isBlank()) {
+                b.setAmountType(com.navfinance.model.AmountType.valueOf(at.toUpperCase()));
+            }
+        } catch (SQLException | IllegalArgumentException ignored) {}
+        try {
+            int dd = rs.getInt("due_day");
+            if (!rs.wasNull()) b.setDueDay(dd);
+        } catch (SQLException ignored) {}
+        try {
+            double da = rs.getDouble("due_amount");
+            if (!rs.wasNull()) b.setDueAmount(da);
+        } catch (SQLException ignored) {}
         b.setNotes(rs.getString("notes"));
         Timestamp cat = rs.getTimestamp("created_at");
         if (cat != null) b.setCreatedAt(cat.toLocalDateTime());

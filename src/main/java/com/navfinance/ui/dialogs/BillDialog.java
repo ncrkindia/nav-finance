@@ -2,21 +2,27 @@ package com.navfinance.ui.dialogs;
 
 import com.navfinance.config.AppConfig;
 import com.navfinance.i18n.I18n;
+import com.navfinance.model.AmountType;
 import com.navfinance.model.Bill;
 import com.navfinance.service.FinanceService;
 import com.navfinance.ui.util.NavIcons;
 import com.navfinance.ui.util.UiUtils;
 
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import java.awt.Color;
+import java.awt.Dimension;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
@@ -27,7 +33,8 @@ import java.awt.Insets;
  * Modal dialog for creating and modifying Bill master records (e.g., Airtel Broadband,
  * Electricity Khardoni, Noida Power).
  * <p>
- * Captures bill titles, service providers, estimated recurring amounts, and user remarks,
+ * Captures bill titles, service providers, amount classification (Fixed vs Variable),
+ * estimated recurring amounts, due day of month, and remarks,
  * validating required inputs before delegating persistence to {@link FinanceService}.
  * </p>
  */
@@ -45,8 +52,20 @@ public class BillDialog extends JDialog {
     /** Text input field for the utility company or provider agency. */
     private JTextField txtProvider;
 
+    /** Radio button selecting Fixed amount type. */
+    private JRadioButton rbFixed;
+
+    /** Radio button selecting Variable (usage-based) amount type. */
+    private JRadioButton rbVariable;
+
     /** Text input field for typical expected monthly charge. */
     private JTextField txtDefaultAmount;
+
+    /** Spinner for monthly recurring due day (1-31, 0 if flexible). */
+    private JSpinner spnDueDay;
+
+    /** Text input field for current unpaid / pending bill amount. */
+    private JTextField txtDueAmount;
 
     /** Multi-line text area for operational account numbers or notes. */
     private JTextArea txtNotes;
@@ -104,6 +123,28 @@ public class BillDialog extends JDialog {
         txtProvider.setFont(UiUtils.regularFont());
         mainPanel.add(txtProvider, gbc);
 
+        // Amount Classification (Fixed vs Variable)
+        gbc.gridx = 0; gbc.gridy = row;
+        JLabel lblType = new JLabel(I18n.get("masters.table.billType") + ":*");
+        lblType.setFont(UiUtils.regularFont());
+        mainPanel.add(lblType, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        JPanel pnlType = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        pnlType.setOpaque(false);
+        rbFixed = new JRadioButton("Fixed Amount", true);
+        rbFixed.setFont(UiUtils.regularFont());
+        rbFixed.setOpaque(false);
+        rbVariable = new JRadioButton("Variable / Usage-based", false);
+        rbVariable.setFont(UiUtils.regularFont());
+        rbVariable.setOpaque(false);
+        ButtonGroup bgType = new ButtonGroup();
+        bgType.add(rbFixed);
+        bgType.add(rbVariable);
+        pnlType.add(rbFixed);
+        pnlType.add(rbVariable);
+        mainPanel.add(pnlType, gbc);
+
         // Typical / Default Amount
         gbc.gridx = 0; gbc.gridy = row;
         JLabel lblAmt = new JLabel(I18n.get("masters.table.defaultAmount") + " (" + AppConfig.getCurrencySymbol() + "):");
@@ -114,6 +155,35 @@ public class BillDialog extends JDialog {
         txtDefaultAmount = new JTextField(20);
         txtDefaultAmount.setFont(UiUtils.regularFont());
         mainPanel.add(txtDefaultAmount, gbc);
+
+        // Typical Due Day of Month (1 - 31)
+        gbc.gridx = 0; gbc.gridy = row;
+        JLabel lblDueDay = new JLabel(I18n.get("masters.table.dueDay") + ":");
+        lblDueDay.setFont(UiUtils.regularFont());
+        mainPanel.add(lblDueDay, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        JPanel pnlDueDay = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        pnlDueDay.setOpaque(false);
+        spnDueDay = new JSpinner(new SpinnerNumberModel(0, 0, 31, 1));
+        spnDueDay.setPreferredSize(new Dimension(80, 28));
+        pnlDueDay.add(spnDueDay);
+        JLabel lblDueDayHint = new JLabel("(1 - 31, 0 if flexible / on arrival)");
+        lblDueDayHint.setFont(UiUtils.regularFont());
+        lblDueDayHint.setForeground(UiUtils.COLOR_TEXT_MUTED);
+        pnlDueDay.add(lblDueDayHint);
+        mainPanel.add(pnlDueDay, gbc);
+
+        // Current Due / Pending Amount
+        gbc.gridx = 0; gbc.gridy = row;
+        JLabel lblDueAmt = new JLabel(I18n.get("masters.table.dueAmount") + " (" + AppConfig.getCurrencySymbol() + "):");
+        lblDueAmt.setFont(UiUtils.regularFont());
+        mainPanel.add(lblDueAmt, gbc);
+
+        gbc.gridx = 1; gbc.gridy = row++;
+        txtDueAmount = new JTextField(20);
+        txtDueAmount.setFont(UiUtils.regularFont());
+        mainPanel.add(txtDueAmount, gbc);
 
         // Notes / Remarks
         gbc.gridx = 0; gbc.gridy = row;
@@ -149,8 +219,19 @@ public class BillDialog extends JDialog {
         if (bill != null) {
             txtBillName.setText(bill.getBillName());
             txtProvider.setText(bill.getProvider());
+            if (bill.getAmountType() == AmountType.VARIABLE) {
+                rbVariable.setSelected(true);
+            } else {
+                rbFixed.setSelected(true);
+            }
             if (bill.getDefaultAmount() != null) {
                 txtDefaultAmount.setText(String.valueOf(bill.getDefaultAmount()));
+            }
+            if (bill.getDueDay() != null) {
+                spnDueDay.setValue(Math.max(0, Math.min(31, bill.getDueDay())));
+            }
+            if (bill.getDueAmount() != null && bill.getDueAmount() > 0) {
+                txtDueAmount.setText(String.valueOf(bill.getDueAmount()));
             }
             txtNotes.setText(bill.getNotes());
         }
@@ -180,10 +261,25 @@ public class BillDialog extends JDialog {
             }
         }
 
+        Double dueAmt = 0.0;
+        String strDueAmt = txtDueAmount.getText().trim();
+        if (!strDueAmt.isEmpty()) {
+            try {
+                dueAmt = Double.valueOf(strDueAmt);
+            } catch (NumberFormatException e) {
+                UiUtils.showError(this, "Invalid due amount format.");
+                txtDueAmount.requestFocus();
+                return;
+            }
+        }
+
         Bill b = bill != null ? bill : new Bill();
         b.setBillName(name);
         b.setProvider(txtProvider.getText().trim());
+        b.setAmountType(rbVariable.isSelected() ? AmountType.VARIABLE : AmountType.FIXED);
         b.setDefaultAmount(amt);
+        b.setDueDay(((Number) spnDueDay.getValue()).intValue());
+        b.setDueAmount(dueAmt);
         b.setNotes(txtNotes.getText().trim());
 
         FinanceService.getInstance().saveBill(b);
