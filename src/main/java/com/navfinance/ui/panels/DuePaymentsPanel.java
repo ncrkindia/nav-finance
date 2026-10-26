@@ -245,7 +245,7 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
         btnSettle.addActionListener(e -> onSettleSelected());
 
         JButton btnSettleOnTime = UiUtils.createPrimaryButton(I18n.get("due.btn.settleOnTime"), NavIcons.check(13, Color.WHITE));
-        btnSettleOnTime.setToolTipText("Settle selected payments (or all September 2026 dues) on their scheduled due dates");
+        btnSettleOnTime.setToolTipText(I18n.get("due.btn.settleOnTime.tooltip"));
         btnSettleOnTime.addActionListener(e -> onSettleOnTime());
 
         JButton btnUnsettle = UiUtils.createSecondaryButton(I18n.get("due.btn.markUnsettled"), NavIcons.refresh(13, UiUtils.COLOR_TEXT_PRIMARY));
@@ -785,42 +785,33 @@ public class DuePaymentsPanel extends JPanel implements LanguageChangeListener {
 
     /**
      * Handles fast "on-time" payment settlements directly on the scheduled due date.
-     * If rows are selected, marks selected rows settled on their due dates.
-     * If no rows are selected, prompts to settle all pending/overdue dues for September 2026.
+     * Settles the selected rows in the due payments table on their respective scheduled due dates
+     * and automatically creates linked ledger expense transactions.
      */
     private void onSettleOnTime() {
         int[] selectedRows = tblDue.getSelectedRows();
-        if (selectedRows != null && selectedRows.length > 0) {
-            String prompt = java.text.MessageFormat.format(I18n.get("due.confirm.settleOnTime"), selectedRows.length);
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    prompt,
-                    "Settle On Time Confirmation",
-                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-            if (confirm != JOptionPane.YES_OPTION) return;
+        if (selectedRows == null || selectedRows.length == 0) {
+            UiUtils.showWarning(this, I18n.get("due.prompt.selectToSettleOnTime"));
+            return;
+        }
 
-            int count = 0;
-            for (int r : selectedRows) {
-                Long id = (Long) modelDue.getValueAt(r, 0);
-                if (recurringService.settlePaymentOnTime(id, true)) {
-                    count++;
-                }
-            }
-            refreshAll();
-            String msg = java.text.MessageFormat.format(I18n.get("due.msg.settledOnTimeCount"), count);
-            UiUtils.showSuccess(this, msg);
-        } else {
-            // Prompt to settle all pending/overdue dues for September 2026
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    I18n.get("due.confirm.settleMonthOnTime"),
-                    "Settle All September 2026 On Time",
-                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-            if (confirm == JOptionPane.YES_OPTION) {
-                int settled = recurringService.settleAllForMonthOnTime(java.time.YearMonth.of(2026, 9), true);
-                refreshAll();
-                String msg = java.text.MessageFormat.format(I18n.get("due.msg.settledOnTimeCount"), settled);
-                UiUtils.showSuccess(this, msg);
+        String prompt = java.text.MessageFormat.format(I18n.get("due.confirm.settleOnTime"), selectedRows.length);
+        int confirm = JOptionPane.showConfirmDialog(this,
+                prompt,
+                I18n.get("due.title.settleOnTimeConfirmation"),
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        int count = 0;
+        for (int r : selectedRows) {
+            Long id = (Long) modelDue.getValueAt(r, 0);
+            if (recurringService.settlePaymentOnTime(id, true)) {
+                count++;
             }
         }
+        refreshAll();
+        String msg = java.text.MessageFormat.format(I18n.get("due.msg.settledOnTimeCount"), count);
+        UiUtils.showSuccess(this, msg);
     }
 
     /**

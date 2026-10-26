@@ -3,7 +3,6 @@ package com.navfinance.service;
 import com.navfinance.config.AppConfig;
 import com.navfinance.dao.DuePaymentDao;
 import com.navfinance.database.DatabaseManager;
-import com.navfinance.model.AmountType;
 import com.navfinance.model.DuePayment;
 import com.navfinance.model.DueStatus;
 import com.navfinance.model.RecurringSchedule;
